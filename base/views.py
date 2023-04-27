@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from django.http import JsonResponse
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -57,6 +58,7 @@ def get_contact_lists(request):
 
     return Response(serializer.data)
 
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_contact_list(request, pk):
@@ -65,6 +67,21 @@ def get_contact_list(request, pk):
     serializer = ContactListSerializer(contact_list)
 
     return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_contact(request, id):
+
+    contact_list = ContactList.objects.get(id=id)
+    serializer = ContactSerializer(data=request.data)
+    #serializer.contact_list = contact_list
+    if serializer.is_valid(raise_exception=True):
+        serializer.save(user=request.user, contact_list=contact_list)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    else:
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class RegisterAPI(generics.GenericAPIView):
     serializer_class = RegisterSerializer
