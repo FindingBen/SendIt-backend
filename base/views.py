@@ -6,8 +6,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.permissions import IsAuthenticated
-from .serializers import NoteSerializer, RegisterSerializer, UserSerializer, ContactListSerializer, ContactSerializer
-from .models import Note, ContactList
+from .serializers import NoteSerializer, RegisterSerializer, UserSerializer, ContactListSerializer, ContactSerializer, DraftSerializer
+from .models import Note, ContactList, Contact, Draft
 
 from rest_framework import generics
 
@@ -41,12 +41,24 @@ def getRoutes(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def note_view(request, pk):
+    user = request.user
+    draft = Draft.objects.get(id=pk)
+    serializer = DraftSerializer(draft)
+
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_notes(request):
     user = request.user
     notes = user.note_set.all()
     serializer = NoteSerializer(notes, many=True)
 
     return Response(serializer.data)
+
+# Contact lists
 
 
 @api_view(['GET'])
@@ -68,6 +80,18 @@ def get_contact_list(request, pk):
 
     return Response(serializer.data)
 
+# Contact list
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_contacts(request, id):
+    contact_list = ContactList.objects.get(id=id)
+    contact = Contact.objects.filter(contact_list=contact_list)
+    serializer = ContactSerializer(contact, many=True)
+
+    return Response(serializer.data)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -75,7 +99,7 @@ def create_contact(request, id):
 
     contact_list = ContactList.objects.get(id=id)
     serializer = ContactSerializer(data=request.data)
-    #serializer.contact_list = contact_list
+    # serializer.contact_list = contact_list
     if serializer.is_valid(raise_exception=True):
         serializer.save(user=request.user, contact_list=contact_list)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -105,4 +129,17 @@ class CreateNote(generics.GenericAPIView):
         note = serializer.save()
         return Response({
             "note": NoteSerializer(note, context=self.get_serializer_context()).data
+        })
+
+
+class CreateDraft(generics.GenericAPIView):
+    serializer_class = DraftSerializer
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        draft = serializer.save()
+        return Response({
+            "draft": DraftSerializer(draft, context=self.get_serializer_context()).data
         })

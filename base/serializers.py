@@ -1,6 +1,6 @@
 from rest_framework.serializers import ModelSerializer
 from django.contrib.auth.models import User
-from .models import Note, ContactList, Contact
+from .models import Note, ContactList, Contact, Draft
 
 
 class NoteSerializer(ModelSerializer):
@@ -39,3 +39,9 @@ class ContactSerializer(ModelSerializer):
     class Meta:
         model = Contact
         fields = ['first_name', 'last_name', 'email', 'phone_number']
+
+
+class DraftSerializer(ModelSerializer):
+    class Meta:
+        model = Draft
+        fields = '__all__'

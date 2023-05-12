@@ -5,11 +5,13 @@ from django.contrib.auth.models import User
 class Note(models.Model):
     users = models.ForeignKey(User, on_delete=models.CASCADE)
     body = models.TextField()
+    image = models.ImageField(null=True)
 
 
 class ContactList(models.Model):
     users = models.ForeignKey(User, on_delete=models.CASCADE)
     list_name = models.CharField(max_length=20)
+
 
 class Contact(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -19,3 +21,9 @@ class Contact(models.Model):
     last_name = models.CharField(max_length=20)
     phone_number = models.IntegerField()
     email = models.EmailField()
+
+
+class Draft(models.Model):
+    users = models.ForeignKey(User, on_delete=models.CASCADE)
+    body = models.TextField(blank=True)
+    image = models.ImageField(null=True, blank=True)
