@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
-from rest_framework import status
+from rest_framework import status, views
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -131,6 +131,12 @@ class CreateNote(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
 
         message = serializer.save()
+
+        for element_obj in request.data['element_list']:
+            print("OBJECT", element_obj['element']['id'])
+            element = Element.objects.get(id=element_obj['element']['id'])
+            message.element_list.add(element)
+
         return Response({
             "note": MessageSerializer(message, context=self.get_serializer_context()).data
         })

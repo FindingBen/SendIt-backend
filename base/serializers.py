@@ -17,12 +17,11 @@ class MessageSerializer(ModelSerializer):
         fields = ['id', 'users', 'element_list']
 
     def create(self, validated_data):
-        element_data = validated_data.pop('element_list')
+        element_list = validated_data.pop('element_list')
         message = Message.objects.create(**validated_data)
 
-        for element in element_data:
-            Element.objects.create(message=message, **element)
-        print("ELEMENT:", element)
+        for element_data in element_list:
+            Element.objects.create(**element_data)
         return message
 
     def get_elements(self, obj):
