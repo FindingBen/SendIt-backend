@@ -1,7 +1,7 @@
 from django.contrib import admin
-from .models import Note, Contact, ContactList, Draft
+from .models import Message, Contact, ContactList, Element
 
-admin.site.register(Note)
+admin.site.register(Message)
 admin.site.register(Contact)
 admin.site.register(ContactList)
-admin.site.register(Draft)
+admin.site.register(Element)

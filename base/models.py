@@ -2,10 +2,23 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
-class Note(models.Model):
+class Message(models.Model):
     users = models.ForeignKey(User, on_delete=models.CASCADE)
-    body = models.TextField()
-    image = models.ImageField(null=True)
+
+    element_list = models.ManyToManyField('Element', related_name='messages')
+# text = models.TextField(null=True)
+# image = models.ImageField(null=True)
+
+
+class Element(models.Model):
+    # Define fields common to all element types
+    # For example, you can have a type field to distinguish between different element types
+    element_type = models.CharField(max_length=20, null=True)
+    # Add other fields specific to each element type
+    # For example, for image element, you can have an image field
+    image = models.ImageField(blank=True)
+    # For text element, you can have a text field
+    text = models.TextField(blank=True)
 
 
 class ContactList(models.Model):
@@ -21,9 +34,3 @@ class Contact(models.Model):
     last_name = models.CharField(max_length=20)
     phone_number = models.IntegerField()
     email = models.EmailField()
-
-
-class Draft(models.Model):
-    users = models.ForeignKey(User, on_delete=models.CASCADE)
-    body = models.TextField(blank=True)
-    image = models.ImageField(null=True, blank=True)

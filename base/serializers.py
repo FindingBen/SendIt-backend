@@ -1,12 +1,33 @@
 from rest_framework.serializers import ModelSerializer
 from django.contrib.auth.models import User
-from .models import Note, ContactList, Contact, Draft
+from .models import Message, ContactList, Contact, Element
 
 
-class NoteSerializer(ModelSerializer):
+class ElementSerializer(ModelSerializer):
     class Meta:
-        model = Note
+        model = Element
         fields = '__all__'
+
+
+class MessageSerializer(ModelSerializer):
+    element_list = ElementSerializer(many=True)
+
+    class Meta:
+        model = Message
+        fields = ['id', 'users', 'element_list']
+
+    def create(self, validated_data):
+        element_data = validated_data.pop('element_list')
+        message = Message.objects.create(**validated_data)
+
+        for element in element_data:
+            Element.objects.create(message=message, **element)
+        print("ELEMENT:", element)
+        return message
+
+    def get_elements(self, obj):
+        elements = obj.element_list.all()
+        return ElementSerializer(elements, many=True).data
 
 
 class UserSerializer(ModelSerializer):
@@ -39,9 +60,3 @@ class ContactSerializer(ModelSerializer):
     class Meta:
         model = Contact
         fields = ['first_name', 'last_name', 'email', 'phone_number']
-
-
-class DraftSerializer(ModelSerializer):
-    class Meta:
-        model = Draft
-        fields = '__all__'

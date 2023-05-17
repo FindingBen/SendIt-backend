@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from rest_framework import status
 from rest_framework.response import Response
@@ -6,8 +6,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.permissions import IsAuthenticated
-from .serializers import NoteSerializer, RegisterSerializer, UserSerializer, ContactListSerializer, ContactSerializer, DraftSerializer
-from .models import Note, ContactList, Contact, Draft
+from .serializers import MessageSerializer, RegisterSerializer, UserSerializer, ContactListSerializer, ContactSerializer, ElementSerializer
+from .models import Message, ContactList, Contact, Element
 
 from rest_framework import generics
 
@@ -41,10 +41,14 @@ def getRoutes(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def note_view(request, pk):
-    user = request.user
-    draft = Draft.objects.get(id=pk)
-    serializer = DraftSerializer(draft)
+def note_view(request, id):
+    message = Message.objects.get(id=id)
+
+    # elements = message.element_list.all()
+    # print("ELEMENTS:", elements)
+    serializer = MessageSerializer(message)
+    # elements = message.element_list.all().order_by('id')
+    # serializer = MessageSerializer(message)
 
     return Response(serializer.data)
 
@@ -53,8 +57,8 @@ def note_view(request, pk):
 @permission_classes([IsAuthenticated])
 def get_notes(request):
     user = request.user
-    notes = user.note_set.all()
-    serializer = NoteSerializer(notes, many=True)
+    notes = user.message_set.all()
+    serializer = MessageSerializer(notes, many=True)
 
     return Response(serializer.data)
 
@@ -71,7 +75,7 @@ def get_contact_lists(request):
     return Response(serializer.data)
 
 
-@api_view(['GET'])
+@api_view(['GET,PUT'])
 @permission_classes([IsAuthenticated])
 def get_contact_list(request, pk):
     user = request.user
@@ -120,26 +124,26 @@ class RegisterAPI(generics.GenericAPIView):
 
 
 class CreateNote(generics.GenericAPIView):
-    serializer_class = NoteSerializer
+    serializer_class = MessageSerializer
 
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        note = serializer.save()
+        message = serializer.save()
         return Response({
-            "note": NoteSerializer(note, context=self.get_serializer_context()).data
+            "note": MessageSerializer(message, context=self.get_serializer_context()).data
         })
 
 
-class CreateDraft(generics.GenericAPIView):
-    serializer_class = DraftSerializer
+class CreateElement(generics.GenericAPIView):
+    serializer_class = ElementSerializer
 
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        draft = serializer.save()
+        element = serializer.save()
         return Response({
-            "draft": DraftSerializer(draft, context=self.get_serializer_context()).data
+            "element": ElementSerializer(element, context=self.get_serializer_context()).data
         })
