@@ -24,6 +24,13 @@ class MessageSerializer(ModelSerializer):
             Element.objects.create(**element_data)
         return message
 
+    def update(self, instance, validated_data):
+
+        instance.element_list = validated_data.get(
+            'element_list', instance.element_list)
+        instance.save()
+        return instance
+
     def get_elements(self, obj):
         elements = obj.element_list.all()
         return ElementSerializer(elements, many=True).data

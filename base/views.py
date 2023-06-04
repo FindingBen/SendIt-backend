@@ -97,6 +97,19 @@ def get_contacts(request, id):
     return Response(serializer.data)
 
 
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_message(request, id):
+    message = Message.objects.get(id=id)
+    serializer = MessageSerializer(message, data=request.data)
+    if serializer.is_valid(raise_exception=True):
+
+        serializer.save(message=message)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    else:
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_contact(request, id):
@@ -133,7 +146,7 @@ class CreateNote(generics.GenericAPIView):
         message = serializer.save()
 
         for element_obj in request.data['element_list']:
-            print("OBJECT", element_obj['element']['id'])
+
             element = Element.objects.get(id=element_obj['element']['id'])
             message.element_list.add(element)
 
@@ -153,3 +166,21 @@ class CreateElement(generics.GenericAPIView):
         return Response({
             "element": ElementSerializer(element, context=self.get_serializer_context()).data
         })
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_message(request, id):
+
+    message = Message.objects.get(id=id)
+    message.delete()
+    return Response("Message deleted!")
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_element(request, id):
+
+    element = Element.objects.get(id=id)
+    element.delete()
+    return Response("Message deleted!")
