@@ -17,11 +17,9 @@ class MessageSerializer(ModelSerializer):
         fields = ['id', 'users', 'element_list']
 
     def create(self, validated_data):
-        element_list = validated_data.pop('element_list')
+        print(validated_data)
         message = Message.objects.create(**validated_data)
 
-        for element_data in element_list:
-            Element.objects.create(**element_data)
         return message
 
     def update(self, instance, validated_data):
