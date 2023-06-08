@@ -19,6 +19,8 @@ class Element(models.Model):
     image = models.ImageField(blank=True)
     # For text element, you can have a text field
     text = models.TextField(blank=True)
+    button_title = models.CharField(max_length=20, null=True)
+    button_link = models.CharField(max_length=100, null=True)
 
 
 class ContactList(models.Model):
