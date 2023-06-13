@@ -18,7 +18,7 @@ urlpatterns = [
     path('message_view_edit/<str:id>/', views.update_message),
     path('delete_message/<str:id>', views.delete_message),
     path('delete_element/<str:id>', views.delete_element),
-    path('update/<str:id>', views.update_message),
+    # path('update/<str:id>', views.update_message),
     path('create_contact/<str:id>/', views.create_contact),
     path('contact_lists/', views.get_contact_lists),
     path('contact_list/<str:id>/', views.get_contacts),
