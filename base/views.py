@@ -102,14 +102,13 @@ def get_contacts(request, id):
 def update_message(request, id):
     message = Message.objects.get(id=id)
     serializer = MessageSerializer(message, data=request.data)
-    print("SER:::", request.data['element_list'])
     if serializer.is_valid(raise_exception=True):
+      
         for element_obj in request.data['element_list']:
-
-            element = Element.objects.get(id=element_obj['id'])
+            element = Element.objects.get(id=element_obj['element']['id'])
             message.element_list.add(element)
        
-        serializer.save()
+        serializer.update(message,validated_data=request.data['element_list'])
         return Response(serializer.data, status=status.HTTP_200_OK)
     else:
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

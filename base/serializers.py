@@ -20,15 +20,9 @@ class MessageSerializer(ModelSerializer):
 
         element_list = validated_data.pop('element_list')
         message = Message.objects.create(**validated_data)
-
-        # for element_data in element_list:
-        #     Element.objects.create(**element_data)
         return message
 
     def update(self, instance, validated_data):
-
-        instance.element_list = validated_data.get(
-            'element_list', instance.element_list)
         instance.save()
         return instance
 
