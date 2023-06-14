@@ -103,9 +103,9 @@ def update_message(request, id):
     message = Message.objects.get(id=id)
     serializer = MessageSerializer(message, data=request.data)
     if serializer.is_valid(raise_exception=True):
+      
         for element_obj in request.data['element_list']:
-
-            element = Element.objects.get(id=element_obj['id'])
+            element = Element.objects.get(id=element_obj['element']['id'])
             message.element_list.add(element)
        
         serializer.update(message,validated_data=request.data['element_list'])
