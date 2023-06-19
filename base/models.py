@@ -16,7 +16,8 @@ class Element(models.Model):
     element_type = models.CharField(max_length=20, null=True)
     # Add other fields specific to each element type
     # For example, for image element, you can have an image field
-    image = models.ImageField(blank=True,null=True)
+    image = models.ImageField(blank=True, null=True)
+    alignment = models.CharField(max_length=20, null=True)
     # For text element, you can have a text field
     text = models.TextField(blank=True)
     button_title = models.CharField(max_length=20, null=True)
