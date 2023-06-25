@@ -8,7 +8,6 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.permissions import IsAuthenticated
 from .serializers import MessageSerializer, RegisterSerializer, UserSerializer, ContactListSerializer, ContactSerializer, ElementSerializer
 from .models import Message, ContactList, Contact, Element
-
 from rest_framework import generics
 
 
