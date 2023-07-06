@@ -6,9 +6,47 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.permissions import IsAuthenticated
-from .serializers import MessageSerializer, RegisterSerializer, UserSerializer, ContactListSerializer, ContactSerializer, ElementSerializer
-from .models import Message, ContactList, Contact, Element
+from .serializers import MessageSerializer, RegisterSerializer, UserSerializer, ContactListSerializer, ContactSerializer, ElementSerializer, PackageSerializer, ChangePasswordSerializer
+from .models import Message, ContactList, Contact, Element, PackagePlan
 from rest_framework import generics
+from django.contrib.auth.models import User
+from django.contrib.auth.views import PasswordResetView
+from django.contrib.messages.views import SuccessMessageMixin
+
+
+class ChangePasswordView(generics.UpdateAPIView):
+    """
+    An endpoint for changing password.
+    """
+    serializer_class = ChangePasswordSerializer
+    model = User
+    permission_classes = (IsAuthenticated,)
+
+    def get_object(self, queryset=None):
+        obj = self.request.user
+        return obj
+
+    def update(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid():
+            # Check old password
+            if not self.object.check_password(serializer.data.get("old_password")):
+                return Response({"old_password": ["Wrong password."]}, status=status.HTTP_400_BAD_REQUEST)
+            # set_password also hashes the password that the user will get
+            self.object.set_password(serializer.data.get("new_password"))
+            self.object.save()
+            response = {
+                'status': 'success',
+                'code': status.HTTP_200_OK,
+                'message': 'Password updated successfully',
+                'data': []
+            }
+
+            return Response(response)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -40,6 +78,28 @@ def getRoutes(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def get_user(request, id):
+    user = User.objects.get(id=id)
+    serializer = UserSerializer(user)
+
+    return Response(serializer.data)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_user(request, id):
+    user = User.objects.get(id=id)
+    serializer = UserSerializer(user, data=request.data)
+    if serializer.is_valid(raise_exception=True):
+
+        serializer.update(user, validated_data=request.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    else:
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def note_view(request, id):
     message = Message.objects.get(id=id)
 
@@ -62,6 +122,15 @@ def get_notes(request):
     return Response(serializer.data)
 
 # Contact lists
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_packages(request):
+    package = PackagePlan.objects.all()
+    serializer = PackageSerializer(package, many=True)
+
+    return Response(serializer.data)
 
 
 @api_view(['GET'])
@@ -102,12 +171,12 @@ def update_message(request, id):
     message = Message.objects.get(id=id)
     serializer = MessageSerializer(message, data=request.data)
     if serializer.is_valid(raise_exception=True):
-      
+
         for element_obj in request.data['element_list']:
             element = Element.objects.get(id=element_obj['element']['id'])
             message.element_list.add(element)
-       
-        serializer.update(message,validated_data=request.data['element_list'])
+
+        serializer.update(message, validated_data=request.data['element_list'])
         return Response(serializer.data, status=status.HTTP_200_OK)
     else:
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

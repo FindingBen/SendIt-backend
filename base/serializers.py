@@ -1,11 +1,18 @@
 from rest_framework.serializers import ModelSerializer
 from django.contrib.auth.models import User
-from .models import Message, ContactList, Contact, Element
+from rest_framework import serializers
+from .models import Message, ContactList, Contact, Element, PackagePlan
 
 
 class ElementSerializer(ModelSerializer):
     class Meta:
         model = Element
+        fields = '__all__'
+
+
+class PackageSerializer(ModelSerializer):
+    class Meta:
+        model = PackagePlan
         fields = '__all__'
 
 
@@ -61,3 +68,13 @@ class ContactSerializer(ModelSerializer):
     class Meta:
         model = Contact
         fields = ['first_name', 'last_name', 'email', 'phone_number']
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    model = User
+
+    """
+    Serializer for password change endpoint.
+    """
+    old_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)

@@ -1,6 +1,9 @@
-from pathlib import Path
-from datetime import timedelta
+
+
 import os
+from datetime import timedelta
+from pathlib import Path
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -30,6 +33,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     "corsheaders",
+    'django_rest_passwordreset',
+    'djoser',
     # apps
     'base',
     'sms'
@@ -136,6 +141,16 @@ SIMPLE_JWT = {
     "SLIDING_TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.TokenObtainSlidingSerializer",
     "SLIDING_TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSlidingSerializer",
 }
+DJOSER = {
+    'PASSWORD_RESET_CONFIRM_URL': 'reset_password_confirm/{uid}/{token}',
+    'PASSWORD_CHANGED_EMAIL_CONFIRMATION': True,
+    'ACTIVATION_URL': '/activate/{uid}/{token}',
+    'SEND_ACTIVATION_EMAIL': False,
+    'SERIALIZERS': {},
+    'EMAIL': {
+        'password_reset': 'base.email.CustomPasswordResetConfirmationEmail'
+    }
+}
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
@@ -166,6 +181,14 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+
+# email configs
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_USE_TLS = True
+EMAIL_PORT = 587
+EMAIL_HOST_USER = 'benarmys4@gmail.com'
+EMAIL_HOST_PASSWORD = 'wxrcguodpyynyyii'
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/

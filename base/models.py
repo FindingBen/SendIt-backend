@@ -1,5 +1,28 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.contrib.auth.base_user import AbstractBaseUser
+from django.dispatch import receiver
+from django.urls import reverse
+from django_rest_passwordreset.signals import reset_password_token_created
+from django.core.mail import send_mail
+
+
+@receiver(reset_password_token_created)
+def password_reset_token_created(sender, instance, reset_password_token, *args, **kwargs):
+
+    email_plaintext_message = "{}?token={}".format(
+        reverse('password_reset:reset-password-request'), reset_password_token.key)
+
+    send_mail(
+        # title:
+        "Password Reset for {title}".format(title="Some website title"),
+        # message:
+        email_plaintext_message,
+        # from:
+        "noreply@somehost.local",
+        # to:
+        [reset_password_token.user.email]
+    )
 
 
 class Message(models.Model):
@@ -37,3 +60,18 @@ class Contact(models.Model):
     last_name = models.CharField(max_length=20)
     phone_number = models.IntegerField()
     email = models.EmailField()
+
+
+class PackagePlan(models.Model):
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, blank=True, null=True)
+    plan_type = models.CharField(max_length=20)
+    price = models.IntegerField()
+    offer1 = models.CharField(max_length=200, null=True, blank=True)
+    offer2 = models.CharField(max_length=200, null=True, blank=True)
+    offer3 = models.CharField(max_length=200, null=True, blank=True)
+    offer4 = models.CharField(max_length=200, null=True, blank=True)
+    offer5 = models.CharField(max_length=200, null=True, blank=True)
+    offer6 = models.CharField(max_length=200, null=True, blank=True)
+    offer7 = models.CharField(max_length=200, null=True, blank=True)
+    offer8 = models.CharField(max_length=200, null=True, blank=True)
