@@ -1,7 +1,7 @@
 from rest_framework.serializers import ModelSerializer
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import Message, ContactList, Contact, Element, PackagePlan
+from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser
 
 
 class ElementSerializer(ModelSerializer):
@@ -44,16 +44,24 @@ class UserSerializer(ModelSerializer):
         fields = ['id', 'username', 'email']
 
 
+class CustomUserSerializer(ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'username', 'email',
+                  'first_name', 'last_name', 'package_plan']
+
+
 class RegisterSerializer(ModelSerializer):
 
     class Meta:
-        model = User
-        fields = ['username', 'email', 'password']
+        model = CustomUser
+        fields = ['username', 'email', 'password',
+                  'first_name', 'last_name', 'package_plan']
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
-        user = User.objects.create_user(
-            validated_data['username'], validated_data['email'], validated_data['password'])
+        user = CustomUser.objects.create_user(
+            **validated_data)
 
         return user
 

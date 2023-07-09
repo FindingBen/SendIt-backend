@@ -6,8 +6,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.permissions import IsAuthenticated
-from .serializers import MessageSerializer, RegisterSerializer, UserSerializer, ContactListSerializer, ContactSerializer, ElementSerializer, PackageSerializer, ChangePasswordSerializer
-from .models import Message, ContactList, Contact, Element, PackagePlan
+from .serializers import MessageSerializer, RegisterSerializer, UserSerializer, CustomUserSerializer, ContactListSerializer, ContactSerializer, ElementSerializer, PackageSerializer, ChangePasswordSerializer
+from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser
 from rest_framework import generics
 from django.contrib.auth.models import User
 from django.contrib.auth.views import PasswordResetView
@@ -19,7 +19,7 @@ class ChangePasswordView(generics.UpdateAPIView):
     An endpoint for changing password.
     """
     serializer_class = ChangePasswordSerializer
-    model = User
+    model = CustomUser
     permission_classes = (IsAuthenticated,)
 
     def get_object(self, queryset=None):
@@ -79,8 +79,8 @@ def getRoutes(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user(request, id):
-    user = User.objects.get(id=id)
-    serializer = UserSerializer(user)
+    user = CustomUser.objects.get(id=id)
+    serializer = CustomUserSerializer(user)
 
     return Response(serializer.data)
 
@@ -88,8 +88,8 @@ def get_user(request, id):
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_user(request, id):
-    user = User.objects.get(id=id)
-    serializer = UserSerializer(user, data=request.data)
+    user = CustomUser.objects.get(id=id)
+    serializer = CustomUserSerializer(user, data=request.data)
     if serializer.is_valid(raise_exception=True):
 
         serializer.update(user, validated_data=request.data)
@@ -196,6 +196,19 @@ def create_contact(request, id):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def purchase_package(request, id):
+    user = CustomUser.objects.get(id=id)
+    package_plan = PackagePlan.objects.get(id=request.data['package_plan'])
+
+    user.package_plan = package_plan
+    user.save()
+
+    serializer = CustomUserSerializer(user)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class RegisterAPI(generics.GenericAPIView):
     serializer_class = RegisterSerializer
 
@@ -204,7 +217,7 @@ class RegisterAPI(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         return Response({
-            "user": UserSerializer(user, context=self.get_serializer_context()).data
+            "user": CustomUserSerializer(user, context=self.get_serializer_context()).data
         })
 
 

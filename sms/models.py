@@ -1,10 +1,10 @@
 from django.db import models
-from base.models import ContactList, Message
+from base.models import ContactList, CustomUser
 from twilio.rest import Client
 
 
 class Sms(models.Model):
-    # contact_list = models.ForeignKey(ContactList, on_delete=models.CASCADE)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     # message = models.ForeignKey(Message, on_delete=models.CASCADE)
     sender = models.CharField(max_length=20, null=False)
     sms_text = models.TextField(max_length=100, null=False)
