@@ -48,7 +48,13 @@ class CustomUserSerializer(ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ['id', 'username', 'email',
-                  'first_name', 'last_name', 'package_plan']
+                  'first_name', 'last_name', 'package_plan', 'sms_count']
+
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
 
 
 class RegisterSerializer(ModelSerializer):
@@ -75,7 +81,7 @@ class ContactListSerializer(ModelSerializer):
 class ContactSerializer(ModelSerializer):
     class Meta:
         model = Contact
-        fields = ['first_name', 'last_name', 'email', 'phone_number']
+        fields = ['id', 'first_name', 'last_name', 'email', 'phone_number']
 
 
 class ChangePasswordSerializer(serializers.Serializer):

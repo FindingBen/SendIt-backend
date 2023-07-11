@@ -12,6 +12,7 @@ class PackagePlan(models.Model):
         User, on_delete=models.CASCADE, blank=True, null=True)
     plan_type = models.CharField(max_length=20)
     price = models.IntegerField()
+    sms_count_pack = models.IntegerField()
     offer1 = models.CharField(max_length=200, null=True, blank=True)
     offer2 = models.CharField(max_length=200, null=True, blank=True)
     offer3 = models.CharField(max_length=200, null=True, blank=True)
@@ -25,20 +26,32 @@ class PackagePlan(models.Model):
 class CustomUser(User):
     package_plan = models.ForeignKey(
         PackagePlan, on_delete=models.CASCADE, blank=True, null=True)
+    sms_count = models.IntegerField()
 
     def save(self, *args, **kwargs):
         if not self.pk:
             package_plan = PackagePlan.objects.get(id=4)
             self.package_plan = package_plan
+            self.sms_count = 2
+
+        is_new_instance = not self.pk
+        original_instance = None
+
+        if not is_new_instance:
+            original_instance = CustomUser.objects.get(pk=self.pk)
+
+        # Check if the package_plan value has changed
+        if original_instance and original_instance.package_plan != self.package_plan:
+
+            package_plan = PackagePlan.objects.get(id=self.package_plan.id)
+
+            self.sms_count = package_plan.sms_count_pack
         super().save(*args, **kwargs)
 
 
 class Message(models.Model):
     users = models.ForeignKey(User, on_delete=models.CASCADE)
-
     element_list = models.ManyToManyField('Element', related_name='messages')
-# text = models.TextField(null=True)
-# image = models.ImageField(null=True)
 
 
 class Element(models.Model):

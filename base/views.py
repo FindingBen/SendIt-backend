@@ -6,6 +6,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.tokens import AccessToken
 from .serializers import MessageSerializer, RegisterSerializer, UserSerializer, CustomUserSerializer, ContactListSerializer, ContactSerializer, ElementSerializer, PackageSerializer, ChangePasswordSerializer
 from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser
 from rest_framework import generics
@@ -53,9 +54,10 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-
+        print(token)
         # Add custom claims
         token['username'] = user.username
+        # token['package_plan'] = user.package_plan
         # ...
 
         return token
@@ -89,7 +91,7 @@ def get_user(request, id):
 @permission_classes([IsAuthenticated])
 def update_user(request, id):
     user = CustomUser.objects.get(id=id)
-    serializer = CustomUserSerializer(user, data=request.data)
+    serializer = CustomUserSerializer(user, data=request.data, partial=True)
     if serializer.is_valid(raise_exception=True):
 
         serializer.update(user, validated_data=request.data)
@@ -99,12 +101,9 @@ def update_user(request, id):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def note_view(request, id):
     message = Message.objects.get(id=id)
 
-    # elements = message.element_list.all()
-    # print("ELEMENTS:", elements)
     serializer = MessageSerializer(message)
     # elements = message.element_list.all().order_by('id')
     # serializer = MessageSerializer(message)
@@ -240,6 +239,18 @@ class CreateNote(generics.GenericAPIView):
         })
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_list(request, id):
+    user = CustomUser.objects.get(id=id)
+    serializer = ContactListSerializer(data=request.data)
+    if serializer.is_valid(raise_exception=True):
+        serializer.save(users=user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    else:
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class CreateElement(generics.GenericAPIView):
     serializer_class = ElementSerializer
 
@@ -268,4 +279,13 @@ def delete_element(request, id):
 
     element = Element.objects.get(id=id)
     element.delete()
+    return Response("Message deleted!")
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_contact_recipient(request, id):
+
+    contact = Contact.objects.get(id=id)
+    contact.delete()
     return Response("Message deleted!")
