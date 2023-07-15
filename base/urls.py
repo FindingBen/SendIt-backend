@@ -11,7 +11,6 @@ urlpatterns = [
     path('', views.getRoutes),
     path('notes/', views.get_notes),
     path('register/', RegisterAPI.as_view(), name='register'),
-    # path('message_view/<str:id>/', views.note_view),
     path('create_notes/', CreateNote.as_view()),
     path('create_element/', CreateElement.as_view()),
     path('message_view/<str:id>/', views.note_view),

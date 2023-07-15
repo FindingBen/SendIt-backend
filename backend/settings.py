@@ -1,5 +1,3 @@
-
-
 import os
 from datetime import timedelta
 from pathlib import Path
@@ -37,13 +35,14 @@ INSTALLED_APPS = [
     'djoser',
     # apps
     'base',
-    'sms'
+    'sms',
+    'payments'
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    "corsheaders.middleware.CorsMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -58,8 +57,10 @@ ROOT_URLCONF = 'backend.urls'
 
 CORS_ALLOW_ALL_ORIGINS = False
 
+
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',  # Replace with the origin of your React application
+    'http://localhost:3000',
+    'https://checkout.stripe.com'  # Replace with the origin of your React application
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -94,6 +95,8 @@ TEMPLATES = [
 WSGI_APPLICATION = 'backend.wsgi.application'
 
 
+STRIPE_SECRET_KEY = 'sk_test_51NSz2OAD7NIuijySMBUoJR6emzSo4egrYIMyv8gedB9vHNlaJJDwETMJ56xAMCNKcNFYulYfnISnz8QzAsEy50I0002Yy8b2sQ'
+STRIPE_WEBHOOK_SECRET = 'whsec_8d291e5f29c03a1c531243eb90593693dab9ed8036a3b7fc52ff2c5b74add37b'
 REST_FRAMEWORK = {
 
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -206,6 +209,16 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
+
+DOMAIN_NAME = 'http://localhost:3000/stripe'
+
+DOMAIN_NAME_CANCEL = 'http://localhost:3000/stripe_cancel'
+
+ACTIVE_PRODUCTS = (('Basic Package', 'price_1NSzPTAD7NIuijyS69UOcr4w', 1), ('Silver Package',
+                   'price_1NTJF1AD7NIuijySWfczHhRp', 2), ('Gold Package', 'price_1NTKmiAD7NIuijySwioi2U02', 3))
+
+# ACTIVE_PRODUCTS_ID = (('Basic Package', 0),
+#                       ('Silver Package', 1), ('Gold Package', 2))
 
 STATIC_URL = 'static/'
 

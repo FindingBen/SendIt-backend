@@ -105,8 +105,6 @@ def note_view(request, id):
     message = Message.objects.get(id=id)
 
     serializer = MessageSerializer(message)
-    # elements = message.element_list.all().order_by('id')
-    # serializer = MessageSerializer(message)
 
     return Response(serializer.data)
 
@@ -115,6 +113,7 @@ def note_view(request, id):
 @permission_classes([IsAuthenticated])
 def get_notes(request):
     user = request.user
+    print(user)
     notes = user.message_set.all()
     serializer = MessageSerializer(notes, many=True)
 
