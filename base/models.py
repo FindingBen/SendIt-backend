@@ -74,7 +74,6 @@ class ContactList(models.Model):
 
 
 class Contact(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
     contact_list = models.ForeignKey(
         ContactList, null=True, on_delete=models.CASCADE)
     first_name = models.CharField(max_length=20)

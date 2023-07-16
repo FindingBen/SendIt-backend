@@ -1,15 +1,17 @@
 import stripe
+import time
 from django.conf import settings
 from rest_framework.views import APIView
 from .models import UserPayment
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes, api_view
 from rest_framework.response import Response
-import time
+from django.db import transaction, IntegrityError
 from django.http import HttpResponse
 from base.models import CustomUser, PackagePlan
 from django.views.decorators.csrf import csrf_exempt
-# This is your test secret API key.
+
+
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
@@ -69,7 +71,7 @@ def payment_successful(request, id):
 @csrf_exempt
 def stripe_webhook(request):
     stripe.api_key = settings.STRIPE_SECRET_KEY
-    time.sleep(10)
+    time.sleep(5)
     payload = request.body
     signature_header = request.META['HTTP_STRIPE_SIGNATURE']
     event = None
@@ -83,20 +85,26 @@ def stripe_webhook(request):
     except stripe.error.SignatureVerificationError as e:
         return HttpResponse(status=400)
     if event['type'] == 'checkout.session.completed':
+        with transaction.atomic():
+            try:
+                session = event['data']['object']
+                session_id = session.get('id', None)
+                customer_email = session["customer_details"]["email"]
+                product_id = session["metadata"]["product_id"]
 
-        session = event['data']['object']
-        session_id = session.get('id', None)
-        customer_email = session["customer_details"]["email"]
-        product_id = session["metadata"]["product_id"]
+                time.sleep(10)
+                user_payment = UserPayment.objects.get(
+                    stripe_checkout_id=session_id)
+                user_payment.payment_bool = True
+                user_payment.save()
 
-        time.sleep(15)
-        user_payment = UserPayment.objects.get(stripe_checkout_id=session_id)
-        user_payment.payment_bool = True
-        user_payment.save()
+                user_obj = CustomUser.objects.filter(email=customer_email)[0]
+                package_obj = PackagePlan.objects.get(id=product_id)
 
-        user_obj = CustomUser.objects.filter(email=customer_email)[0]
-        package_obj = PackagePlan.objects.get(id=product_id)
+                user_obj.package_plan = package_obj
+                user_obj.save()
 
-        user_obj.package_plan = package_obj
-        user_obj.save()
+            except IntegrityError:
+                pass
+
     return HttpResponse(status=200)

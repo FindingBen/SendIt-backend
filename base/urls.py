@@ -8,7 +8,6 @@ from .views import MyTokenObtainPairView, ChangePasswordView
 from .views import RegisterAPI, CreateNote, CreateElement
 
 urlpatterns = [
-    path('', views.getRoutes),
     path('notes/', views.get_notes),
     path('register/', RegisterAPI.as_view(), name='register'),
     path('create_notes/', CreateNote.as_view()),

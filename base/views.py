@@ -54,7 +54,6 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-        print(token)
         # Add custom claims
         token['username'] = user.username
         # token['package_plan'] = user.package_plan
@@ -65,17 +64,6 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
-
-
-@api_view(['GET'])
-def getRoutes(request):
-
-    routes = [
-        'api/token',
-        'api/token/refresh'
-    ]
-
-    return Response(routes)
 
 
 @api_view(['GET'])
@@ -113,7 +101,6 @@ def note_view(request, id):
 @permission_classes([IsAuthenticated])
 def get_notes(request):
     user = request.user
-    print(user)
     notes = user.message_set.all()
     serializer = MessageSerializer(notes, many=True)
 
@@ -188,7 +175,7 @@ def create_contact(request, id):
     serializer = ContactSerializer(data=request.data)
     # serializer.contact_list = contact_list
     if serializer.is_valid(raise_exception=True):
-        serializer.save(user=request.user, contact_list=contact_list)
+        serializer.save(contact_list=contact_list)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     else:
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
