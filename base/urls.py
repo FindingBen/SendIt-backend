@@ -4,7 +4,7 @@ from rest_framework_simplejwt.views import (
 
     TokenRefreshView,
 )
-from .views import MyTokenObtainPairView, ChangePasswordView
+from .views import MyTokenObtainPairView
 from .views import RegisterAPI, CreateNote, CreateElement
 
 urlpatterns = [
@@ -25,10 +25,11 @@ urlpatterns = [
     path('create_list/<str:id>', views.create_list),
     path('delete_recipient/<str:id>/', views.delete_contact_recipient),
     path('package_purchase/<str:id>/', views.purchase_package),
-    path('change_password/', ChangePasswordView.as_view()),
     path('token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('password_reset/',
          include('django_rest_passwordreset.urls', namespace='password_reset')),
+    path('set_password/',
+         include('django_rest_passwordreset.urls', namespace='set_password')),
 
 ]
