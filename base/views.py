@@ -164,11 +164,13 @@ class RegisterAPI(generics.GenericAPIView):
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-        return Response({
-            "user": CustomUserSerializer(user, context=self.get_serializer_context()).data
-        })
+        if serializer.is_valid(raise_exception=True):
+            user = serializer.save()
+            return Response({
+                "user": CustomUserSerializer(user, context=self.get_serializer_context()).data
+            })
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class CreateNote(generics.GenericAPIView):
