@@ -57,9 +57,6 @@ class StripeCheckoutVIew(APIView):
 def payment_successful(request, id):
     stripe.api_key = settings.STRIPE_SECRET_KEY
 
-    session = stripe.checkout.Session.retrieve(id)
-
-    # customer = stripe.Customer.retrieve(session.customer)
     user_id = request.user
 
     user_payment = UserPayment.objects.get(user=user_id)
