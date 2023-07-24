@@ -9,7 +9,7 @@ urlpatterns = [
     path('sms/', include('sms.urls')),
     path('auth/', include('djoser.urls')),
     path('auth/', include('djoser.urls.jwt')),
-    path('api/stripe/', include('payments.urls'))
+    path('stripe/', include('payments.urls'))
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

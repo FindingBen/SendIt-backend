@@ -71,7 +71,7 @@ def payment_successful(request, id):
 @csrf_exempt
 def stripe_webhook(request):
     stripe.api_key = settings.STRIPE_SECRET_KEY
-    time.sleep(5)
+    time.sleep(2)
     payload = request.body
     signature_header = request.META['HTTP_STRIPE_SIGNATURE']
     event = None

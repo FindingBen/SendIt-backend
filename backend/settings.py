@@ -59,8 +59,10 @@ CORS_ALLOW_ALL_ORIGINS = False
 
 
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',
-    'https://checkout.stripe.com'  # Replace with the origin of your React application
+    # 'http://localhost:3000',
+    'https://checkout.stripe.com',
+    # Replace with the origin of your React application
+    'https://sendit-frontend-production.up.railway.app'
 ]
 
 CORS_ALLOW_CREDENTIALS = True
