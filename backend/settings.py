@@ -19,9 +19,7 @@ SECRET_KEY = os.environ['SECRET_KEY']
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['https://checkout.stripe.com',
-                 # Replace with the origin of your React application
-                 'https://sendit-frontend-production.up.railway.app']
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
