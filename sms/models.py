@@ -8,6 +8,7 @@ class Sms(models.Model):
     # message = models.ForeignKey(Message, on_delete=models.CASCADE)
     sender = models.CharField(max_length=20, null=False)
     sms_text = models.TextField(max_length=100, null=False)
+    content_link = models.URLField(max_length=100, null=True, blank=True)
 
     def save(self, *args, **kwargs):
         account_sid = 'AC60677c3a06dcd08999640a1db5b03770'
@@ -23,9 +24,18 @@ class Sms(models.Model):
         recipient_numbers = NUMBERS.values()
 
         for recipient_number in recipient_numbers:
-            sms = client.messages.create(
-                from_='+14847299112',
-                body=self.sms_text,
-                to=recipient_number
-            )
+
+            if self.content_link:
+                sms = client.messages.create(
+                    from_='+14847299112',
+                    body=self.sms_text.replace('#Link', self.content_link),
+                    to=recipient_number
+                )
+            else:
+                sms = client.messages.create(
+                    from_='+14847299112',
+                    body=self.sms_text,
+                    to=recipient_number
+                )
+
         return super().save(*args, **kwargs)
