@@ -57,9 +57,6 @@ class StripeCheckoutVIew(APIView):
 def payment_successful(request, id):
     stripe.api_key = settings.STRIPE_SECRET_KEY
 
-    session = stripe.checkout.Session.retrieve(id)
-
-    # customer = stripe.Customer.retrieve(session.customer)
     user_id = request.user
 
     user_payment = UserPayment.objects.get(user=user_id)
@@ -71,7 +68,7 @@ def payment_successful(request, id):
 @csrf_exempt
 def stripe_webhook(request):
     stripe.api_key = settings.STRIPE_SECRET_KEY
-    time.sleep(5)
+    time.sleep(2)
     payload = request.body
     signature_header = request.META['HTTP_STRIPE_SIGNATURE']
     event = None

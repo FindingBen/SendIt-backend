@@ -21,7 +21,7 @@ class MessageSerializer(ModelSerializer):
 
     class Meta:
         model = Message
-        fields = ['id', 'users', 'element_list']
+        fields = ['id', 'users', 'element_list', 'created_at', 'status']
 
     def create(self, validated_data):
 

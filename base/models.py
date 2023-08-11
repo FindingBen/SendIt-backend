@@ -5,6 +5,7 @@ from django.dispatch import receiver
 from django.urls import reverse
 from django_rest_passwordreset.signals import reset_password_token_created
 from django.core.mail import send_mail
+from django.conf import settings
 
 
 class PackagePlan(models.Model):
@@ -52,17 +53,22 @@ class CustomUser(User):
 class Message(models.Model):
     users = models.ForeignKey(User, on_delete=models.CASCADE)
     element_list = models.ManyToManyField('Element', related_name='messages')
+    created_at = models.DateField(
+        auto_now_add=True)
+    status = models.CharField(max_length=10, blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        self.status = 'No Action'
+        super().save(*args, **kwargs)
 
 
 class Element(models.Model):
-    # Define fields common to all element types
-    # For example, you can have a type field to distinguish between different element types
+
     element_type = models.CharField(max_length=20, null=True)
-    # Add other fields specific to each element type
-    # For example, for image element, you can have an image field
+
     image = models.ImageField(blank=True, null=True)
     alignment = models.CharField(max_length=20, null=True)
-    # For text element, you can have a text field
+
     text = models.TextField(blank=True)
     button_title = models.CharField(max_length=20, null=True)
     button_link = models.CharField(max_length=100, null=True)
