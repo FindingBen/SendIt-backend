@@ -16,9 +16,9 @@ if os.path.isfile(dotenv_file):
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ['SECRET_KEY']
 
-print(BASE_DIR)
+
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
@@ -98,6 +98,8 @@ TEMPLATES = [
         },
     },
 ]
+
+DATE_INPUT_FORMATS = ['%d-%m-%Y']
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 

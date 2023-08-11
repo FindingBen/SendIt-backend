@@ -5,6 +5,7 @@ from django.dispatch import receiver
 from django.urls import reverse
 from django_rest_passwordreset.signals import reset_password_token_created
 from django.core.mail import send_mail
+from django.conf import settings
 
 
 class PackagePlan(models.Model):
@@ -52,7 +53,13 @@ class CustomUser(User):
 class Message(models.Model):
     users = models.ForeignKey(User, on_delete=models.CASCADE)
     element_list = models.ManyToManyField('Element', related_name='messages')
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateField(
+        auto_now_add=True)
+    status = models.CharField(max_length=10, blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        self.status = 'No Action'
+        super().save(*args, **kwargs)
 
 
 class Element(models.Model):
