@@ -246,21 +246,28 @@ def delete_contact_recipient(request, id):
 
 
 @api_view(['GET'])
-def get_analytics_data(request):
-    analytics_data = sample_run_report()
+def get_analytics_data(request, record_id):
+    analytics_data = sample_run_report(record_id=record_id)
 
     # Extract rows from the response
     rows = analytics_data.rows
-
+    print(rows)
     formatted_data = []
     for row in rows:
         dimension_value = row.dimension_values[0].value
-        metric_value = row.metric_values[0].value
-
+        metric_value_engegement = row.metric_values[0].value
+        screen_views = row.metric_values[1].value
+        user_engegment_duration = row.metric_values[2].value
+        scrolled_percentage = row.metric_values[3].value
+        avg_session_duration = row.metric_values[4].value
         # Create a dictionary to represent the formatted row
         formatted_row = {
             'dimension': dimension_value,
-            'metric': metric_value
+            'engegement_rate': metric_value_engegement,
+            'screen_views': screen_views,
+            'user_engagement_duration': user_engegment_duration,
+            'scrolled_percentage': scrolled_percentage,
+            'avg_session': avg_session_duration
         }
         formatted_data.append(formatted_row)
 

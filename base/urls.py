@@ -25,7 +25,7 @@ urlpatterns = [
     path('create_list/<str:id>', views.create_list),
     path('delete_recipient/<str:id>/', views.delete_contact_recipient),
     path('package_purchase/<str:id>/', views.purchase_package),
-    path('get_analytcs/', views.get_analytics_data),
+    path('get_analytcs/<int:record_id>/', views.get_analytics_data),
     path('token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('password_reset/',
