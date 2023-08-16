@@ -13,6 +13,7 @@ from rest_framework import generics
 from django.contrib.auth.models import User
 from django.contrib.auth.views import PasswordResetView
 from django.contrib.messages.views import SuccessMessageMixin
+from .utils.googleAnalytics import sample_run_report
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -242,3 +243,25 @@ def delete_contact_recipient(request, id):
     contact = Contact.objects.get(id=id)
     contact.delete()
     return Response("Message deleted!")
+
+
+@api_view(['GET'])
+def get_analytics_data(request):
+    analytics_data = sample_run_report()
+
+    # Extract rows from the response
+    rows = analytics_data.rows
+
+    formatted_data = []
+    for row in rows:
+        dimension_value = row.dimension_values[0].value
+        metric_value = row.metric_values[0].value
+
+        # Create a dictionary to represent the formatted row
+        formatted_row = {
+            'dimension': dimension_value,
+            'metric': metric_value
+        }
+        formatted_data.append(formatted_row)
+
+    return Response({'message': 'Data returned!', 'data': formatted_data})
