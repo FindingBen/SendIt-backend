@@ -1,11 +1,13 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.auth.base_user import AbstractBaseUser
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.urls import reverse
 from django_rest_passwordreset.signals import reset_password_token_created
 from django.core.mail import send_mail
 from django.conf import settings
+from django.apps import apps
 
 
 class PackagePlan(models.Model):
@@ -55,11 +57,12 @@ class Message(models.Model):
     element_list = models.ManyToManyField('Element', related_name='messages')
     created_at = models.DateField(
         auto_now_add=True)
-    status = models.CharField(max_length=10, blank=True, null=True)
+    status = models.CharField(
+        max_length=10, blank=True, null=True, default='Draft')
 
-    def save(self, *args, **kwargs):
-        self.status = 'No Action'
-        super().save(*args, **kwargs)
+    # def save(self, *args, **kwargs):
+    #     self.status = 'Draft'
+    #     super().save(*args, **kwargs)
 
 
 class Element(models.Model):
@@ -77,6 +80,19 @@ class Element(models.Model):
 class ContactList(models.Model):
     users = models.ForeignKey(User, on_delete=models.CASCADE)
     list_name = models.CharField(max_length=20)
+    contact_lenght = models.IntegerField(null=True, blank=True)
+
+    @receiver(post_save, sender='base.Contact')
+    @receiver(post_delete, sender='base.Contact')
+    def update_contact_list_count(sender, instance, **kwargs):
+        # Replace 'yourappname' with your actual app name
+        Contact = apps.get_model('base', 'Contact')
+        contact_list = instance.contact_list
+        print('TEST')
+        contact_count = Contact.objects.filter(
+            contact_list=contact_list).count()
+        contact_list.contact_lenght = contact_count
+        contact_list.save()
 
 
 class Contact(models.Model):

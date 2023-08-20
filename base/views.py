@@ -20,16 +20,21 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
+        print('TOKEN', token)
         # Add custom claims
         token['username'] = user.username
+        token['first_name'] = user.first_name
         # token['package_plan'] = user.package_plan
         # ...
-
+        print('TOKEN')
         return token
 
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
+
+    def validate(self, **kwargs):
+        pass
 
 
 @api_view(['GET'])
@@ -89,6 +94,7 @@ def get_packages(request):
 def get_contact_lists(request):
     user = request.user
     contact_list = user.contactlist_set.all()
+
     serializer = ContactListSerializer(contact_list, many=True)
 
     return Response(serializer.data)
@@ -99,6 +105,7 @@ def get_contact_lists(request):
 def get_contact_list(request, pk):
     user = request.user
     contact_list = ContactList.objects.get(id=pk)
+
     serializer = ContactListSerializer(contact_list)
 
     return Response(serializer.data)
@@ -111,6 +118,7 @@ def get_contact_list(request, pk):
 def get_contacts(request, id):
     contact_list = ContactList.objects.get(id=id)
     contact = Contact.objects.filter(contact_list=contact_list)
+
     serializer = ContactSerializer(contact, many=True)
 
     return Response(serializer.data)
