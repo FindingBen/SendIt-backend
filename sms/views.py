@@ -1,10 +1,10 @@
 from django.shortcuts import render, get_object_or_404
-from django.http import JsonResponse
 from rest_framework import status, views
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from .models import Sms
+from django.views.decorators.csrf import csrf_exempt
 from base.models import Message, ContactList, CustomUser
 from base.serializers import MessageSerializer
 from .serializers import SmsSerializer

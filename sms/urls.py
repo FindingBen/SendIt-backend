@@ -5,5 +5,6 @@ from .views import createSms
 
 urlpatterns = [
     path('sms-editor/<str:id>', views.get_message),
-    path('sms-send/', createSms.as_view())
+    path('sms-send/', createSms.as_view()),
+
 ]
