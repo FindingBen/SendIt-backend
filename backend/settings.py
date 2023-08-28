@@ -18,7 +18,7 @@ SECRET_KEY = os.environ['SECRET_KEY']
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
@@ -64,7 +64,7 @@ CORS_ALLOW_ALL_ORIGINS = False
 
 
 CORS_ALLOWED_ORIGINS = [
-    # 'http://localhost:3000',
+    'http://localhost:3000',
     'https://checkout.stripe.com',
     # Replace with the origin of your React application
     'https://sendit-frontend-production.up.railway.app'
@@ -226,7 +226,7 @@ USE_I18N = True
 
 USE_TZ = True
 
-MEDIA_URL = '/media/'
+MEDIA_URL = 'media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 
 # Static files (CSS, JavaScript, Images)
