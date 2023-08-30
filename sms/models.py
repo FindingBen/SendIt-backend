@@ -14,8 +14,7 @@ class Sms(models.Model):
     contact_list = models.ForeignKey(ContactList, on_delete=models.CASCADE)
 
     def save(self, *args, **kwargs):
-        client = vonage.Client(key=os.environ(
-            'VONAGE_ACCOUNT_ID'), secret=os.environ('VONAGE_TOKEN'))
+        client = vonage.Client(key='33572b56', secret='cq75YEW2e1Z5coGZ')
         sms = vonage.Sms(client)
 
         # Use self.contact_list to get the related ContactList instance
@@ -38,6 +37,7 @@ class Sms(models.Model):
                             "text": self.sms_text.replace('#Link', self.content_link),
                         }
                     )
+                    print('DATA', responseData)
                 else:
                     responseData = sms.send_message(
                         {
