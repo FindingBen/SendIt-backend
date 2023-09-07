@@ -259,10 +259,11 @@ def get_analytics_data(request, record_id):
 
     # Extract rows from the response
     rows = analytics_data.rows
-    print(rows)
+
     formatted_data = []
     for row in rows:
-        dimension_value = row.dimension_values[0].value
+        # dimension_value = row.dimension_values[0].value
+        dimension_value = row.dimension_values[1].value
         metric_value_engegement = row.metric_values[0].value
         screen_views = row.metric_values[1].value
         user_engegment_duration = row.metric_values[2].value
@@ -270,7 +271,8 @@ def get_analytics_data(request, record_id):
         avg_session_duration = row.metric_values[4].value
         # Create a dictionary to represent the formatted row
         formatted_row = {
-            'dimension': dimension_value,
+            # 'dimension': dimension_value,
+            'date': dimension_value,
             'engegement_rate': metric_value_engegement,
             'screen_views': screen_views,
             'user_engagement_duration': user_engegment_duration,
