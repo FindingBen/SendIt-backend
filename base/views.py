@@ -255,6 +255,10 @@ def delete_contact_recipient(request, id):
 
 @api_view(['GET'])
 def get_analytics_data(request, record_id):
-    analytics_data = sample_run_report(record_id=record_id)
-    print(analytics_data)
+
+    start_date = request.query_params.get('startDate')
+    end_date = request.query_params.get('endDate')
+    analytics_data = sample_run_report(
+        record_id=record_id, start_date=start_date, end_date=end_date)
+
     return Response({'message': 'Data returned!', 'data': analytics_data})

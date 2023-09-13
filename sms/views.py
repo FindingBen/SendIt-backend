@@ -9,6 +9,8 @@ from base.models import Message, ContactList, CustomUser
 from base.serializers import MessageSerializer
 from .serializers import SmsSerializer
 from rest_framework import generics
+from django.http import JsonResponse
+from django.http import HttpResponseRedirect
 
 
 @api_view(['GET'])
@@ -23,13 +25,23 @@ def get_message(request, id):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_sms(request, id):
+    sms = Sms.objects.get(message_id=id)
+    print("OBJECT", sms)
+    serializer = SmsSerializer(sms)
+
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class createSms(generics.GenericAPIView):
     serializer_class = SmsSerializer
 
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        print(request.data)
+
         user_obj = CustomUser.objects.get(id=request.data['user'])
         if user_obj.sms_count > 0:
             print('ssdasds')
@@ -41,3 +53,20 @@ class createSms(generics.GenericAPIView):
                 })
         else:
             return Response({'error': 'You have no sms credit left, purchase a new package or extend the current one'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+def track_link_click(request, uuid):
+    # message_obj = request.data['message']
+
+    sms_obj = Sms.objects.get(unique_id=uuid)
+
+    message_obj = Message.objects.get(id=sms_obj.message.id)
+
+    sms_obj.click_number += 1  # Increment click_number by 1
+    sms_obj.save()
+
+    print(sms_obj)
+    # # Return a JSON response indicating that the click was recorded
+    # # Replace with your desired URL
+    redirect_url = f"http://localhost:3000/message_view/{message_obj.id}"
+    return HttpResponseRedirect(redirect_url)

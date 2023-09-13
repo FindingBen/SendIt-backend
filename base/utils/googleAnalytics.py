@@ -19,8 +19,9 @@ def get_all_dates_in_range(start_date, end_date):
     return set(date.strftime("%Y-%m-%d") for date in date_list)
 
 
-def sample_run_report(property_id="400824086", record_id=None):
+def sample_run_report(property_id="400824086", record_id=None, start_date=None, end_date=None):
     page_specified = f'/message_view/{record_id}'
+   
     # page_specified = f'/message_view/44'
     # print("ID", record_id)
     # Using a default constructor instructs the client to use the credentials
@@ -29,9 +30,17 @@ def sample_run_report(property_id="400824086", record_id=None):
     credentials_path = os.path.abspath('base/utils/credentials.json')
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
     client = BetaAnalyticsDataClient()
-    date_range = DateRange(start_date="2023-08-25",
-                           end_date=datetime.now().date().isoformat())
+    if start_date is None or end_date is None:
+        print('NONE')
+        start_date = (datetime.now() - timedelta(days=1)).date().isoformat()
+        end_date = datetime.now().date().isoformat()
+        date_range = DateRange(start_date=start_date, end_date=end_date)
+    else:
+        print('YESS')
+        date_range = DateRange(start_date=start_date,
+                               end_date=end_date)
 
+    
     request = RunReportRequest(
         property=f"properties/{property_id}",
         dimensions=[Dimension(name="pagePath"),
