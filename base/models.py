@@ -87,8 +87,9 @@ class ContactList(models.Model):
     def update_contact_list_count(sender, instance, **kwargs):
         # Replace 'yourappname' with your actual app name
         Contact = apps.get_model('base', 'Contact')
+
         contact_list = instance.contact_list
-        print('TEST')
+        print('www')
         contact_count = Contact.objects.filter(
             contact_list=contact_list).count()
         contact_list.contact_lenght = contact_count

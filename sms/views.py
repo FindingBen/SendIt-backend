@@ -44,10 +44,10 @@ class createSms(generics.GenericAPIView):
 
         user_obj = CustomUser.objects.get(id=request.data['user'])
         if user_obj.sms_count > 0:
-            print('ssdasds')
             if serializer.is_valid():
+
                 sms = serializer.save()
-                print('ss')
+
                 return Response({
                     "sms": SmsSerializer(sms, context=self.get_serializer_context()).data
                 })
@@ -56,16 +56,14 @@ class createSms(generics.GenericAPIView):
 
 
 def track_link_click(request, uuid):
-    # message_obj = request.data['message']
 
-    sms_obj = Sms.objects.get(unique_id=uuid)
+    sms_obj = Sms.objects.get(unique_tracking_id=uuid)
 
     message_obj = Message.objects.get(id=sms_obj.message.id)
 
     sms_obj.click_number += 1  # Increment click_number by 1
     sms_obj.save()
 
-    print(sms_obj)
     # # Return a JSON response indicating that the click was recorded
     # # Replace with your desired URL
     redirect_url = f"http://localhost:3000/message_view/{message_obj.id}"

@@ -241,7 +241,7 @@ def delete_element(request, id):
 
     element = Element.objects.get(id=id)
     element.delete()
-    return Response("Message deleted!")
+    return Response("Element deleted!")
 
 
 @api_view(['DELETE'])
@@ -250,7 +250,24 @@ def delete_contact_recipient(request, id):
 
     contact = Contact.objects.get(id=id)
     contact.delete()
-    return Response("Message deleted!")
+    return Response("Recipient deleted!")
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_contact_list(request, id):
+    try:
+        contact_list = ContactList.objects.get(id=id)
+    except ContactList.DoesNotExist:
+        return Response("List not found", status=status.HTTP_404_NOT_FOUND)
+
+    # Delete all associated contacts first
+    Contact.objects.filter(contact_list=contact_list).delete()
+
+    # Now, delete the contact list
+    contact_list.delete()
+
+    return Response("List deleted successfully!")
 
 
 @api_view(['GET'])
