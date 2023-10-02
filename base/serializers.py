@@ -45,6 +45,8 @@ class UserSerializer(ModelSerializer):
 
 
 class CustomUserSerializer(ModelSerializer):
+    package_plan = PackageSerializer()
+
     class Meta:
         model = CustomUser
         fields = ['id', 'username', 'email',

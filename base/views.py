@@ -6,13 +6,9 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.permissions import IsAuthenticated
-from rest_framework_simplejwt.tokens import AccessToken
 from .serializers import MessageSerializer, RegisterSerializer, UserSerializer, CustomUserSerializer, ContactListSerializer, ContactSerializer, ElementSerializer, PackageSerializer, ChangePasswordSerializer
 from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser
 from rest_framework import generics
-from django.contrib.auth.models import User
-from django.contrib.auth.views import PasswordResetView
-from django.contrib.messages.views import SuccessMessageMixin
 from .utils.googleAnalytics import sample_run_report
 
 
@@ -20,13 +16,20 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-        print('TOKEN', token)
+
         # Add custom claims
         token['username'] = user.username
         token['first_name'] = user.first_name
-        # token['package_plan'] = user.package_plan
-        # ...
-        print('TOKEN')
+        token['last_name'] = user.last_name
+
+        try:
+            custom_user = CustomUser.objects.get(username=user.username)
+            serialized_data = custom_user.serialize_package_plan()
+
+            token['package_plan'] = serialized_data
+        except CustomUser.DoesNotExist:
+            token['package_plan'] = None
+
         return token
 
 
@@ -87,7 +90,6 @@ def get_packages(request):
     serializer = PackageSerializer(package, many=True)
 
     return Response(serializer.data)
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

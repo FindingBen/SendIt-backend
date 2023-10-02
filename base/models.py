@@ -51,6 +51,14 @@ class CustomUser(User):
             self.sms_count = package_plan.sms_count_pack
         super().save(*args, **kwargs)
 
+    def serialize_package_plan(self):
+        # Implement custom serialization logic here
+        return {
+            'package_plan': self.package_plan.plan_type,
+            'sms_count': self.sms_count,
+            # Add other relevant data
+        }
+
 
 class Message(models.Model):
     users = models.ForeignKey(User, on_delete=models.CASCADE)

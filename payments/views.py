@@ -81,6 +81,7 @@ def stripe_webhook(request):
         return HttpResponse(status=400)
     except stripe.error.SignatureVerificationError as e:
         return HttpResponse(status=400)
+
     if event['type'] == 'checkout.session.completed':
         with transaction.atomic():
             try:
@@ -89,7 +90,7 @@ def stripe_webhook(request):
                 customer_email = session["customer_details"]["email"]
                 product_id = session["metadata"]["product_id"]
 
-                time.sleep(10)
+                time.sleep(5)
                 user_payment = UserPayment.objects.get(
                     stripe_checkout_id=session_id)
                 user_payment.payment_bool = True
