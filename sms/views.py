@@ -60,11 +60,11 @@ def track_link_click(request, uuid):
     sms_obj = Sms.objects.get(unique_tracking_id=uuid)
 
     message_obj = Message.objects.get(id=sms_obj.message.id)
-
+    print(message_obj.id)
     sms_obj.click_number += 1  # Increment click_number by 1
     sms_obj.save()
 
     # # Return a JSON response indicating that the click was recorded
     # # Replace with your desired URL
-    redirect_url = f"http://localhost:3000/message_view/{message_obj.id}"
+    redirect_url = f"https://sendit-frontend-production.up.railway.app/message_view/{message_obj.id}"
     return HttpResponseRedirect(redirect_url)
