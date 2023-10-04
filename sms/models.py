@@ -10,8 +10,8 @@ class Sms(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     message = models.ForeignKey(Message, on_delete=models.CASCADE)
     sender = models.CharField(max_length=20, null=False)
-    sms_text = models.TextField(max_length=100, null=False)
-    content_link = models.URLField(max_length=100, null=True, blank=True)
+    sms_text = models.TextField(max_length=500, null=False)
+    content_link = models.URLField(max_length=500, null=True, blank=True)
     contact_list = models.ForeignKey(ContactList, on_delete=models.CASCADE)
     sms_sends = models.IntegerField(default=0)
     click_number = models.IntegerField(default=0)
@@ -62,16 +62,17 @@ class Sms(models.Model):
                             )
 
                     if responseData["messages"][0]["status"] == "0":
-                        print("Message sent successfully.")
+                        print(responseData)
                         self.message.status = 'sent'
                         self.message.save()
                         self.is_sent = True  # Moved this line inside the if block
                         super().save(*args, **kwargs)  # Save the instance here
 
                     else:
-                        print('s')
-                        # print(
-                        #     f"Message failed with error: {responseData['messages'][0]['error-text']}")
+
+                        print(
+                            f"Message failed with error: {responseData['messages'][0]['error-text']}")
+
                 except Exception as e:
                     print("Error sending SMS:", str(e))
             else:
