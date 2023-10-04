@@ -193,12 +193,15 @@ DJOSER = {
 #     }
 # }
 
-DATABASE_URL = os.environ['DATABASE_URL']
-
 DATABASES = {
-    'default':
-    dj_database_url.config(default=DATABASE_URL, conn_max_age=1800)
-
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'railway',
+        'USER': os.environ['POSTGRES_USER'],
+        'PASSWORD': os.environ['POSTGRES_PASS'],
+        'HOST': os.environ['POSTGRES_HOST'],
+        'PORT': '7491',
+    }
 }
 
 
