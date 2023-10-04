@@ -182,27 +182,27 @@ DJOSER = {
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'sendperplane',
-        'USER': 'postgres',
-        'PASSWORD': 'rootPass123!',
-        'HOST': '127.0.0.1',
-        'PORT': '5432',
-    }
-}
-
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-#         'NAME': 'railway',
-#         'USER': os.environ['POSTGRES_USER'],
-#         'PASSWORD': os.environ['POSTGRES_PASS'],
-#         'HOST': os.environ['POSTGRES_HOST'],
-#         'PORT': '7491',
+#         'NAME': 'sendperplane',
+#         'USER': 'postgres',
+#         'PASSWORD': 'rootPass123!',
+#         'HOST': '127.0.0.1',
+#         'PORT': '5432',
 #     }
 # }
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'railway',
+        'USER': os.environ['POSTGRES_USER'],
+        'PASSWORD': os.environ['POSTGRES_PASS'],
+        'HOST': os.environ['POSTGRES_HOST'],
+        'PORT': os.environ['PORT'],
+    }
+}
 
 
 # Password validation
