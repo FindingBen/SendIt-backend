@@ -43,7 +43,7 @@ class StripeCheckoutVIew(APIView):
                 payment_method_types=['card'],
                 mode='payment',
                 success_url=settings.DOMAIN_STRIPE_NAME + \
-                '/?success=true&session_id={CHECKOUT_SESSION_ID}',
+                '/payment_successfull/?success=true&session_id={CHECKOUT_SESSION_ID}',
                 cancel_url=settings.DOMAIN_STRIPE_NAME_CANCEL + '/?cancel=true',
             )
             return Response({"url": checkout_session.url})
