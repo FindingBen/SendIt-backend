@@ -42,9 +42,9 @@ class StripeCheckoutVIew(APIView):
 
                 payment_method_types=['card'],
                 mode='payment',
-                success_url=settings.DOMAIN_NAME + \
+                success_url=settings.DOMAIN_STRIPE_NAME + \
                 '/?success=true&session_id={CHECKOUT_SESSION_ID}',
-                cancel_url=settings.DOMAIN_NAME_CANCEL + '/?cancel=true',
+                cancel_url=settings.DOMAIN_STRIPE_NAME_CANCEL + '/?cancel=true',
             )
             return Response({"url": checkout_session.url})
 
@@ -60,15 +60,23 @@ def payment_successful(request, id):
     user_id = request.user
 
     user_payment = UserPayment.objects.get(user=user_id)
+
     user_payment.stripe_checkout_id = id
     user_payment.save()
     return Response('Successfull response')
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def payment_cancelled(request):
+
+    return Response('Payment cancelled response')
+
+
 @csrf_exempt
 def stripe_webhook(request):
     stripe.api_key = settings.STRIPE_SECRET_KEY
-    time.sleep(2)
+    time.sleep(5)
     payload = request.body
     signature_header = request.META['HTTP_STRIPE_SIGNATURE']
     event = None
@@ -90,9 +98,11 @@ def stripe_webhook(request):
                 customer_email = session["customer_details"]["email"]
                 product_id = session["metadata"]["product_id"]
 
-                time.sleep(5)
+                time.sleep(10)
+                print(session_id)
                 user_payment = UserPayment.objects.get(
                     stripe_checkout_id=session_id)
+
                 user_payment.payment_bool = True
                 user_payment.save()
 

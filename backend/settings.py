@@ -184,27 +184,27 @@ DJOSER = {
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-#         'NAME': 'sendperplane',
-#         'USER': 'postgres',
-#         'PASSWORD': 'rootPass123!',
-#         'HOST': '127.0.0.1',
-#         'PORT': '5432',
-#     }
-# }
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'railway',
-        'USER': os.environ['POSTGRES_USER'],
-        'PASSWORD': os.environ['POSTGRES_PASS'],
-        'HOST': os.environ['POSTGRES_HOST'],
-        'PORT': os.environ['PORT'],
+        'NAME': 'sendperplane',
+        'USER': 'postgres',
+        'PASSWORD': 'rootPass123!',
+        'HOST': '127.0.0.1',
+        'PORT': '5432',
     }
 }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+#         'NAME': 'railway',
+#         'USER': os.environ['POSTGRES_USER'],
+#         'PASSWORD': os.environ['POSTGRES_PASS'],
+#         'HOST': os.environ['POSTGRES_HOST'],
+#         'PORT': os.environ['PORT'],
+#     }
+# }
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -250,9 +250,14 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-DOMAIN_NAME = 'http://localhost:3000/stripe'
+# DOMAIN_NAME = 'http://localhost:3000/stripe'
 
-DOMAIN_NAME_CANCEL = 'http://localhost:3000/stripe_cancel'
+# DOMAIN_NAME_CANCEL = 'http://localhost:3000/stripe_cancel'
+
+
+DOMAIN_STRIPE_NAME = 'https://sendit-backend-production.up.railway.app/stripe/'
+
+DOMAIN_STRIPE_NAME_CANCEL = 'https://sendit-backend-production.up.railway.app/stripe_cancel/'
 
 ACTIVE_PRODUCTS = (('Basic Package', 'price_1NSzPTAD7NIuijyS69UOcr4w', 1), ('Silver Package',
                    'price_1NTJF1AD7NIuijySWfczHhRp', 2), ('Gold Package', 'price_1NTKmiAD7NIuijySwioi2U02', 3))

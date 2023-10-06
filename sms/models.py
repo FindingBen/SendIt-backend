@@ -42,7 +42,6 @@ class Sms(models.Model):
                     for recipient_number in numbers_dict.values():
 
                         if self.content_link:
-                            print('test')
 
                             responseData = sms.send_message(
                                 {
