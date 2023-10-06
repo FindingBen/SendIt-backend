@@ -255,7 +255,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 # DOMAIN_NAME_CANCEL = 'http://localhost:3000/stripe_cancel'
 
 
-DOMAIN_STRIPE_NAME = 'https://sendit-backend-production.up.railway.app/stripe'
+DOMAIN_STRIPE_NAME = 'https://sendit-backend-production.up.railway.app/stripe/payment_successfull'
 
 DOMAIN_STRIPE_NAME_CANCEL = 'https://sendit-backend-production.up.railway.app/stripe_cancel'
 
