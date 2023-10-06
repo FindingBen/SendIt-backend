@@ -250,14 +250,14 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-# DOMAIN_NAME = 'http://localhost:3000/stripe'
+# DOMAIN_STRIPE_NAME = 'http://localhost:3000/stripe'
 
-# DOMAIN_NAME_CANCEL = 'http://localhost:3000/stripe_cancel'
+# DOMAIN_STRIPE_NAME_CANCEL = 'http://localhost:3000/stripe_cancel'
 
 
-DOMAIN_STRIPE_NAME = 'https://sendit-backend-production.up.railway.app/stripe'
+DOMAIN_STRIPE_NAME = 'https://sendit-frontend-production.up.railway.app/stripe'
 
-DOMAIN_STRIPE_NAME_CANCEL = 'https://sendit-backend-production.up.railway.app/stripe_cancel'
+DOMAIN_STRIPE_NAME_CANCEL = 'https://sendit-frontend-production.up.railway.app/stripe_cancel'
 
 ACTIVE_PRODUCTS = (('Basic Package', 'price_1NSzPTAD7NIuijyS69UOcr4w', 1), ('Silver Package',
                    'price_1NTJF1AD7NIuijySWfczHhRp', 2), ('Gold Package', 'price_1NTKmiAD7NIuijySwioi2U02', 3))
