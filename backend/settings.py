@@ -86,6 +86,15 @@ CORS_ALLOW_HEADERS = ["accept",
                       "x-csrftoken",
                       "x-requested-with",]
 
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',  # Allow OPTIONS method for preflight requests
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
