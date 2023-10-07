@@ -6,5 +6,6 @@ urlpatterns = [
     path('stripe_checkout_session', StripeCheckoutVIew.as_view()),
     path('payment_successfull/<str:id>', views.payment_successful),
     path('payment_cancelled', views.payment_cancelled),
-    path('payment_webhook', views.stripe_webhook, name='stripe_webhook'),
+    path('config/', views.stripe_config),
+    path('stripe_webhook', views.stripe_webhook, name='stripe_webhook'),
 ]

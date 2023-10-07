@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from .models import UserPayment
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes, api_view
-from rest_framework.response import Response
+from rest_framework.response import Response, JsonResponse
 from django.db import transaction, IntegrityError
 from django.http import HttpResponse
 from base.models import CustomUser, PackagePlan
@@ -15,6 +15,13 @@ from django.views.decorators.http import require_http_methods
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 print(stripe.api_key)
+
+
+@csrf_exempt
+def stripe_config(request):
+    if request.method == 'GET':
+        stripe_config = {'publicKey': settings.STRIPE_PUBLISHABLE_KEY}
+        return JsonResponse(stripe_config, safe=False)
 
 
 class StripeCheckoutVIew(APIView):
