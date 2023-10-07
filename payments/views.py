@@ -10,9 +10,11 @@ from django.db import transaction, IntegrityError
 from django.http import HttpResponse
 from base.models import CustomUser, PackagePlan
 from django.views.decorators.csrf import csrf_exempt
-
+from django.views.decorators.http import require_http_methods
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
+
+print(stripe.api_key)
 
 
 class StripeCheckoutVIew(APIView):
@@ -73,8 +75,10 @@ def payment_cancelled(request):
     return Response('Payment cancelled response')
 
 
+@require_http_methods(['POST'])
 @csrf_exempt
 def stripe_webhook(request):
+    print('WEBHOOK')
     stripe.api_key = settings.STRIPE_SECRET_KEY
     time.sleep(5)
     payload = request.body
@@ -97,7 +101,7 @@ def stripe_webhook(request):
                 session_id = session.get('id', None)
                 customer_email = session["customer_details"]["email"]
                 product_id = session["metadata"]["product_id"]
-
+                print('WEBHOOK2')
                 time.sleep(10)
                 print(session_id)
                 user_payment = UserPayment.objects.get(
