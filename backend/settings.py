@@ -73,7 +73,7 @@ CORS_ALLOWED_ORIGINS = [
     'https://sendit-frontend-production.up.railway.app'
 ]
 
-CORS_ALLOW_CREDENTIALS = False
+CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOW_HEADERS = ["accept",
                       "accept-encoding",
@@ -85,15 +85,6 @@ CORS_ALLOW_HEADERS = ["accept",
                       "user-agent",
                       "x-csrftoken",
                       "x-requested-with",]
-
-CORS_ALLOW_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',  # Allow OPTIONS method for preflight requests
-    'PATCH',
-    'POST',
-    'PUT',
-]
 
 TEMPLATES = [
     {
