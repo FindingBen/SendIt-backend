@@ -28,12 +28,13 @@ class StripeCheckoutVIew(APIView):
     def post(self, request):
         data_package = [package for package in settings.ACTIVE_PRODUCTS]
 
+        print("ddddd")
         package = next(
             (pkg for pkg in data_package if pkg[0] == request.data['name_product']), None)
 
         if package is None:
             return Response({"error": "Invalid package name"})
-
+        print("ddddd")
         try:
             checkout_session = stripe.checkout.Session.create(
                 line_items=[
@@ -55,6 +56,7 @@ class StripeCheckoutVIew(APIView):
                 '/?success=true&session_id={CHECKOUT_SESSION_ID}',
                 cancel_url=settings.DOMAIN_STRIPE_NAME_CANCEL + '/?cancel=true',
             )
+            print("ddddd")
             return Response({"url": checkout_session.url})
 
         except Exception as e:
