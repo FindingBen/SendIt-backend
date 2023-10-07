@@ -73,7 +73,7 @@ CORS_ALLOWED_ORIGINS = [
     'https://sendit-frontend-production.up.railway.app'
 ]
 
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_CREDENTIALS = False
 
 CORS_ALLOW_HEADERS = ["accept",
                       "accept-encoding",
