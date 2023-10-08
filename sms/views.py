@@ -10,7 +10,10 @@ from base.serializers import MessageSerializer
 from .serializers import SmsSerializer
 from rest_framework import generics
 from django.http import JsonResponse
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse
+import jwt
+from django.db import transaction
+import hashlib
 
 
 @api_view(['GET'])
@@ -29,7 +32,7 @@ def get_message(request, id):
 @permission_classes([IsAuthenticated])
 def get_sms(request, id):
     sms = Sms.objects.get(message_id=id)
-    print("OBJECT", sms)
+
     serializer = SmsSerializer(sms)
 
     return Response(serializer.data, status=status.HTTP_200_OK)
@@ -60,7 +63,7 @@ def track_link_click(request, uuid):
     sms_obj = Sms.objects.get(unique_tracking_id=uuid)
 
     message_obj = Message.objects.get(id=sms_obj.message.id)
-    print(message_obj.id)
+
     sms_obj.click_number += 1  # Increment click_number by 1
     sms_obj.save()
 
@@ -68,3 +71,32 @@ def track_link_click(request, uuid):
     # # Replace with your desired URL
     redirect_url = f"https://sendit-frontend-production.up.railway.app/message_view/{message_obj.id}"
     return HttpResponseRedirect(redirect_url)
+
+
+@csrf_exempt
+@api_view(['POST'])
+def vonage_webhook(request):
+    try:
+        # Parse the JSON data from the request body
+        data = request.data
+        sms_object = Sms.objects.get(unique_tracking_id=data['client-ref'])
+        with transaction.atomic():
+            if data['status'] == 'delivered':
+                sms_object.delivered += 1
+
+            elif data['status'] == 'failed':
+                sms_object.not_delivered += 1
+            elif data['status'] == 'rejected':
+                sms_object.not_delivered += 1
+
+            sms_object.save()
+
+        print('Received Vonage Delivery Receipt:')
+
+        # Respond with a success message
+        return JsonResponse({'message': 'Delivery receipt received successfully'}, status=200)
+
+    except Exception as e:
+        print('Error handling Vonage delivery receipt:', str(e))
+
+        return JsonResponse({'error': 'Error processing delivery receipt'}, status=500)

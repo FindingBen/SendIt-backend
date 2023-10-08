@@ -16,6 +16,8 @@ class Sms(models.Model):
     sms_sends = models.IntegerField(default=0)
     click_number = models.IntegerField(default=0)
     is_sent = models.BooleanField(default=False)
+    delivered = models.IntegerField(default=0)
+    not_delivered = models.IntegerField(default=0)
 
     def save(self, *args, **kwargs):
         with transaction.atomic():
@@ -48,6 +50,7 @@ class Sms(models.Model):
                                     "from": '+12012550867',
                                     "to": f'+{recipient_number}',
                                     "text": self.sms_text.replace('#Link', self.content_link),
+                                    "client-ref": self.unique_tracking_id
                                 }
                             )
 
@@ -57,6 +60,7 @@ class Sms(models.Model):
                                     "from": "+12012550867",
                                     "to": f'+{recipient_number}',
                                     "text": self.sms_text,
+                                    "client-ref": self.unique_tracking_id
                                 }
                             )
 
