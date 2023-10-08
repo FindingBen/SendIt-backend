@@ -99,4 +99,4 @@ def vonage_webhook(request):
     except Exception as e:
         print('Error handling Vonage delivery receipt:', str(e))
 
-        return JsonResponse({'error': 'Error processing delivery receipt'}, status=500)
+        return JsonResponse({'error': 'Error processing delivery receipt'}, status=200)
