@@ -8,3 +8,8 @@ class SmsSerializer(ModelSerializer):
     class Meta:
         model = Sms
         fields = '__all__'
+
+
+class ScheduledSmsSerializer(ModelSerializer):
+    class Meta:
+        pass

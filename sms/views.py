@@ -13,7 +13,9 @@ from django.http import JsonResponse
 from django.http import HttpResponseRedirect, HttpResponse
 import jwt
 from django.db import transaction
-import hashlib
+from django.utils import timezone
+from datetime import datetime
+from celery import shared_task
 
 
 @api_view(['GET'])
@@ -56,6 +58,55 @@ class createSms(generics.GenericAPIView):
                 })
         else:
             return Response({'error': 'You have no sms credit left, purchase a new package or extend the current one'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+@shared_task
+def send_scheduled_sms(sms_id):
+    try:
+        sms = Sms.objects.get(pk=sms_id)
+        # Add logic to send the SMS here
+        # You may want to use a third-party SMS gateway or library for this
+        print('is it running?')
+        sms.save()
+    except Sms.DoesNotExist:
+        pass
+
+
+class ScheduleSms(generics.GenericAPIView):
+    serializer_class = SmsSerializer
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        print(serializer)
+        serializer.is_valid(raise_exception=True)
+
+        user_obj = CustomUser.objects.get(id=request.data['user'])
+        if user_obj.sms_count > 0:
+            if serializer.is_valid():
+                # scheduled_time = serializer.validated_data.get(
+                #     'scheduled_time')
+                scheduled_time = datetime.fromisoformat(
+                    str(serializer.validated_data.get('scheduled_time')))
+                current_time = timezone.now()
+                print('TEST2', scheduled_time)
+                print('CurrentTime', current_time)
+                if scheduled_time > current_time:
+                    sms = Sms(**serializer.validated_data)
+                    sms.save()
+                    print('TEST3', sms)
+                    # Schedule the SMS to be sent in the future
+                    send_scheduled_sms.apply_async(
+                        (sms.id,), eta=scheduled_time)
+
+                    return Response({
+                        "sms": SmsSerializer(sms, context=self.get_serializer_context()).data
+                    })
+                else:
+                    return Response({'error': 'Scheduled time must be in the future.'}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'error': 'You have no SMS credit left, purchase a new package or extend the current one'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 def track_link_click(request, uuid):

@@ -3,6 +3,7 @@ from base.models import ContactList, CustomUser, Message, Contact
 import vonage
 import uuid
 from django.db import transaction
+from django.conf import settings
 
 
 class Sms(models.Model):
@@ -18,65 +19,69 @@ class Sms(models.Model):
     is_sent = models.BooleanField(default=False)
     delivered = models.IntegerField(default=0)
     not_delivered = models.IntegerField(default=0)
+    scheduled_time = models.DateTimeField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
         with transaction.atomic():
             if not self.is_sent:
-                client = vonage.Client(
-                    key='33572b56', secret='cq75YEW2e1Z5coGZ')
-                sms = vonage.Sms(client)
+                print("TEST TIME SCHEDULE", self.scheduled_time)
+                if self.scheduled_time is None:
 
-                # Use self.contact_list to get the related ContactList instance
-                contact_list_obj = self.contact_list
-                contact_obj = Contact.objects.filter(
-                    contact_list=contact_list_obj)
-                # Get value for total sms sends based on contact list length
-                self.sms_sends = contact_list_obj.contact_lenght
-                numbers_dict = {
-                    contact.first_name: contact.phone_number for contact in contact_obj
-                }
-                # numbers_dict = {
-                #     'number1': '4552529924',
-                # }
-                self.content_link = self.content_link + \
-                    f'{self.unique_tracking_id}'
-                try:
-                    for recipient_number in numbers_dict.values():
+                    client = vonage.Client(
+                        key='33572b56', secret='cq75YEW2e1Z5coGZ')
+                    sms = vonage.Sms(client)
 
-                        if self.content_link:
+                    # Use self.contact_list to get the related ContactList instance
+                    contact_list_obj = self.contact_list
+                    contact_obj = Contact.objects.filter(
+                        contact_list=contact_list_obj)
+                    # Get value for total sms sends based on contact list length
+                    self.sms_sends = contact_list_obj.contact_lenght
+                    numbers_dict = {
+                        contact.first_name: contact.phone_number for contact in contact_obj
+                    }
 
-                            responseData = sms.send_message(
-                                {
-                                    "from": '+12012550867',
-                                    "to": f'+{recipient_number}',
-                                    "text": self.sms_text.replace('#Link', self.content_link),
-                                    "client-ref": self.unique_tracking_id
-                                }
-                            )
+                    self.content_link = self.content_link + \
+                        f'{self.unique_tracking_id}'
+                    try:
+                        for recipient_number in numbers_dict.values():
+
+                            if self.content_link:
+
+                                responseData = sms.send_message(
+                                    {
+                                        "from": '+12012550867',
+                                        "to": f'+{recipient_number}',
+                                        "text": self.sms_text.replace('#Link', self.content_link),
+                                        "client-ref": self.unique_tracking_id
+                                    }
+                                )
+
+                            else:
+                                responseData = sms.send_message(
+                                    {
+                                        "from": "+12012550867",
+                                        "to": f'+{recipient_number}',
+                                        "text": self.sms_text,
+                                        "client-ref": self.unique_tracking_id
+                                    }
+                                )
+
+                        if responseData["messages"][0]["status"] == "0":
+                            print(responseData)
+                            self.message.status = 'sent'
+                            self.message.save()
+                            self.is_sent = True  # Moved this line inside the if block
+                            super().save(*args, **kwargs)  # Save the instance here
 
                         else:
-                            responseData = sms.send_message(
-                                {
-                                    "from": "+12012550867",
-                                    "to": f'+{recipient_number}',
-                                    "text": self.sms_text,
-                                    "client-ref": self.unique_tracking_id
-                                }
-                            )
 
-                    if responseData["messages"][0]["status"] == "0":
-                        print(responseData)
-                        self.message.status = 'sent'
-                        self.message.save()
-                        self.is_sent = True  # Moved this line inside the if block
-                        super().save(*args, **kwargs)  # Save the instance here
+                            print(
+                                f"Message failed with error: {responseData['messages'][0]['error-text']}")
 
-                    else:
-
-                        print(
-                            f"Message failed with error: {responseData['messages'][0]['error-text']}")
-
-                except Exception as e:
-                    print("Error sending SMS:", str(e))
+                    except Exception as e:
+                        print("Error sending SMS:", str(e))
+                else:
+                    print('Saved SMS but its not yet sent!')
             else:
                 super().save(*args, **kwargs)  # If is_sent is True, save the instance

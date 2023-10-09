@@ -104,6 +104,8 @@ TEMPLATES = [
 
 DATE_INPUT_FORMATS = ['%d-%m-%Y']
 
+DATETIME_FORMAT = ['%m/%d/%Y %H:%M:%S']  # '10/25/2006 14:30:59'
+
 WSGI_APPLICATION = 'backend.wsgi.application'
 
 
@@ -242,9 +244,13 @@ LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'UTC'
 
+
 USE_I18N = True
 
-USE_TZ = True
+CELERY_TIMEZONE = "UTC"
+CELERY_TASK_TRACK_STARTED = True
+
+# USE_TZ = True
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')

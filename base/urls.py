@@ -29,7 +29,7 @@ urlpatterns = [
     path('get_analytcs/<int:record_id>/', views.get_analytics_data),
     path('token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('password_reset/',
+    path('reset_password/',
          include('django_rest_passwordreset.urls', namespace='password_reset')),
     path('set_password/',
          include('django_rest_passwordreset.urls', namespace='set_password')),
