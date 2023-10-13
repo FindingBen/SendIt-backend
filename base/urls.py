@@ -12,6 +12,7 @@ urlpatterns = [
     path('register/', RegisterAPI.as_view(), name='register'),
     path('create_notes/', CreateNote.as_view()),
     path('create_element/', CreateElement.as_view()),
+    path('update_element/<str:id>/', views.update_element),
     path('message_view/<str:id>/', views.note_view),
     path('message_view_edit/<str:id>/', views.update_message),
     path('delete_message/<str:id>', views.delete_message),

@@ -62,27 +62,22 @@ class CustomUser(User):
 
 class Message(models.Model):
     users = models.ForeignKey(User, on_delete=models.CASCADE)
-    element_list = models.ManyToManyField('Element', related_name='messages')
     created_at = models.DateField(
         auto_now_add=True)
     status = models.CharField(
         max_length=10, blank=True, null=True, default='Draft')
 
-    # def save(self, *args, **kwargs):
-    #     self.status = 'Draft'
-    #     super().save(*args, **kwargs)
-
 
 class Element(models.Model):
 
     element_type = models.CharField(max_length=20, null=True)
-
+    message = models.ForeignKey(Message, on_delete=models.CASCADE)
     image = models.ImageField(blank=True, null=True)
     alignment = models.CharField(max_length=20, null=True)
-
     text = models.TextField(blank=True)
     button_title = models.CharField(max_length=20, null=True)
     button_link = models.CharField(max_length=100, null=True)
+    order = models.PositiveIntegerField()
 
 
 class ContactList(models.Model):

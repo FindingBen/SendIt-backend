@@ -17,15 +17,13 @@ class PackageSerializer(ModelSerializer):
 
 
 class MessageSerializer(ModelSerializer):
-    element_list = ElementSerializer(many=True)
 
     class Meta:
         model = Message
-        fields = ['id', 'users', 'element_list', 'created_at', 'status']
+        fields = ['id', 'users', 'created_at', 'status']
 
     def create(self, validated_data):
 
-        element_list = validated_data.pop('element_list')
         message = Message.objects.create(**validated_data)
         return message
 
@@ -33,9 +31,9 @@ class MessageSerializer(ModelSerializer):
         instance.save()
         return instance
 
-    def get_elements(self, obj):
-        elements = obj.element_list.all()
-        return ElementSerializer(elements, many=True).data
+    # def get_elements(self, obj):
+    #     elements = obj.element_list.all()
+    #     return ElementSerializer(elements, many=True).data
 
 
 class UserSerializer(ModelSerializer):

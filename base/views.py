@@ -65,10 +65,23 @@ def update_user(request, id):
 @api_view(['GET'])
 def note_view(request, id):
     message = Message.objects.get(id=id)
-
-    serializer = MessageSerializer(message)
+    elements = Element.objects.filter(message=message).order_by('order')
+    serializer = ElementSerializer(elements, many=True)
 
     return Response(serializer.data)
+
+
+@api_view(['PUT'])
+def update_element(request, id):
+    try:
+        element = Element.objects.get(id=id)
+        print("DATA", request.data)
+        element.order = request.data['order']
+        element.save()
+        serializer = ElementSerializer(element)
+        return Response(serializer.data)
+    except Element.DoesNotExist:
+        raise Response("Element not found")
 
 
 @api_view(['GET'])
@@ -90,6 +103,7 @@ def get_packages(request):
     serializer = PackageSerializer(package, many=True)
 
     return Response(serializer.data)
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -133,11 +147,11 @@ def update_message(request, id):
     serializer = MessageSerializer(message, data=request.data)
     if serializer.is_valid(raise_exception=True):
 
-        for element_obj in request.data['element_list']:
-            element = Element.objects.get(id=element_obj['element']['id'])
-            message.element_list.add(element)
+        # for element_obj in request.data['element_list']:
+        #     element = Element.objects.get(id=element_obj['element']['id'])
+        #     message.element_list.add(element)
 
-        serializer.update(message, validated_data=request.data['element_list'])
+        serializer.update(message, validated_data=request.data)
         return Response(serializer.data, status=status.HTTP_200_OK)
     else:
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -193,10 +207,10 @@ class CreateNote(generics.GenericAPIView):
 
         message = serializer.save()
 
-        for element_obj in request.data['element_list']:
+        # for element_obj in request.data['element_list']:
 
-            element = Element.objects.get(id=element_obj['element']['id'])
-            message.element_list.add(element)
+        #     element = Element.objects.get(id=element_obj['element']['id'])
+        #     message.element_list.add(element)
 
         return Response({
             "note": MessageSerializer(message, context=self.get_serializer_context()).data
