@@ -187,11 +187,13 @@ DJOSER = {
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+CACHE_TTL = 60 * 15
+
 
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379",
+        "LOCATION": "redis://default:0FxZAn6ojRjLzCYTpXlL@containers-us-west-43.railway.app:7431",
     }
 }
 

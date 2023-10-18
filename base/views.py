@@ -1,5 +1,6 @@
-from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
+from django.conf import settings
+import json
 from rest_framework import status, views
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -10,6 +11,11 @@ from .serializers import MessageSerializer, RegisterSerializer, UserSerializer, 
 from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser
 from rest_framework import generics
 from .utils.googleAnalytics import sample_run_report
+from django.views.decorators.cache import cache_page
+from django.core.cache import caches
+from django.core.cache.backends.base import DEFAULT_TIMEOUT
+
+CACHE_TTL = getattr(settings, 'CACHE_TTL', DEFAULT_TIMEOUT)
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -99,10 +105,23 @@ def get_notes(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_packages(request):
-    package = PackagePlan.objects.all()
-    serializer = PackageSerializer(package, many=True)
 
-    return Response(serializer.data)
+    cached_data = caches['default'].get('packages')
+
+    if cached_data is not None:
+        print('its not loaded from DB')
+        # If the data is found in the cache, return it
+        return Response(cached_data, content_type='application/json')
+    else:
+        # If the data is not in the cache, fetch it, serialize it, and cache it
+        package = PackagePlan.objects.all()
+        serializer = PackageSerializer(package, many=True)
+        data = serializer.data
+        print('its loaded from DB')
+        # Store the data as a JSON list in the cache
+        caches['default'].set('packages', data, CACHE_TTL)
+
+        return Response(data)
 
 
 @api_view(['GET'])

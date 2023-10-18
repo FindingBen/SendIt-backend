@@ -1,0 +1,26 @@
+version: 1
+
+services:
+  web:
+    image: railwayapp/python
+    command: python manage.py runserver 0.0.0.0:$PORT
+    env:
+      - DJANGO_SETTINGS_MODULE=backend.settings
+    ports:
+      - $PORT:8000
+    dependsOn:
+      - redis
+      - celery
+
+  redis:
+    image: railwayapp/redis
+    ports:
+      - 7431:7431
+
+  celery:
+    image: railwayapp/python
+    command: python -m celery -A backend worker --loglevel=info -P solo
+    env:
+      - DJANGO_SETTINGS_MODULE=backend.settings
+    dependsOn:
+      - redis
