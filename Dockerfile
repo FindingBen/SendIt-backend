@@ -15,6 +15,8 @@ ENV DJANGO_SETTINGS_MODULE=backend.settings
 ENV CELERY_BROKER_URL=redis://default:0FxZAn6ojRjLzCYTpXlL@containers-us-west-43.railway.app:7431
 
 
+ARG RAILWAY_ENVIRONMENT
+
 ENV PORT = 8080
 
 EXPOSE 8080

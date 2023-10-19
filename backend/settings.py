@@ -15,7 +15,7 @@ if os.path.isfile(dotenv_file):
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ['SECRET_KEY']
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -110,8 +110,8 @@ DATETIME_FORMAT = ['%m/%d/%Y %H:%M:%S']  # '10/25/2006 14:30:59'
 WSGI_APPLICATION = 'backend.wsgi.application'
 
 
-STRIPE_SECRET_KEY = os.environ['STRIPE_SECRET_KEY']
-STRIPE_WEBHOOK_SECRET = os.environ['STRIPE_WEBHOOK_SECRET']
+STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY")
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET")
 
 REST_FRAMEWORK = {
 
@@ -194,7 +194,7 @@ CACHE_TTL = 60 * 15
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": os.environ['REDIS_URL'],
+        "LOCATION": os.environ.get("REDIS_URL"),
     }
 }
 
@@ -213,10 +213,10 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': 'railway',
-        'USER': os.environ['POSTGRES_USER'],
-        'PASSWORD': os.environ['POSTGRES_PASS'],
-        'HOST': os.environ['POSTGRES_HOST'],
-        'PORT': os.environ['PORT'],
+        'USER': os.environ.get("POSTGRES_USER"),
+        'PASSWORD': os.environ.get('POSTGRES_PASS'),
+        'HOST': os.environ.get('POSTGRES_HOST'),
+        'PORT': os.environ.get('PORT'),
     }
 }
 
@@ -244,8 +244,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_USE_TLS = True
 EMAIL_PORT = 587
-EMAIL_HOST_USER = os.environ['EMAIL_HOST_USER']
-EMAIL_HOST_PASSWORD = os.environ['EMAIL_HOST_PASSWORD']
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
