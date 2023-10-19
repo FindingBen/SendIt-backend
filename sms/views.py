@@ -52,7 +52,7 @@ class createSms(generics.GenericAPIView):
 
         if user_obj.sms_count > 0:
             if serializer.is_valid():
-
+                print('AAA')
                 sms = serializer.save()
                 print(sms.unique_tracking_id)
                 send_sms.delay(sms.unique_tracking_id)

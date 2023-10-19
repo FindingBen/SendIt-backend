@@ -194,7 +194,7 @@ CACHE_TTL = 60 * 15
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": "redis://default:0FxZAn6ojRjLzCYTpXlL@containers-us-west-43.railway.app:7431",
+        "LOCATION": os.environ['REDIS_URL'],
     }
 }
 
