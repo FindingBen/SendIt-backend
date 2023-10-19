@@ -17,8 +17,10 @@ ENV CELERY_BROKER_URL=redis://default:0FxZAn6ojRjLzCYTpXlL@containers-us-west-43
 
 ARG RAILWAY_ENVIRONMENT
 
-ENV PORT = 8080
+RUN mkdir static
 
 EXPOSE 8080
 # Run the Celery worker
 CMD ["python", "-m", "celery", "-A", "backend", "worker", "--loglevel=info","--pool=solo"]
+
+CMD ["gunicorn","--bind", ":8080", "backend.wsgi:application"]
