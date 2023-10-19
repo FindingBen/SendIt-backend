@@ -15,4 +15,4 @@ ENV DJANGO_SETTINGS_MODULE=backend.settings
 ENV CELERY_BROKER_URL=redis://default:0FxZAn6ojRjLzCYTpXlL@containers-us-west-43.railway.app:7431
 
 # Run the Celery worker
-CMD ["python", "-m", "celery", "-A", "backend", "worker", "--loglevel=info -P-solo"]
+CMD ["python", "-m", "celery", "-A", "backend", "worker", "--loglevel=info -P solo"]
