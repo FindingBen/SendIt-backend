@@ -62,15 +62,13 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'backend.urls'
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = False
 
 
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'https://checkout.stripe.com',
     'reverent_easley',
-    "beni14/sendperplane-app:1.0",
-    '78cfe551513a29f835306faec565114b88ebaeb1097887a8be8453cfc9b8097f',
     "http://0.0.0.0:8080",
     'https://sendit-frontend-production.up.railway.app'
 ]
