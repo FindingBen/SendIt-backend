@@ -260,8 +260,8 @@ USE_I18N = True
 CELERY_TIMEZONE = "UTC"
 CELERY_TASK_TRACK_STARTED = True
 CELERY_IMPORTS = ("sms.tasks", )
-CELERY_BROKER_URL = "redis://localhost:6379"
-CELERY_RESULT_BACKEND = "redis://localhost:6379"
+CELERY_BROKER_URL = "redis://default:0FxZAn6ojRjLzCYTpXlL@containers-us-west-43.railway.app:7431"
+CELERY_RESULT_BACKEND = "redis://default:0FxZAn6ojRjLzCYTpXlL@containers-us-west-43.railway.app:7431"
 CELERY_CACHE_BACKEND = 'default'
 # USE_TZ = True
 
