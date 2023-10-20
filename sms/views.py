@@ -99,7 +99,7 @@ def schedule_sms(request):
                 message=message,
                 sms_sends=sms_sends,
                 scheduled_time=data['scheduled_time'],
-                scheduled=data['scheduled'],
+
             )
 
             sms.save()

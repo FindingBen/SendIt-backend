@@ -68,7 +68,7 @@ CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'https://checkout.stripe.com',
- 
+
     "http://0.0.0.0:8080",
     'https://sendit-frontend-production.up.railway.app'
 ]

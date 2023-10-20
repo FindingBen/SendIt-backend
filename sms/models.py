@@ -18,7 +18,7 @@ class Sms(models.Model):
     click_number = models.IntegerField(default=0)
     is_sent = models.BooleanField(default=False)
     delivered = models.IntegerField(default=0)
-    scheduled = models.BooleanField(default=False)
+
     not_delivered = models.IntegerField(default=0)
     scheduled_time = models.DateTimeField(null=True, blank=True)
 
