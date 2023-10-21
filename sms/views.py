@@ -66,60 +66,57 @@ class createSms(generics.GenericAPIView):
 @api_view(['POST'])
 def schedule_sms(request):
 
-    try:
-        data = request.data
-        user_obj = CustomUser.objects.get(id=request.data['user'])
+   # try:
+    data = request.data
+    user_obj = CustomUser.objects.get(id=request.data['user'])
 
-        if user_obj.sms_count > 0:
+    if user_obj.sms_count > 0:
 
-            scheduled_time = datetime.fromisoformat(
-                str(request.data['scheduled_time']))
-            scheduled_time_utc = pytz.timezone(
-                'UTC').localize(scheduled_time)
-            # Adjust for the time zone difference (2 hours ahead)
-            scheduled_time_local = scheduled_time_utc - timedelta(hours=2)
-            current_datetime = datetime.fromisoformat(
-                str(datetime.now()))
-            current_datetime_utc = pytz.timezone(
-                'UTC').localize(current_datetime)
-            custom_user = CustomUser.objects.get(id=data['user'])
-            contact_list = ContactList.objects.get(id=data['contact_list'])
+        scheduled_time = datetime.fromisoformat(
+            str(request.data['scheduled_time']))
+        scheduled_time_utc = pytz.timezone(
+            'UTC').localize(scheduled_time)
+        # Adjust for the time zone difference (2 hours ahead)
+        scheduled_time_local = scheduled_time_utc - timedelta(hours=2)
+        current_datetime = datetime.fromisoformat(
+            str(datetime.now()))
 
-            message = Message.objects.get(id=data['message'])
+        custom_user = CustomUser.objects.get(id=data['user'])
+        contact_list = ContactList.objects.get(id=data['contact_list'])
+
+        message = Message.objects.get(id=data['message'])
+
+        sms_sends = contact_list.contact_lenght
+        sms = Sms(
+            user=custom_user,
+            sender=data['sender'],
+            sms_text=data['sms_text'],
+            content_link=data['content_link'],
+            contact_list=contact_list,
+            message=message,
+            sms_sends=sms_sends,
+            scheduled_time=data['scheduled_time'],
+        )
+
+        sms.save()
+
+        if scheduled_time > current_datetime:
             message.status = 'Scheduled'
             message.save()
+            # Schedule the SMS to be sent in the future
+            send_scheduled_sms.apply_async(
+                (sms.unique_tracking_id,), eta=scheduled_time_local)
 
-            sms_sends = contact_list.contact_lenght
-            sms = Sms(
-                user=custom_user,
-                sender=data['sender'],
-                sms_text=data['sms_text'],
-                content_link=data['content_link'],
-                contact_list=contact_list,
-                message=message,
-                sms_sends=sms_sends,
-                scheduled_time=data['scheduled_time'],
-
-            )
-
-            sms.save()
-
-            if scheduled_time > current_datetime:
-
-                # Schedule the SMS to be sent in the future
-                send_scheduled_sms.apply_async(
-                    (sms.unique_tracking_id,), eta=scheduled_time_local)
-
-                return Response({
-                    "sms": f'{data}'
-                })
-            else:
-                return Response({'error': 'Scheduled time must be in the future.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                "sms": f'{data}'
+            })
         else:
-            return Response({'error': 'You have no SMS credit left, purchase a new package or extend the current one'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-    except:
-        print('There has been an error')
-        return Response('failed')
+            return Response({'error': 'Scheduled time must be in the future.'}, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        return Response({'error': 'You have no SMS credit left, purchase a new package or extend the current one'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    # except:
+    #     print('There has been an error')
+    return Response('failed')
 
 
 def track_link_click(request, uuid):
