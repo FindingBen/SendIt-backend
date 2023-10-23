@@ -2,12 +2,14 @@ import stripe
 import time
 from django.conf import settings
 from rest_framework.views import APIView
-from .models import UserPayment
+from .models import UserPayment, Purchase
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes, api_view
 from rest_framework.response import Response
+from .serializers import PurchaseSerializer
 from django.db import transaction, IntegrityError
 from django.http import HttpResponse
+from rest_framework import status
 from base.models import CustomUser, PackagePlan
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -19,13 +21,12 @@ class StripeCheckoutVIew(APIView):
     def post(self, request):
         data_package = [package for package in settings.ACTIVE_PRODUCTS]
 
-
         package = next(
             (pkg for pkg in data_package if pkg[0] == request.data['name_product']), None)
 
         if package is None:
             return Response({"error": "Invalid package name"})
-     
+
         try:
             checkout_session = stripe.checkout.Session.create(
                 line_items=[
@@ -47,17 +48,19 @@ class StripeCheckoutVIew(APIView):
                 '/?success=true&session_id={CHECKOUT_SESSION_ID}',
                 cancel_url=settings.DOMAIN_STRIPE_NAME_CANCEL + '/?cancel=true',
             )
-          
-            return Response({"url": checkout_session.url})
+
+            url_str = str(checkout_session.url)
+            return Response({"url": url_str})
 
         except Exception as e:
-            return
+
+            error_message = str(e)  # Get the error message as a string
+            return Response({"error": error_message})
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def payment_successful(request, id):
-    stripe.api_key = settings.STRIPE_SECRET_KEY
 
     user_id = request.user
 
@@ -75,11 +78,24 @@ def payment_cancelled(request):
     return Response('Payment cancelled response')
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_purchases(request, id):
+    user_id = request.user
+
+    user_payment = UserPayment.objects.get(user=user_id)
+    purchase_obj = Purchase.objects.filter(userPayment=user_payment)
+    serializer = PurchaseSerializer(purchase_obj, many=True)
+
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 @require_http_methods(['POST'])
 @csrf_exempt
 def stripe_webhook(request):
-    print('WEBHOOK')
+
     stripe.api_key = settings.STRIPE_SECRET_KEY
+
     time.sleep(5)
     payload = request.body
     signature_header = request.META['HTTP_STRIPE_SIGNATURE']
@@ -101,9 +117,9 @@ def stripe_webhook(request):
                 session_id = session.get('id', None)
                 customer_email = session["customer_details"]["email"]
                 product_id = session["metadata"]["product_id"]
-                print('WEBHOOK2')
+
                 time.sleep(10)
-                print(session_id)
+
                 user_payment = UserPayment.objects.get(
                     stripe_checkout_id=session_id)
 
@@ -115,6 +131,18 @@ def stripe_webhook(request):
 
                 user_obj.package_plan = package_obj
                 user_obj.save()
+                payment_type_details = event['data']['object'].get(
+                    'payment_method_types')
+                print(payment_type_details)
+                if (user_payment.payment_bool == True):
+                    payment_type_details = event['data']['object'].get(
+                        'payment_method_types')
+                    create_purchase = Purchase(userPayment=user_payment,
+                                               package_name=package_obj.plan_type,
+                                               price=package_obj.price,
+                                               payment_id=event['data']['object']['payment_intent'],
+                                               payment_method=payment_type_details)
+                    create_purchase.save()
 
             except IntegrityError:
                 pass

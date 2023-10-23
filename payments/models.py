@@ -11,6 +11,14 @@ class UserPayment(models.Model):
     stripe_checkout_id = models.CharField(max_length=500)
 
 
+class Purchase(models.Model):
+    userPayment = models.ForeignKey(UserPayment, on_delete=models.CASCADE)
+    package_name = models.CharField(max_length=20)
+    price = models.IntegerField(default=0)
+    payment_method = models.CharField(max_length=20)
+    payment_id = models.CharField(max_length=300)
+
+
 @receiver(post_save, sender=CustomUser)
 def create_user_payment(sender, instance, created, **kwargs):
     if created:

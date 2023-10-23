@@ -19,7 +19,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 
 ALLOWED_HOSTS = ['*']
@@ -110,7 +110,7 @@ DATETIME_FORMAT = ['%m/%d/%Y %H:%M:%S']  # '10/25/2006 14:30:59'
 WSGI_APPLICATION = 'backend.wsgi.application'
 
 
-STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY")
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET")
 
 REST_FRAMEWORK = {
@@ -280,6 +280,8 @@ DOMAIN_STRIPE_NAME = 'https://sendit-frontend-production.up.railway.app/stripe'
 
 DOMAIN_STRIPE_NAME_CANCEL = 'https://sendit-frontend-production.up.railway.app/stripe_cancel'
 
+
+# test products
 # ACTIVE_PRODUCTS = (('Basic Package', 'price_1NSzPTAD7NIuijyS69UOcr4w', 1), ('Silver Package',
 #                    'price_1NTJF1AD7NIuijySWfczHhRp', 2), ('Gold Package', 'price_1NTKmiAD7NIuijySwioi2U02', 3))
 
