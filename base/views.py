@@ -106,22 +106,12 @@ def get_notes(request):
 @permission_classes([IsAuthenticated])
 def get_packages(request):
 
-    cached_data = caches['default'].get('packages')
+    # If the data is not in the cache, fetch it, serialize it, and cache it
+    package = PackagePlan.objects.all()
+    serializer = PackageSerializer(package, many=True)
+    data = serializer.data
 
-    if cached_data is not None:
-        print('its not loaded from DB')
-        # If the data is found in the cache, return it
-        return Response(cached_data, content_type='application/json')
-    else:
-        # If the data is not in the cache, fetch it, serialize it, and cache it
-        package = PackagePlan.objects.all()
-        serializer = PackageSerializer(package, many=True)
-        data = serializer.data
-        print('its loaded from DB')
-        # Store the data as a JSON list in the cache
-        caches['default'].set('packages', data, CACHE_TTL)
-
-        return Response(data)
+    return Response(data)
 
 
 @api_view(['GET'])
