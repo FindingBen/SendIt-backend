@@ -18,7 +18,8 @@ class Sms(models.Model):
     click_number = models.IntegerField(default=0)
     is_sent = models.BooleanField(default=False)
     delivered = models.IntegerField(default=0)
-
+    unsubscribe_path = models.CharField(
+        max_length=100, default='https://sendit-frontend-production.up.railway.app')
     not_delivered = models.IntegerField(default=0)
     scheduled_time = models.DateTimeField(null=True, blank=True)
 

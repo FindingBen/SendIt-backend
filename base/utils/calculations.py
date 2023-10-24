@@ -1,3 +1,4 @@
+import hashlib
 
 
 def total_sum(data_value: None):
@@ -15,3 +16,16 @@ def total_sum(data_value: None):
                         'avg_session_total': sum(avgSession_sum), 'bounceRate': sum(bounceRate_sum)}
     # print(total_sum_object)
     return total_sum_object
+
+
+def generate_hash(phone_number):
+    # Create a hashlib object
+    sha256 = hashlib.sha256()
+
+    # Update the hash object with the phone number as bytes
+    sha256.update(str(phone_number).encode('utf-8'))
+
+    # Get the hexadecimal representation of the hash
+    hashed_phone = sha256.hexdigest()
+
+    return hashed_phone

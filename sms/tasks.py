@@ -3,6 +3,7 @@ from celery import shared_task
 import vonage
 import uuid
 from django.db import transaction
+import hashlib
 
 
 @shared_task
@@ -41,14 +42,16 @@ def send_scheduled_sms(unique_tracking_id: uuid.UUID):
                     str(unique_tracking_id)
                 try:
                     for recipient_number in numbers_dict.values():
-
+                        generate_hash_number = generate_hash(recipient_number)
                         if content_link:
 
                             responseData = sms.send_message(
                                 {
                                     "from": '+12012550867',
                                     "to": f'+{recipient_number}',
-                                    "text": sms_text.replace('#Link', content_link),
+                                    "text": sms_text.replace('#Link', content_link) +
+                                    "\n\n\n\n\n" +
+                                    f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{generate_hash_number}',
                                     "client-ref": unique_tracking_id
                                 }
                             )
@@ -57,7 +60,9 @@ def send_scheduled_sms(unique_tracking_id: uuid.UUID):
                             responseData = sms.send_message(
                                 {
                                     "from": "+12012550867",
-                                    "to": f'+{recipient_number}',
+                                    "to": f'+{recipient_number}' +
+                                    "\n\n\n\n\n" +
+                                    f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{generate_hash_number}',
                                     "text": sms_text,
                                     "client-ref": unique_tracking_id
                                 }
@@ -91,18 +96,17 @@ def send_scheduled_sms(unique_tracking_id: uuid.UUID):
 
 @shared_task
 def send_sms(unique_tracking_id: uuid.UUID):
-    print('Test')
 
     from .models import Sms
     from base.models import CustomUser, ContactList, Message, Contact
-    print('uuid', unique_tracking_id)
+
     smsObj = Sms.objects.get(unique_tracking_id=unique_tracking_id)
-    print(smsObj)
+
     contact_list = ContactList.objects.get(id=smsObj.contact_list.id)
     message = Message.objects.get(id=smsObj.message.id)
     content_link = smsObj.content_link
     sms_text = smsObj.sms_text
-    print("sms sends", contact_list.contact_lenght)
+
     with transaction.atomic():
         if not smsObj.is_sent:
             print('sent?')
@@ -122,27 +126,31 @@ def send_sms(unique_tracking_id: uuid.UUID):
 
             content_link = content_link + \
                 f'{unique_tracking_id}'
-        try:
 
             for recipient_number in numbers_dict.values():
-
+                generate_hash_number = generate_hash(recipient_number)
                 if content_link:
 
                     responseData = sms.send_message(
                         {
                             "from": '+12012550867',
                             "to": f'+{recipient_number}',
-                            "text": sms_text.replace('#Link', content_link),
+                            "text": sms_text.replace('#Link', content_link) +
+                            "\n\n\n\n\n" +
+                            f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{generate_hash_number}',
                             "client-ref": unique_tracking_id
                         }
                     )
 
                 else:
+                    print('S', generate_hash_number)
                     responseData = sms.send_message(
                         {
                             "from": "+12012550867",
                             "to": f'+{recipient_number}',
-                            "text": sms_text,
+                            "text": sms_text +
+                            "\n\n\n\n\n" +
+                            f'\nClick to Opt-out:{smsObj.unsubscribe_path}/{generate_hash_number}',
                             "client-ref": unique_tracking_id
                         }
                     )
@@ -150,7 +158,6 @@ def send_sms(unique_tracking_id: uuid.UUID):
             smsObj.sms_sends = contact_list.contact_lenght
             smsObj.save()
             smsObj.is_sent = True
-            message.status = 'sent'
             message.status = 'sent'
             message.save()
 
@@ -162,8 +169,18 @@ def send_sms(unique_tracking_id: uuid.UUID):
                 print(
                     f"Message failed with error: {responseData['messages'][0]['error-text']}")
 
-        except:
-            pass
-
         else:
             pass  # If is_sent is True, save the instance
+
+
+def generate_hash(phone_number):
+    # Create a hashlib object
+    sha256 = hashlib.sha256()
+    print('is it hitting')
+    # Update the hash object with the phone number as bytes
+    sha256.update(str(phone_number).encode('utf-8'))
+
+    # Get the hexadecimal representation of the hash
+    hashed_phone = sha256.hexdigest()
+
+    return hashed_phone

@@ -8,6 +8,7 @@ from django_rest_passwordreset.signals import reset_password_token_created
 from django.core.mail import send_mail
 from django.conf import settings
 from django.apps import apps
+from .utils.calculations import generate_hash
 
 
 class PackagePlan(models.Model):
@@ -92,7 +93,7 @@ class ContactList(models.Model):
         Contact = apps.get_model('base', 'Contact')
 
         contact_list = instance.contact_list
-        print('www')
+
         contact_count = Contact.objects.filter(
             contact_list=contact_list).count()
         contact_list.contact_lenght = contact_count
@@ -105,4 +106,11 @@ class Contact(models.Model):
     first_name = models.CharField(max_length=20)
     last_name = models.CharField(max_length=20)
     phone_number = models.BigIntegerField()
+    hashed_phone = models.CharField(default='TBA',max_length=200)
     email = models.EmailField()
+
+    def save(self, *args, **kwargs):
+        phone_to_hash = generate_hash(self.phone_number)
+        self.hashed_phone = phone_to_hash
+
+        super(Contact, self).save(*args, **kwargs)

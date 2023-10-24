@@ -180,6 +180,18 @@ def create_contact(request, id):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['GET'])
+def handle_unsubscribe(request, token):
+
+    # token which is an hashed phone number
+    try:
+        contact = Contact.objects.get(hashed_phone=token)
+        contact.delete()
+    except Exception as e:
+        return Response(f'There has been an error: {e}', status=status.HTTP_400_BAD_REQUEST)
+    return Response('response')
+
+
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def purchase_package(request, id):
