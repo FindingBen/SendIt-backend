@@ -109,7 +109,7 @@ def stripe_webhook(request):
         return HttpResponse(status=400)
     except stripe.error.SignatureVerificationError as e:
         return HttpResponse(status=400)
-
+    print('test')
     if event['type'] == 'checkout.session.completed':
         with transaction.atomic():
             try:
@@ -128,7 +128,7 @@ def stripe_webhook(request):
 
                 user_obj = CustomUser.objects.filter(email=customer_email)[0]
                 package_obj = PackagePlan.objects.get(id=product_id)
-
+                print('test')
                 user_obj.package_plan = package_obj
                 user_obj.save()
                 payment_type_details = event['data']['object'].get(

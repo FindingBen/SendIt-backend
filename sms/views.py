@@ -80,7 +80,7 @@ def schedule_sms(request):
             scheduled_time_local = scheduled_time_utc - timedelta(hours=2)
             current_datetime = datetime.fromisoformat(
                 str(datetime.now()))
-
+            
             custom_user = CustomUser.objects.get(id=data['user'])
             contact_list = ContactList.objects.get(id=data['contact_list'])
 
