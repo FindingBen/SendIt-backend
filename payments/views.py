@@ -23,10 +23,10 @@ class StripeCheckoutVIew(APIView):
 
         package = next(
             (pkg for pkg in data_package if pkg[0] == request.data['name_product']), None)
-        
+
         if package is None:
             return Response({"error": "Invalid package name"})
-
+        print(package)
         try:
             checkout_session = stripe.checkout.Session.create(
                 line_items=[
