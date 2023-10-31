@@ -28,35 +28,35 @@ class StripeCheckoutVIew(APIView):
             return Response({"error": "Invalid package name"})
         print(settings.ACTIVE_PRODUCTS)
 
-        # try:
-        checkout_session = stripe.checkout.Session.create(
-            line_items=[
-                {
-                    # Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-                    'price': package[1],
-                    'quantity': 1,
+        try:
+            checkout_session = stripe.checkout.Session.create(
+                line_items=[
+                    {
+                        # Provide the exact Price ID (for example, pr_1234) of the product you want to sell
+                        'price': package[1],
+                        'quantity': 1,
+                    },
+
+                ],
+                metadata={
+                    'product_id': package[2],
+
                 },
 
-            ],
-            metadata={
-                'product_id': package[2],
+                payment_method_types=['card'],
+                mode='payment',
+                success_url=settings.DOMAIN_STRIPE_NAME + \
+                '/?success=true&session_id={CHECKOUT_SESSION_ID}',
+                cancel_url=settings.DOMAIN_STRIPE_NAME_CANCEL + '/?cancel=true',
+            )
 
-            },
+            url_str = str(checkout_session.url)
+            return Response({"url": url_str})
 
-            payment_method_types=['card'],
-            mode='payment',
-            success_url=settings.DOMAIN_STRIPE_NAME + \
-            '/?success=true&session_id={CHECKOUT_SESSION_ID}',
-            cancel_url=settings.DOMAIN_STRIPE_NAME_CANCEL + '/?cancel=true',
-        )
+        except Exception as e:
 
-        url_str = str(checkout_session.url)
-        return Response({"url": url_str})
-
-        # except Exception as e:
-
-        #     error_message = str(e)  # Get the error message as a string
-        #     return Response({"error": error_message})
+            error_message = str(e)  # Get the error message as a string
+            return Response({"error": error_message})
 
 
 @api_view(['GET'])
@@ -66,7 +66,7 @@ def payment_successful(request, id):
     user_id = request.user
 
     user_payment = UserPayment.objects.get(user=user_id.id)
-    print('success_payment', user_id.id)
+
     user_payment.stripe_checkout_id = id
     user_payment.save()
     return Response('Successfull response')
@@ -87,7 +87,7 @@ def get_purchases(request, id):
     user_payment = UserPayment.objects.get(user=user_id.id)
     purchase_obj = Purchase.objects.filter(userPayment=user_payment)
     serializer = PurchaseSerializer(purchase_obj, many=True)
-    print('success?', user_payment)
+
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -116,7 +116,6 @@ def stripe_webhook(request):
         with transaction.atomic():
             try:
                 session = event['data']['object']
-                session_id = session.get('id', None)
                 customer_email = session["customer_details"]["email"]
                 product_id = session["metadata"]["product_id"]
 
@@ -137,7 +136,7 @@ def stripe_webhook(request):
                     'payment_method_types')
 
                 if (user_payment.payment_bool == True):
-                    print('is_pay')
+
                     payment_type_details = event['data']['object'].get(
                         'payment_method_types')
                     create_purchase = Purchase(userPayment=user_payment,
@@ -148,7 +147,7 @@ def stripe_webhook(request):
                     create_purchase.save()
                     user_payment.payment_bool = False
                     user_payment.save()
-                    print(user_payment)
+
             except IntegrityError:
                 pass
 
