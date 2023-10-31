@@ -93,7 +93,7 @@ def get_purchases(request, id):
 @require_http_methods(['POST'])
 @csrf_exempt
 def stripe_webhook(request):
-
+    print('STRIPE')
     stripe.api_key = settings.STRIPE_SECRET_KEY
 
     time.sleep(5)
