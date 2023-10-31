@@ -66,7 +66,7 @@ def payment_successful(request, id):
     user_id = request.user
 
     user_payment = UserPayment.objects.get(user=user_id)
-
+    print('success_payment', user_id)
     user_payment.stripe_checkout_id = id
     user_payment.save()
     return Response('Successfull response')
@@ -83,11 +83,11 @@ def payment_cancelled(request):
 @permission_classes([IsAuthenticated])
 def get_purchases(request, id):
     user_id = request.user
-
+    print('success?', user_id)
     user_payment = UserPayment.objects.get(user=user_id)
     purchase_obj = Purchase.objects.filter(userPayment=user_payment)
     serializer = PurchaseSerializer(purchase_obj, many=True)
-
+    print('success?', user_payment)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -97,7 +97,7 @@ def stripe_webhook(request):
 
     stripe.api_key = settings.STRIPE_SECRET_KEY
 
-    time.sleep(10)
+    time.sleep(5)
     payload = request.body
     signature_header = request.META['HTTP_STRIPE_SIGNATURE']
     event = None
@@ -119,12 +119,12 @@ def stripe_webhook(request):
                 session_id = session.get('id', None)
                 customer_email = session["customer_details"]["email"]
                 product_id = session["metadata"]["product_id"]
-                print('test2', product_id)
-                time.sleep(15)
+
+                time.sleep(10)
 
                 user_payment = UserPayment.objects.get(
                     stripe_checkout_id=session_id)
-
+                print('payment?', user_payment)
                 user_payment.payment_bool = True
                 user_payment.save()
 
@@ -138,7 +138,7 @@ def stripe_webhook(request):
                     'payment_method_types')
                 print('test3')
                 if (user_payment.payment_bool == True):
-                    time.sleep(15)
+                    time.sleep(10)
                     payment_type_details = event['data']['object'].get(
                         'payment_method_types')
                     create_purchase = Purchase(userPayment=user_payment,
