@@ -65,8 +65,8 @@ def payment_successful(request, id):
 
     user_id = request.user
 
-    user_payment = UserPayment.objects.get(user=user_id)
-    print('success_payment', user_id)
+    user_payment = UserPayment.objects.get(user=user_id.id)
+    print('success_payment', user_id.id)
     user_payment.stripe_checkout_id = id
     user_payment.save()
     return Response('Successfull response')
@@ -83,8 +83,8 @@ def payment_cancelled(request):
 @permission_classes([IsAuthenticated])
 def get_purchases(request, id):
     user_id = request.user
-    print('success?', user_id)
-    user_payment = UserPayment.objects.get(user=user_id)
+
+    user_payment = UserPayment.objects.get(user=user_id.id)
     purchase_obj = Purchase.objects.filter(userPayment=user_payment)
     serializer = PurchaseSerializer(purchase_obj, many=True)
     print('success?', user_payment)
@@ -136,9 +136,9 @@ def stripe_webhook(request):
 
                 payment_type_details = event['data']['object'].get(
                     'payment_method_types')
-                print('test3')
+
                 if (user_payment.payment_bool == True):
-                    time.sleep(10)
+
                     payment_type_details = event['data']['object'].get(
                         'payment_method_types')
                     create_purchase = Purchase(userPayment=user_payment,
