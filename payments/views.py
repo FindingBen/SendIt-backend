@@ -94,25 +94,25 @@ def get_purchases(request, id):
 @require_http_methods(['POST'])
 @csrf_exempt
 def stripe_webhook(request):
-    print('STRIPE')
+
     stripe.api_key = settings.STRIPE_SECRET_KEY
 
-    time.sleep(5)
+    time.sleep(10)
     payload = request.body
     signature_header = request.META['HTTP_STRIPE_SIGNATURE']
     event = None
-    # try:
-    event = stripe.Webhook.construct_event(
-        payload, signature_header, settings.STRIPE_WEBHOOK_SECRET
-    )
-    print('test')
-    # except ValueError as e:
-    #     return HttpResponse(status=400)
-    # except stripe.error.SignatureVerificationError as e:
-    #     return HttpResponse(status=400)
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, signature_header, settings.STRIPE_WEBHOOK_SECRET
+        )
+
+    except ValueError as e:
+        return HttpResponse(status=400)
+    except stripe.error.SignatureVerificationError as e:
+        return HttpResponse(status=400)
 
     if event['type'] == 'checkout.session.completed':
-        print('test1')
+
         with transaction.atomic():
             try:
                 session = event['data']['object']
@@ -120,7 +120,7 @@ def stripe_webhook(request):
                 customer_email = session["customer_details"]["email"]
                 product_id = session["metadata"]["product_id"]
                 print('test2', product_id)
-                time.sleep(10)
+                time.sleep(15)
 
                 user_payment = UserPayment.objects.get(
                     stripe_checkout_id=session_id)
@@ -138,6 +138,7 @@ def stripe_webhook(request):
                     'payment_method_types')
                 print('test3')
                 if (user_payment.payment_bool == True):
+                    time.sleep(15)
                     payment_type_details = event['data']['object'].get(
                         'payment_method_types')
                     create_purchase = Purchase(userPayment=user_payment,
