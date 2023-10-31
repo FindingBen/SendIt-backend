@@ -15,7 +15,6 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
-products = settings.ACTIVE_PRODUCTS
 
 
 class StripeCheckoutVIew(APIView):
@@ -27,7 +26,8 @@ class StripeCheckoutVIew(APIView):
 
         if package is None:
             return Response({"error": "Invalid package name"})
-        print(package)
+        print(settings.ACTIVE_PRODUCTS)
+
         try:
             checkout_session = stripe.checkout.Session.create(
                 line_items=[
