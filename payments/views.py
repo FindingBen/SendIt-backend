@@ -121,13 +121,14 @@ def stripe_webhook(request):
                 product_id = session["metadata"]["product_id"]
 
                 time.sleep(10)
-
-                user_payment = UserPayment.objects.get(
-                    stripe_checkout_id=session_id)
-                print('payment?', user_payment)
+                print(session_id)
+                if (session_id):
+                    user_payment = UserPayment.objects.get(
+                        stripe_checkout_id=session_id)
+                print('payment_127', user_payment)
                 user_payment.payment_bool = True
                 user_payment.save()
-
+                (user_payment.payment_bool)
                 user_obj = CustomUser.objects.filter(email=customer_email)[0]
                 package_obj = PackagePlan.objects.get(id=product_id)
 
@@ -138,7 +139,7 @@ def stripe_webhook(request):
                     'payment_method_types')
 
                 if (user_payment.payment_bool == True):
-
+                    print('is_pay')
                     payment_type_details = event['data']['object'].get(
                         'payment_method_types')
                     create_purchase = Purchase(userPayment=user_payment,
