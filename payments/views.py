@@ -26,7 +26,6 @@ class StripeCheckoutVIew(APIView):
 
         if package is None:
             return Response({"error": "Invalid package name"})
-        print(settings.ACTIVE_PRODUCTS)
 
         try:
             checkout_session = stripe.checkout.Session.create(
@@ -62,13 +61,14 @@ class StripeCheckoutVIew(APIView):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def payment_successful(request, id):
+    try:
+        user_id = request.user
+        user_payment = UserPayment.objects.get(user=user_id.id)
+        user_payment.stripe_checkout_id = id
+        user_payment.save()
+    except Exception as e:
+        return Response(f'There has been an error: {e}')
 
-    user_id = request.user
-
-    user_payment = UserPayment.objects.get(user=user_id.id)
-
-    user_payment.stripe_checkout_id = id
-    user_payment.save()
     return Response('Successfull response')
 
 
@@ -82,11 +82,13 @@ def payment_cancelled(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_purchases(request, id):
-    user_id = request.user
-
-    user_payment = UserPayment.objects.get(user=user_id.id)
-    purchase_obj = Purchase.objects.filter(userPayment=user_payment)
-    serializer = PurchaseSerializer(purchase_obj, many=True)
+    try:
+        user_id = request.user
+        user_payment = UserPayment.objects.get(user=user_id.id)
+        purchase_obj = Purchase.objects.filter(userPayment=user_payment)
+        serializer = PurchaseSerializer(purchase_obj, many=True)
+    except Exception as e:
+        return Response(f'There has been an error: {e}')
 
     return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -118,12 +120,11 @@ def stripe_webhook(request):
                 session = event['data']['object']
                 customer_email = session["customer_details"]["email"]
                 product_id = session["metadata"]["product_id"]
-
+                ######
                 time.sleep(10)
-
+                ######
                 user_obj = CustomUser.objects.filter(email=customer_email)[0]
                 package_obj = PackagePlan.objects.get(id=product_id)
-
                 user_obj.package_plan = package_obj
                 user_obj.save()
                 user_payment = UserPayment.objects.get(
@@ -132,22 +133,21 @@ def stripe_webhook(request):
                 user_payment.payment_bool = True
                 user_payment.save()
 
-                payment_type_details = event['data']['object'].get(
-                    'payment_method_types')
-
                 if (user_payment.payment_bool == True):
-
                     payment_type_details = event['data']['object'].get(
                         'payment_method_types')
+
                     create_purchase = Purchase(userPayment=user_payment,
                                                package_name=package_obj.plan_type,
                                                price=package_obj.price,
                                                payment_id=event['data']['object']['payment_intent'],
                                                payment_method=payment_type_details)
+
                     create_purchase.save()
                     user_payment.payment_bool = False
                     user_payment.save()
-
+                else:
+                    return Response('Payment not completed! Contact administrator for more info')
             except IntegrityError:
                 pass
 

@@ -1,5 +1,4 @@
-from django.shortcuts import render, get_object_or_404
-from rest_framework import status, views
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -10,10 +9,8 @@ from base.serializers import MessageSerializer
 from .serializers import SmsSerializer
 from rest_framework import generics
 from django.http import JsonResponse
-from django.http import HttpResponseRedirect, HttpResponse
-import jwt
+from django.http import HttpResponseRedirect
 from django.db import transaction
-from django.utils import timezone
 from datetime import datetime, timedelta
 import pytz
 from .tasks import send_scheduled_sms, send_sms
@@ -22,11 +19,11 @@ from .tasks import send_scheduled_sms, send_sms
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_message(request, id):
-    message = Message.objects.get(id=id)
-    # contact = Message.objects.filter(contact_list=contact_list)
-    serializer = MessageSerializer(message)
-
-    # if serializer.is_valid(raise_exception=True):
+    try:
+        message = Message.objects.get(id=id)
+        serializer = MessageSerializer(message)
+    except Exception as e:
+        return Response(f'There has been an error: {e}')
 
     return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -34,9 +31,11 @@ def get_message(request, id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_sms(request, id):
-    sms = Sms.objects.get(message_id=id)
-
-    serializer = SmsSerializer(sms)
+    try:
+        sms = Sms.objects.get(message_id=id)
+        serializer = SmsSerializer(sms)
+    except Exception as e:
+        return Response(f'There has been an error: {e}')
 
     return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -72,46 +71,47 @@ def schedule_sms(request):
 
         if user_obj.sms_count > 0:
 
-            scheduled_time = datetime.fromisoformat(
-                str(request.data['scheduled_time']))
-            scheduled_time_utc = pytz.timezone(
+            with transaction.atomic():
+                scheduled_time = datetime.fromisoformat(
+                    str(request.data['scheduled_time']))
+                scheduled_time_utc = pytz.timezone(
                 'UTC').localize(scheduled_time)
-            # Adjust for the time zone difference (2 hours ahead)
-            scheduled_time_local = scheduled_time_utc - timedelta(hours=2)
-            current_datetime = datetime.fromisoformat(
-                str(datetime.now()))
-            
-            custom_user = CustomUser.objects.get(id=data['user'])
-            contact_list = ContactList.objects.get(id=data['contact_list'])
+                # Adjust for the time zone difference (2 hours ahead)
+                scheduled_time_local = scheduled_time_utc - timedelta(hours=2)
+                current_datetime = datetime.fromisoformat(
+                    str(datetime.now()))
 
-            message = Message.objects.get(id=data['message'])
+                custom_user = CustomUser.objects.get(id=data['user'])
+                contact_list = ContactList.objects.get(id=data['contact_list'])
 
-            sms_sends = contact_list.contact_lenght
-            sms = Sms(
-                user=custom_user,
-                sender=data['sender'],
-                sms_text=data['sms_text'],
-                content_link=data['content_link'],
-                contact_list=contact_list,
-                message=message,
-                sms_sends=sms_sends,
-                scheduled_time=data['scheduled_time'],
-            )
+                message = Message.objects.get(id=data['message'])
 
-            sms.save()
+                sms_sends = contact_list.contact_lenght
+                sms = Sms(
+                    user=custom_user,
+                    sender=data['sender'],
+                    sms_text=data['sms_text'],
+                    content_link=data['content_link'],
+                    contact_list=contact_list,
+                    message=message,
+                    sms_sends=sms_sends,
+                    scheduled_time=data['scheduled_time'],
+                )
 
-            if scheduled_time > current_datetime:
-                message.status = 'Scheduled'
-                message.save()
-                # Schedule the SMS to be sent in the future
-                send_scheduled_sms.apply_async(
-                    (sms.unique_tracking_id,), eta=scheduled_time_local)
+                sms.save()
 
-                return Response({
-                    "sms": f'{data}'
-                })
-            else:
-                return Response({'error': 'Scheduled time must be in the future.'}, status=status.HTTP_400_BAD_REQUEST)
+                if scheduled_time > current_datetime:
+                    message.status = 'Scheduled'
+                    message.save()
+                    # Schedule the SMS to be sent in the future
+                    send_scheduled_sms.apply_async(
+                        (sms.unique_tracking_id,), eta=scheduled_time_local)
+
+                    return Response({
+                        "sms": f'{data}'
+                    })
+                else:
+                    return Response({'error': 'Scheduled time must be in the future.'}, status=status.HTTP_400_BAD_REQUEST)
 
         else:
             return Response({'error': 'You have no SMS credit left, purchase a new package or extend the current one'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)

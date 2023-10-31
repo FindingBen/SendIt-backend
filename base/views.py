@@ -1,21 +1,14 @@
-from django.http import JsonResponse
 from django.conf import settings
-import json
-from rest_framework import status, views
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.permissions import IsAuthenticated
-from .serializers import MessageSerializer, RegisterSerializer, UserSerializer, CustomUserSerializer, ContactListSerializer, ContactSerializer, ElementSerializer, PackageSerializer, ChangePasswordSerializer
+from .serializers import MessageSerializer, RegisterSerializer, CustomUserSerializer, ContactListSerializer, ContactSerializer, ElementSerializer, PackageSerializer
 from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser
 from rest_framework import generics
 from .utils.googleAnalytics import sample_run_report
-from django.views.decorators.cache import cache_page
-from django.core.cache import caches
-from django.core.cache.backends.base import DEFAULT_TIMEOUT
-
-CACHE_TTL = getattr(settings, 'CACHE_TTL', DEFAULT_TIMEOUT)
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -70,10 +63,12 @@ def update_user(request, id):
 
 @api_view(['GET'])
 def note_view(request, id):
-    message = Message.objects.get(id=id)
-    elements = Element.objects.filter(message=message).order_by('order')
-    serializer = ElementSerializer(elements, many=True)
-
+    try:
+        message = Message.objects.get(id=id)
+        elements = Element.objects.filter(message=message).order_by('order')
+        serializer = ElementSerializer(elements, many=True)
+    except Exception as e:
+        return Response(f'There has been some error: {e}')
     return Response(serializer.data)
 
 
@@ -81,7 +76,6 @@ def note_view(request, id):
 def update_element(request, id):
     try:
         element = Element.objects.get(id=id)
-        print("DATA", request.data)
         element.order = request.data['order']
         element.save()
         serializer = ElementSerializer(element)
@@ -93,10 +87,12 @@ def update_element(request, id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_notes(request):
-    user = request.user
-    notes = user.message_set.all()
-    serializer = MessageSerializer(notes, many=True)
-
+    try:
+        user = request.user
+        notes = user.message_set.all()
+        serializer = MessageSerializer(notes, many=True)
+    except Exception as e:
+        return Response(f'There has been some error: {e}')
     return Response(serializer.data)
 
 # Contact lists
@@ -105,84 +101,85 @@ def get_notes(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_packages(request):
-
-    # If the data is not in the cache, fetch it, serialize it, and cache it
-    package = PackagePlan.objects.all()
-    serializer = PackageSerializer(package, many=True)
-    data = serializer.data
-
+    try:
+        package = PackagePlan.objects.all()
+        serializer = PackageSerializer(package, many=True)
+        data = serializer.data
+    except Exception as e:
+        return Response(f'There has been some error: {e}')
     return Response(data)
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_contact_lists(request):
-    user = request.user
-    contact_list = user.contactlist_set.all()
+    try:
+        user = request.user
+        contact_list = user.contactlist_set.all()
 
-    serializer = ContactListSerializer(contact_list, many=True)
-
+        serializer = ContactListSerializer(contact_list, many=True)
+    except Exception as e:
+        return Response(f'There has been some error: {e}')
     return Response(serializer.data)
 
 
 @api_view(['GET,PUT'])
 @permission_classes([IsAuthenticated])
 def get_contact_list(request, pk):
-    user = request.user
-    contact_list = ContactList.objects.get(id=pk)
+    try:
+        contact_list = ContactList.objects.get(id=pk)
 
-    serializer = ContactListSerializer(contact_list)
+        serializer = ContactListSerializer(contact_list)
+    except Exception as e:
+        return Response(f'There has been some error: {e}')
 
     return Response(serializer.data)
-
-# Contact list
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_contacts(request, id):
-    contact_list = ContactList.objects.get(id=id)
-    contact = Contact.objects.filter(contact_list=contact_list)
-
-    serializer = ContactSerializer(contact, many=True)
-
+    try:
+        contact_list = ContactList.objects.get(id=id)
+        contact = Contact.objects.filter(contact_list=contact_list)
+        serializer = ContactSerializer(contact, many=True)
+    except Exception as e:
+        return Response(f'There has been some error: {e}')
     return Response(serializer.data)
 
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_message(request, id):
-    message = Message.objects.get(id=id)
-    serializer = MessageSerializer(message, data=request.data)
-    if serializer.is_valid(raise_exception=True):
-
-        # for element_obj in request.data['element_list']:
-        #     element = Element.objects.get(id=element_obj['element']['id'])
-        #     message.element_list.add(element)
-
-        serializer.update(message, validated_data=request.data)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    else:
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        message = Message.objects.get(id=id)
+        serializer = MessageSerializer(message, data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            serializer.update(message, validated_data=request.data)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response(f'There has been some error: {e}')
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_contact(request, id):
-
-    contact_list = ContactList.objects.get(id=id)
-    serializer = ContactSerializer(data=request.data)
-    # serializer.contact_list = contact_list
-    if serializer.is_valid(raise_exception=True):
-        serializer.save(contact_list=contact_list)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    else:
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        contact_list = ContactList.objects.get(id=id)
+        serializer = ContactSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save(contact_list=contact_list)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response(f'There has been some error: {e}')
 
 
 @api_view(['GET'])
 def handle_unsubscribe(request, token):
-
     # token which is an hashed phone number
     try:
         contact = Contact.objects.get(hashed_phone=token)
@@ -195,14 +192,17 @@ def handle_unsubscribe(request, token):
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def purchase_package(request, id):
-    user = CustomUser.objects.get(id=id)
-    package_plan = PackagePlan.objects.get(id=request.data['package_plan'])
+    try:
+        user = CustomUser.objects.get(id=id)
+        package_plan = PackagePlan.objects.get(id=request.data['package_plan'])
 
-    user.package_plan = package_plan
-    user.save()
+        user.package_plan = package_plan
+        user.save()
 
-    serializer = CustomUserSerializer(user)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+        serializer = CustomUserSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response(f'There has been some error: {e}')
 
 
 class RegisterAPI(generics.GenericAPIView):
@@ -228,11 +228,6 @@ class CreateNote(generics.GenericAPIView):
 
         message = serializer.save()
 
-        # for element_obj in request.data['element_list']:
-
-        #     element = Element.objects.get(id=element_obj['element']['id'])
-        #     message.element_list.add(element)
-
         return Response({
             "note": MessageSerializer(message, context=self.get_serializer_context()).data
         })
@@ -241,13 +236,16 @@ class CreateNote(generics.GenericAPIView):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_list(request, id):
-    user = CustomUser.objects.get(id=id)
-    serializer = ContactListSerializer(data=request.data)
-    if serializer.is_valid(raise_exception=True):
-        serializer.save(users=user)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    else:
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        user = CustomUser.objects.get(id=id)
+        serializer = ContactListSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save(users=user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response(f'There has been some error: {e}')
 
 
 class CreateElement(generics.GenericAPIView):
@@ -267,27 +265,34 @@ class CreateElement(generics.GenericAPIView):
 @permission_classes([IsAuthenticated])
 def delete_message(request, id):
 
-    message = Message.objects.get(id=id)
-    message.delete()
-    return Response("Message deleted!")
+    try:
+        message = Message.objects.get(id=id)
+        message.delete()
+        return Response("Message deleted!")
+    except Exception as e:
+        return Response(f'There has been an error:{e}')
 
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_element(request, id):
-
-    element = Element.objects.get(id=id)
-    element.delete()
-    return Response("Element deleted!")
+    try:
+        element = Element.objects.get(id=id)
+        element.delete()
+        return Response("Element deleted!")
+    except Exception as e:
+        return Response(f'There has been an error:{e}')
 
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_contact_recipient(request, id):
-
-    contact = Contact.objects.get(id=id)
-    contact.delete()
-    return Response("Recipient deleted!")
+    try:
+        contact = Contact.objects.get(id=id)
+        contact.delete()
+        return Response("Recipient deleted!")
+    except Exception as e:
+        return Response(f'There has been an error:{e}')
 
 
 @api_view(['DELETE'])
@@ -295,16 +300,11 @@ def delete_contact_recipient(request, id):
 def delete_contact_list(request, id):
     try:
         contact_list = ContactList.objects.get(id=id)
+        Contact.objects.filter(contact_list=contact_list).delete()
+        contact_list.delete()
+        return Response("List deleted successfully!")
     except ContactList.DoesNotExist:
         return Response("List not found", status=status.HTTP_404_NOT_FOUND)
-
-    # Delete all associated contacts first
-    Contact.objects.filter(contact_list=contact_list).delete()
-
-    # Now, delete the contact list
-    contact_list.delete()
-
-    return Response("List deleted successfully!")
 
 
 @api_view(['GET'])

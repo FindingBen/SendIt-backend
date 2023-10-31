@@ -283,11 +283,11 @@ DOMAIN_STRIPE_NAME_CANCEL = 'https://sendit-frontend-production.up.railway.app/s
 
 
 # test products
-# ACTIVE_PRODUCTS = (('Basic Package', 'price_1NSzPTAD7NIuijyS69UOcr4w', 1), ('Silver Package',
-#                    'price_1NTJF1AD7NIuijySWfczHhRp', 2), ('Gold Package', 'price_1NTKmiAD7NIuijySwioi2U02', 3))
+# ACTIVE_PRODUCTS = (('Basic Package', 'price_1NSzPTAD7NIuijyS69UOcr4w', 2), ('Silver Package',
+#                    'price_1NTJF1AD7NIuijySWfczHhRp', 3), ('Gold Package', 'price_1NTKmiAD7NIuijySwioi2U02', 4))
 
-ACTIVE_PRODUCTS = (('Basic Package', 'price_1O7DtsAD7NIuijySWVToVtvB', 1), ('Silver Package',
-                   'price_1NyXK2AD7NIuijySgslBZ5hd', 2), ('Gold Package', 'price_1O7DuLAD7NIuijySn76jns9f', 3))
+ACTIVE_PRODUCTS = (('Basic Package', 'price_1O7DtsAD7NIuijySWVToVtvB', 2), ('Silver Package',
+                   'price_1NyXK2AD7NIuijySgslBZ5hd', 3), ('Gold Package', 'price_1O7DuLAD7NIuijySn76jns9f', 4))
 
 
 STATIC_URL = '/static/'
@@ -299,3 +299,5 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+

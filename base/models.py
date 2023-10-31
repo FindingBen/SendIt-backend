@@ -1,12 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.contrib.auth.base_user import AbstractBaseUser
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
-from django.urls import reverse
-from django_rest_passwordreset.signals import reset_password_token_created
-from django.core.mail import send_mail
-from django.conf import settings
 from django.apps import apps
 from .utils.calculations import generate_hash
 
@@ -106,7 +101,7 @@ class Contact(models.Model):
     first_name = models.CharField(max_length=20)
     last_name = models.CharField(max_length=20)
     phone_number = models.BigIntegerField()
-    hashed_phone = models.CharField(default='TBA',max_length=200)
+    hashed_phone = models.CharField(default='TBA', max_length=200)
     email = models.EmailField()
 
     def save(self, *args, **kwargs):

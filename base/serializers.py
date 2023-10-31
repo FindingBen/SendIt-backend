@@ -31,10 +31,6 @@ class MessageSerializer(ModelSerializer):
         instance.save()
         return instance
 
-    # def get_elements(self, obj):
-    #     elements = obj.element_list.all()
-    #     return ElementSerializer(elements, many=True).data
-
 
 class UserSerializer(ModelSerializer):
     class Meta:
