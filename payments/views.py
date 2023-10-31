@@ -28,35 +28,35 @@ class StripeCheckoutVIew(APIView):
             return Response({"error": "Invalid package name"})
         print(settings.ACTIVE_PRODUCTS)
 
-        try:
-            checkout_session = stripe.checkout.Session.create(
-                line_items=[
-                    {
-                        # Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-                        'price': package[1],
-                        'quantity': 1,
-                    },
-
-                ],
-                metadata={
-                    'product_id': package[2],
-
+        # try:
+        checkout_session = stripe.checkout.Session.create(
+            line_items=[
+                {
+                    # Provide the exact Price ID (for example, pr_1234) of the product you want to sell
+                    'price': package[1],
+                    'quantity': 1,
                 },
 
-                payment_method_types=['card'],
-                mode='payment',
-                success_url=settings.DOMAIN_STRIPE_NAME + \
-                '/?success=true&session_id={CHECKOUT_SESSION_ID}',
-                cancel_url=settings.DOMAIN_STRIPE_NAME_CANCEL + '/?cancel=true',
-            )
+            ],
+            metadata={
+                'product_id': package[2],
 
-            url_str = str(checkout_session.url)
-            return Response({"url": url_str})
+            },
 
-        except Exception as e:
+            payment_method_types=['card'],
+            mode='payment',
+            success_url=settings.DOMAIN_STRIPE_NAME + \
+            '/?success=true&session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=settings.DOMAIN_STRIPE_NAME_CANCEL + '/?cancel=true',
+        )
 
-            error_message = str(e)  # Get the error message as a string
-            return Response({"error": error_message})
+        url_str = str(checkout_session.url)
+        return Response({"url": url_str})
+
+        # except Exception as e:
+
+        #     error_message = str(e)  # Get the error message as a string
+        #     return Response({"error": error_message})
 
 
 @api_view(['GET'])
