@@ -286,8 +286,8 @@ DOMAIN_STRIPE_NAME_CANCEL = 'https://sendit-frontend-production.up.railway.app/s
 # ACTIVE_PRODUCTS = (('Basic Package', 'price_1NSzPTAD7NIuijyS69UOcr4w', 1), ('Silver Package',
 #                    'price_1NTJF1AD7NIuijySWfczHhRp', 2), ('Gold Package', 'price_1NTKmiAD7NIuijySwioi2U02', 3))
 
-ACTIVE_PRODUCTS = (('Basic Package', 'price_1O7DKpAD7NIuijySRcfXLICY', 1), ('Silver Package',
-                   'price_1NyXK2AD7NIuijySgslBZ5hd', 2), ('Gold Package', 'price_1NyXLaAD7NIuijySpkxaT68m', 3))
+ACTIVE_PRODUCTS = (('Basic Package', 'price_1O7DtsAD7NIuijySWVToVtvB', 1), ('Silver Package',
+                   'price_1NyXK2AD7NIuijySgslBZ5hd', 2), ('Gold Package', 'price_1O7DuLAD7NIuijySn76jns9f', 3))
 
 
 STATIC_URL = '/static/'
