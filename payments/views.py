@@ -15,6 +15,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
+products = settings.ACTIVE_PRODUCTS
 
 
 class StripeCheckoutVIew(APIView):
