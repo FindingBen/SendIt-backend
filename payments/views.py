@@ -104,20 +104,21 @@ def stripe_webhook(request):
         event = stripe.Webhook.construct_event(
             payload, signature_header, settings.STRIPE_WEBHOOK_SECRET
         )
-        print(event['data']['object'])
+        print('test')
     except ValueError as e:
         return HttpResponse(status=400)
     except stripe.error.SignatureVerificationError as e:
         return HttpResponse(status=400)
 
     if event['type'] == 'checkout.session.completed':
+        print('test1')
         with transaction.atomic():
             try:
                 session = event['data']['object']
                 session_id = session.get('id', None)
                 customer_email = session["customer_details"]["email"]
                 product_id = session["metadata"]["product_id"]
-
+                print('test2', product_id)
                 time.sleep(10)
 
                 user_payment = UserPayment.objects.get(
@@ -134,7 +135,7 @@ def stripe_webhook(request):
 
                 payment_type_details = event['data']['object'].get(
                     'payment_method_types')
-                print(payment_type_details)
+                print('test3')
                 if (user_payment.payment_bool == True):
                     payment_type_details = event['data']['object'].get(
                         'payment_method_types')
@@ -146,6 +147,7 @@ def stripe_webhook(request):
                     create_purchase.save()
                     user_payment.payment_bool = False
                     user_payment.save()
+                    print(user_payment)
             except IntegrityError:
                 pass
 
