@@ -179,15 +179,14 @@ def create_contact(request, id):
 
 
 @api_view(['GET'])
-def handle_unsubscribe(request, token):
-    # token which is an hashed phone number
-    # try:
-    contact = Contact.objects.get(hashed_phone=token)
-    contact.delete()
-    print('deleted?')
-    # except Exception as e:
-    #     return Response(f'There has been an error: {e}', status=status.HTTP_400_BAD_REQUEST)
-    return Response('response')
+def handle_unsubscribe(request, id):
+    try:
+        contact = Contact.objects.get(hashed_phone=id)
+        contact.delete()
+        return Response('Contact deleted successfully', status=status.HTTP_200_OK)
+    except Exception as e:
+        print(f'Error occurred while deleting contact: {e}')
+        return Response(f'There has been an error: {e}', status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['PUT'])
