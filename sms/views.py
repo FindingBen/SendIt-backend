@@ -75,7 +75,7 @@ def schedule_sms(request):
                 scheduled_time = datetime.fromisoformat(
                     str(request.data['scheduled_time']))
                 scheduled_time_utc = pytz.timezone(
-                'UTC').localize(scheduled_time)
+                    'UTC').localize(scheduled_time)
                 # Adjust for the time zone difference (2 hours ahead)
                 scheduled_time_local = scheduled_time_utc - timedelta(hours=2)
                 current_datetime = datetime.fromisoformat(
@@ -120,6 +120,7 @@ def schedule_sms(request):
     return Response('failed')
 
 
+@api_view(['GET'])
 def track_link_click(request, uuid):
 
     sms_obj = Sms.objects.get(unique_tracking_id=uuid)
