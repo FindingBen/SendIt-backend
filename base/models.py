@@ -73,6 +73,7 @@ class Element(models.Model):
     text = models.TextField(blank=True)
     button_title = models.CharField(max_length=20, null=True)
     button_link = models.CharField(max_length=100, null=True)
+    button_color = models.CharField(max_length=20, default='#000000')
     order = models.PositiveIntegerField()
 
 

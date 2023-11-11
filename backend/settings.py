@@ -180,7 +180,10 @@ DJOSER = {
     'PASSWORD_CHANGED_EMAIL_CONFIRMATION': True,
     'ACTIVATION_URL': '/activate/{uid}/{token}',
     'SEND_ACTIVATION_EMAIL': False,
-    'SERIALIZERS': {},
+    'PASSWORD_RESET_CONFIRMATION_EMAIL': 'base.email.CustomPasswordResetConfirmationEmail',
+    'SERIALIZERS': {
+        'messages': 'base.constants.CUSTOM_MESSAGE'
+    },
     'EMAIL': {
         'password_reset': 'base.email.CustomPasswordResetConfirmationEmail'
     }
