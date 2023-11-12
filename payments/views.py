@@ -13,7 +13,7 @@ from rest_framework import status
 from base.models import CustomUser, PackagePlan
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-
+from django.core.mail import send_mail
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
@@ -121,6 +121,7 @@ def stripe_webhook(request):
                 customer_email = session["customer_details"]["email"]
                 product_id = session["metadata"]["product_id"]
                 ######
+                print(product_id)
                 time.sleep(10)
                 ######
                 user_obj = CustomUser.objects.filter(email=customer_email)[0]
@@ -129,7 +130,7 @@ def stripe_webhook(request):
                 user_obj.save()
                 user_payment = UserPayment.objects.get(
                     user_id=user_obj.id)
-
+                print(package_obj)
                 user_payment.payment_bool = True
                 user_payment.save()
 
@@ -146,6 +147,21 @@ def stripe_webhook(request):
                     create_purchase.save()
                     user_payment.payment_bool = False
                     user_payment.save()
+                    send_mail(
+                        subject=f'Receipt for sendperplane product {package_obj.plan_type}',
+                        message='Thank you for purchasing the package from us! We hope that you will enjoy our sending service.' +
+                        '\n\n\n'
+                        'Your purchase id is: ' +
+                        f'{event["data"]["object"]["payment_intent"]}'', use that code to make an inquire in case you got any questions or issues during the payment.' +
+                        '\n\n\n'
+                        'Please dont hesitate to contact us at: beniagic@gmail.com'+'\n'
+                        'Once again, thank you for choosing Sendperplane. We look forward to serving you again in the future.' +
+                        '\n\n'
+                        'Best regards,'+'\n'
+                        'Sendperplane team',
+                        recipient_list=[customer_email],
+                        from_email='benarmys4@gmail.com'
+                    )
                 else:
                     return Response('Payment not completed! Contact administrator for more info')
             except IntegrityError:
