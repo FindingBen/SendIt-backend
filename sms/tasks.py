@@ -12,14 +12,14 @@ def send_scheduled_sms(unique_tracking_id: uuid.UUID):
     try:
         from .models import Sms
         from base.models import CustomUser, ContactList, Message, Contact
-        print('here', unique_tracking_id)
+
         smsObj = Sms.objects.get(unique_tracking_id=unique_tracking_id)
         custom_user = CustomUser.objects.get(id=smsObj.user.id)
         contact_list = ContactList.objects.get(id=smsObj.contact_list.id)
         message = Message.objects.get(id=smsObj.message.id)
         content_link = smsObj.content_link
         sms_text = smsObj.sms_text
-        print("Sms", content_link)
+        print("Sending...")
 
         with transaction.atomic():
             if not smsObj.is_sent:
@@ -41,15 +41,16 @@ def send_scheduled_sms(unique_tracking_id: uuid.UUID):
                 content_link = content_link + \
                     str(unique_tracking_id)
                 try:
-                    for recipient_number in numbers_dict.values():
-                        generate_hash_number = generate_hash(recipient_number)
+                    for recipient in contact_obj:
+                        generate_hash_number = generate_hash(
+                            recipient.phone_number)
                         if content_link:
 
                             responseData = sms.send_message(
                                 {
                                     "from": '+12012550867',
-                                    "to": f'+{recipient_number}',
-                                    "text": sms_text.replace('#Link', content_link) +
+                                    "to": f'+{recipient.phone_number}',
+                                    "text": sms_text.replace('#Link', content_link).replace('#FirstName', recipient.first_name) +
                                     "\n\n\n\n\n" +
                                     f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{generate_hash_number}',
                                     "client-ref": unique_tracking_id
@@ -60,7 +61,7 @@ def send_scheduled_sms(unique_tracking_id: uuid.UUID):
                             responseData = sms.send_message(
                                 {
                                     "from": "+12012550867",
-                                    "to": f'+{recipient_number}' +
+                                    "to": f'+{recipient.phone_number}' +
                                     "\n\n\n\n\n" +
                                     f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{generate_hash_number}',
                                     "text": sms_text,

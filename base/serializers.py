@@ -20,7 +20,7 @@ class MessageSerializer(ModelSerializer):
 
     class Meta:
         model = Message
-        fields = ['id', 'users', 'created_at', 'status']
+        fields = ['id', 'users', 'created_at', 'status', 'message_name']
 
     def create(self, validated_data):
 

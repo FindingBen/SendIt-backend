@@ -67,9 +67,14 @@ def note_view(request, id):
         message = Message.objects.get(id=id)
         elements = Element.objects.filter(message=message).order_by('order')
         serializer = ElementSerializer(elements, many=True)
+        message_serializer = MessageSerializer(message)
+        response_data = {
+            'elements': serializer.data,
+            'message': message_serializer.data,  # You can customize this message
+        }
     except Exception as e:
         return Response(f'There has been some error: {e}')
-    return Response(serializer.data)
+    return Response(response_data)
 
 
 @api_view(['PUT'])
