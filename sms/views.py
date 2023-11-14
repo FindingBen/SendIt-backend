@@ -76,8 +76,8 @@ def schedule_sms(request):
                     str(request.data['scheduled_time']))
                 scheduled_time_utc = pytz.timezone(
                     'UTC').localize(scheduled_time)
-                # Adjust for the time zone difference (2 hours ahead)
-                scheduled_time_local = scheduled_time_utc - timedelta(hours=2)
+                # Adjust for the time zone difference (1 hours ahead)
+                scheduled_time_local = scheduled_time_utc - timedelta(hours=1)
                 current_datetime = datetime.fromisoformat(
                     str(datetime.now()))
 
@@ -99,11 +99,11 @@ def schedule_sms(request):
                 )
 
                 sms.save()
-
+                print('CURR TIME', current_datetime)
                 if scheduled_time > current_datetime:
                     message.status = 'Scheduled'
                     message.save()
-                    # Schedule the SMS to be sent in the future
+
                     send_scheduled_sms.apply_async(
                         (sms.unique_tracking_id,), eta=scheduled_time_local)
 
