@@ -32,20 +32,16 @@ def send_scheduled_sms(unique_tracking_id: uuid.UUID):
 
                 contact_obj = Contact.objects.filter(
                     contact_list=contact_list)
-                # Get value for total sms sends based on contact list length
-
-                numbers_dict = {
-                    contact.first_name: contact.phone_number for contact in contact_obj
-                }
 
                 content_link = content_link + \
                     str(unique_tracking_id)
-               # try:
+
+            try:
                 for recipient in contact_obj:
                     generate_hash_number = generate_hash(
                         recipient.phone_number)
                     if content_link:
-                        print(recipient.first_name)
+
                         responseData = sms.send_message(
                             {
                                 "from": '+12012550867',
@@ -64,7 +60,7 @@ def send_scheduled_sms(unique_tracking_id: uuid.UUID):
                                 "to": f'+{recipient.phone_number}' +
                                 "\n\n\n\n\n" +
                                 f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{generate_hash_number}',
-                                "text": sms_text,
+                                "text": sms_text.replace('#FirstName', recipient.first_name),
                                 "client-ref": unique_tracking_id
                             }
                         )
@@ -75,16 +71,16 @@ def send_scheduled_sms(unique_tracking_id: uuid.UUID):
                 message.save()
                 smsObj.is_sent = True
 
-                # if responseData["messages"][0]["status"] == "0":
-                #     pass  # Moved this line inside the if block
+                if responseData["messages"][0]["status"] == "0":
+                    pass  # Moved this line inside the if block
 
-                # else:
+                else:
 
-                #     print(
-                #         f"Message failed with error: {responseData['messages'][0]['error-text']}")
+                    print(
+                        f"Message failed with error: {responseData['messages'][0]['error-text']}")
 
-                # except Exception as e:
-                #     print("Error sending SMS:", str(e))
+            except Exception as e:
+                print("Error sending SMS:", str(e))
 
             else:
                 pass
@@ -107,10 +103,10 @@ def send_sms(unique_tracking_id: uuid.UUID):
     message = Message.objects.get(id=smsObj.message.id)
     content_link = smsObj.content_link
     sms_text = smsObj.sms_text
-
+    print("Sending...")
     with transaction.atomic():
         if not smsObj.is_sent:
-            print('sent?')
+
             client = vonage.Client(
                 key='33572b56', secret='cq75YEW2e1Z5coGZ')
             sms = vonage.Sms(client)
@@ -121,22 +117,22 @@ def send_sms(unique_tracking_id: uuid.UUID):
                 contact_list=contact_list)
             # Get value for total sms sends based on contact list length
 
-            numbers_dict = {
-                contact.first_name: contact.phone_number for contact in contact_obj
-            }
+            # numbers_dict = {
+            #     contact.first_name: contact.phone_number for contact in contact_obj
+            # }
 
             content_link = content_link + \
                 f'{unique_tracking_id}'
 
-            for recipient_number in numbers_dict.values():
-                generate_hash_number = generate_hash(recipient_number)
+            for recipient in contact_obj:
+                generate_hash_number = generate_hash(recipient.phone_number)
                 if content_link:
 
                     responseData = sms.send_message(
                         {
                             "from": '+12012550867',
-                            "to": f'+{recipient_number}',
-                            "text": sms_text.replace('#Link', content_link) +
+                            "to": f'+{recipient.phone_number}',
+                            "text": sms_text.replace('#Link', content_link).replace('#FirstName', recipient.first_name) +
                             "\n\n\n\n\n" +
                             f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{generate_hash_number}',
                             "client-ref": unique_tracking_id
@@ -148,8 +144,8 @@ def send_sms(unique_tracking_id: uuid.UUID):
                     responseData = sms.send_message(
                         {
                             "from": "+12012550867",
-                            "to": f'+{recipient_number}',
-                            "text": sms_text +
+                            "to": f'+{recipient.phone_number}',
+                            "text": sms_text.replace('#FirstName', recipient.first_name) +
                             "\n\n\n\n\n" +
                             f'\nClick to Opt-out:{smsObj.unsubscribe_path}/{generate_hash_number}',
                             "client-ref": unique_tracking_id
@@ -163,7 +159,6 @@ def send_sms(unique_tracking_id: uuid.UUID):
             message.save()
 
             if responseData["messages"][0]["status"] == "0":
-
                 print('done')
             else:
 
@@ -177,7 +172,6 @@ def send_sms(unique_tracking_id: uuid.UUID):
 def generate_hash(phone_number):
     # Create a hashlib object
     sha256 = hashlib.sha256()
-    print('is it hitting')
     # Update the hash object with the phone number as bytes
     sha256.update(str(phone_number).encode('utf-8'))
 
