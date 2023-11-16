@@ -19,7 +19,7 @@ SECRET_KEY = os.environ['SECRET_KEY']
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ['DJANGO_DEBUG', 'False'] == 'True'
+DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
 
 print(DEBUG)
 
