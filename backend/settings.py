@@ -21,7 +21,6 @@ SECRET_KEY = os.environ['SECRET_KEY']
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
 
-print(DEBUG)
 
 ALLOWED_HOSTS = ['*']
 
@@ -213,6 +212,8 @@ CACHES = {
 #         'PORT': '5432',
 #     }
 # }
+
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 4000
 
 DATABASES = {
     'default': {
