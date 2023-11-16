@@ -145,7 +145,7 @@ def vonage_webhook(request):
         sms_object = Sms.objects.get(unique_tracking_id=data['client-ref'])
         with transaction.atomic():
             print('IT CAME!')
-            if data['status'] == 'delivered' and sms_object.delivered == 0:
+            if data['status'] == 'delivered':
                 sms_object.delivered += 1
                 print('CAME2')
             elif data['status'] == 'failed':
