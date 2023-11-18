@@ -20,9 +20,9 @@ SECRET_KEY = os.environ['SECRET_KEY']
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
+print(DEBUG)
 
-
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.environ['HOSTS']
 
 
 # Application definition
@@ -202,29 +202,29 @@ CACHES = {
     }
 }
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-#         'NAME': 'sendperplane',
-#         'USER': 'postgres',
-#         'PASSWORD': 'rootPass123!',
-#         'HOST': '127.0.0.1',
-#         'PORT': '5432',
-#     }
-# }
-
-DATA_UPLOAD_MAX_NUMBER_FIELDS = 4000
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'railway',
-        'USER': os.environ.get("POSTGRES_USER"),
-        'PASSWORD': os.environ.get('POSTGRES_PASS'),
-        'HOST': os.environ.get('POSTGRES_HOST'),
-        'PORT': os.environ.get('PORT'),
+        'NAME': 'sendperplane',
+        'USER': 'postgres',
+        'PASSWORD': 'rootPass123!',
+        'HOST': '127.0.0.1',
+        'PORT': '5432',
     }
 }
+
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 4000
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+#         'NAME': 'railway',
+#         'USER': os.environ.get("POSTGRES_USER"),
+#         'PASSWORD': os.environ.get('POSTGRES_PASS'),
+#         'HOST': os.environ.get('POSTGRES_HOST'),
+#         'PORT': os.environ.get('PORT'),
+#     }
+# }
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
