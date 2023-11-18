@@ -139,9 +139,13 @@ def track_link_click(request, uuid):
 @csrf_exempt
 @api_view(['POST'])
 def vonage_webhook(request):
+    print('run?')
+    print('request;', request)
     try:
+
         # Parse the JSON data from the request body
         data = request.data
+        print(data)
         sms_object = Sms.objects.get(unique_tracking_id=data['client-ref'])
         with transaction.atomic():
             if data['status'] == 'delivered':
