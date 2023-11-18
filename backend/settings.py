@@ -22,7 +22,7 @@ SECRET_KEY = os.environ['SECRET_KEY']
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
 print(DEBUG)
 
-ALLOWED_HOSTS = os.environ['HOSTS']
+ALLOWED_HOSTS = []
 
 
 # Application definition
