@@ -19,7 +19,7 @@ SECRET_KEY = os.environ['SECRET_KEY']
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = ['*']
 
@@ -63,12 +63,7 @@ ROOT_URLCONF = 'backend.urls'
 CORS_ALLOW_ALL_ORIGINS = False
 
 
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',
-    'https://checkout.stripe.com',
-    "http://0.0.0.0:8080",
-    'https://sendit-frontend-production.up.railway.app'
-]
+CORS_ALLOWED_ORIGINS = os.environ.get('ORIGINS', '').split(',')
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -186,6 +181,10 @@ DJOSER = {
     }
 }
 
+
+VONAGE_ID = os.environ.get('VONAGE_ACCOUNT_ID')
+VONAGE_TOKEN = os.environ.get('VONAGE_TOKEN')
+
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
@@ -195,27 +194,16 @@ CACHE_TTL = 60 * 15
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": "redis://default:0FxZAn6ojRjLzCYTpXlL@containers-us-west-43.railway.app:7431",
+        "LOCATION": os.environ.get('REDIS_URL'),
     }
 }
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-#         'NAME': 'sendperplane',
-#         'USER': 'postgres',
-#         'PASSWORD': 'rootPass123!',
-#         'HOST': '127.0.0.1',
-#         'PORT': '5432',
-#     }
-# }
 
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 4000
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'railway',
+        'NAME': os.environ.get('POSTGRES_NAME'),
         'USER': os.environ.get("POSTGRES_USER"),
         'PASSWORD': os.environ.get('POSTGRES_PASS'),
         'HOST': os.environ.get('POSTGRES_HOST'),
@@ -263,8 +251,8 @@ USE_I18N = True
 CELERY_TIMEZONE = "UTC"
 CELERY_TASK_TRACK_STARTED = True
 CELERY_IMPORTS = ("sms.tasks", )
-CELERY_BROKER_URL = "redis://default:0FxZAn6ojRjLzCYTpXlL@containers-us-west-43.railway.app:7431"
-CELERY_RESULT_BACKEND = "redis://default:0FxZAn6ojRjLzCYTpXlL@containers-us-west-43.railway.app:7431"
+CELERY_BROKER_URL = os.environ.get('REDIS_URL')
+CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL')
 CELERY_CACHE_BACKEND = 'default'
 # USE_TZ = True
 
@@ -278,14 +266,10 @@ STATICFILES_DIRS = [
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-# DOMAIN_STRIPE_NAME = 'http://localhost:3000/stripe'
 
-# DOMAIN_STRIPE_NAME_CANCEL = 'http://localhost:3000/stripe_cancel'
+DOMAIN_STRIPE_NAME = os.environ.get('DOMAIN_STRIPE_NAME')
 
-
-DOMAIN_STRIPE_NAME = 'https://sendit-frontend-production.up.railway.app/stripe'
-
-DOMAIN_STRIPE_NAME_CANCEL = 'https://sendit-frontend-production.up.railway.app/stripe_cancel'
+DOMAIN_STRIPE_NAME_CANCEL = os.environ.get('DOMAIN_STRIPE_NAME_CANCEL')
 
 
 # test products

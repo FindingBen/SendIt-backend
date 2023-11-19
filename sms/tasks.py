@@ -1,6 +1,7 @@
 from __future__ import absolute_import, unicode_literals
 from celery import shared_task
 import vonage
+from django.conf import settings
 import uuid
 from django.db import transaction
 import hashlib
@@ -25,7 +26,7 @@ def send_scheduled_sms(unique_tracking_id: uuid.UUID):
             if not smsObj.is_sent:
 
                 client = vonage.Client(
-                    key='33572b56', secret='cq75YEW2e1Z5coGZ')
+                    key=settings.VONAGE_ACCOUNT_ID, secret=settings.VONAGE_TOKEN)
                 sms = vonage.Sms(client)
 
                 # Use self.contact_list to get the related ContactList instance
