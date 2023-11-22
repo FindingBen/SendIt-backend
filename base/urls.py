@@ -23,7 +23,7 @@ urlpatterns = [
     path('user_account/<str:id>/', views.get_user),
     path('update_user/<str:id>/', views.update_user),
     path('create_list/<str:id>', views.create_list),
-    path('unsubscribe/<str:id>', views.handle_unsubscribe),
+    path('optout/<str:id>', views.handle_unsubscribe),
     path('delete_recipient/<str:id>/', views.delete_contact_recipient),
     path('delete_list/<str:id>', views.delete_contact_list),
     path('package_purchase/<str:id>/', views.purchase_package),

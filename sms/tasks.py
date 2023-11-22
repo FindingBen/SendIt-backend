@@ -8,7 +8,7 @@ import hashlib
 
 
 @shared_task
-def send_scheduled_sms(unique_tracking_id: uuid.UUID):
+def send_scheduled_sms(unique_tracking_id: None):
 
     try:
         from .models import Sms
@@ -39,8 +39,7 @@ def send_scheduled_sms(unique_tracking_id: uuid.UUID):
 
             try:
                 for recipient in contact_obj:
-                    generate_hash_number = generate_hash(
-                        recipient.phone_number)
+
                     if content_link:
 
                         responseData = sms.send_message(
@@ -49,7 +48,7 @@ def send_scheduled_sms(unique_tracking_id: uuid.UUID):
                                 "to": f'+{recipient.phone_number}',
                                 "text": sms_text.replace('#Link', content_link).replace('#FirstName', recipient.first_name) +
                                 "\n\n\n\n\n" +
-                                f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{generate_hash_number}',
+                                f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.phone_number}',
                                 "client-ref": unique_tracking_id
                             }
                         )
@@ -60,7 +59,7 @@ def send_scheduled_sms(unique_tracking_id: uuid.UUID):
                                 "from": "+12012550867",
                                 "to": f'+{recipient.phone_number}' +
                                 "\n\n\n\n\n" +
-                                f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{generate_hash_number}',
+                                f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.phone_number}',
                                 "text": sms_text.replace('#FirstName', recipient.first_name),
                                 "client-ref": unique_tracking_id
                             }
@@ -85,15 +84,12 @@ def send_scheduled_sms(unique_tracking_id: uuid.UUID):
 
             else:
                 pass
-        # You may want to use a third-party SMS gateway or library for this
-        print('is it running?UPDATE')
-
     except Sms.DoesNotExist:
         pass
 
 
 @shared_task
-def send_sms(unique_tracking_id: uuid.UUID):
+def send_sms(unique_tracking_id: None):
 
     from .models import Sms
     from base.models import CustomUser, ContactList, Message, Contact
@@ -105,6 +101,7 @@ def send_sms(unique_tracking_id: uuid.UUID):
     content_link = smsObj.content_link
     sms_text = smsObj.sms_text
     print("Sending...")
+    print('uuid', unique_tracking_id)
     with transaction.atomic():
         if not smsObj.is_sent:
 
@@ -126,7 +123,7 @@ def send_sms(unique_tracking_id: uuid.UUID):
                 f'{unique_tracking_id}'
 
             for recipient in contact_obj:
-                generate_hash_number = generate_hash(recipient.phone_number)
+
                 if content_link:
 
                     responseData = sms.send_message(
@@ -135,20 +132,20 @@ def send_sms(unique_tracking_id: uuid.UUID):
                             "to": f'+{recipient.phone_number}',
                             "text": sms_text.replace('#Link', content_link).replace('#FirstName', recipient.first_name) +
                             "\n\n\n\n\n" +
-                            f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{generate_hash_number}',
+                            f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.phone_number}',
                             "client-ref": unique_tracking_id
                         }
                     )
 
                 else:
-                    print('S', generate_hash_number)
+
                     responseData = sms.send_message(
                         {
                             "from": "+12012550867",
                             "to": f'+{recipient.phone_number}',
                             "text": sms_text.replace('#FirstName', recipient.first_name) +
                             "\n\n\n\n\n" +
-                            f'\nClick to Opt-out:{smsObj.unsubscribe_path}/{generate_hash_number}',
+                            f'\nClick to Opt-out:{smsObj.unsubscribe_path}/{recipient.phone_number}',
                             "client-ref": unique_tracking_id
                         }
                     )
