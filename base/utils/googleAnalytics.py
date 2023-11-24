@@ -87,10 +87,12 @@ def sample_run_report(property_id="400824086", record_id=None, start_date=None, 
                        "scrolledUser": 0, "avgSessionDuration": 0, 'bounceRate': 0}
             final_data.append(row_obj)
     sorted_final_data = sorted(final_data, key=lambda x: x["date"])
-    from .calculations import total_sum
+    from .calculations import total_sum, calculate_overall_performance
     summed_eng = total_sum(sorted_final_data)
+    overall_perf = calculate_overall_performance(summed_eng)
     final_analysis_data = {'sorted_data': sorted_final_data,
-                           'sorted_total_data': summed_eng}
+                           'sorted_total_data': summed_eng,
+                           'overall_perf': overall_perf}
     return final_analysis_data
 
 

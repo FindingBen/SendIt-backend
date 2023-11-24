@@ -18,14 +18,61 @@ def total_sum(data_value: None):
     return total_sum_object
 
 
-def generate_hash(phone_number):
-    # Create a hashlib object
-    sha256 = hashlib.sha256()
+def calculate_overall_performance(final_data: None):
+    print('DATAAAA', final_data)
+    # Assign weights to each metric
+    bounce_rate_weight = 0.1
+    engagement_rate_weight = 0.2
+    scrolled_users_weight = 0.15
+    user_engagement_weight = 0.2
+    total_views_weight = 0.15
+    # total_clicks_weight = 0.15
+    # total_sends_weight = 0.1
 
-    # Update the hash object with the phone number as bytes
-    sha256.update(str(phone_number).encode('utf-8'))
+    # Normalize values to be between 0 and 1
+    max_possible_scrolled_users = 1000  # Replace with your maximum value
+    max_possible_user_engagement = 300  # Replace with your maximum value
+    # Replace with your maximum value
+    max_possible_total_views = 50
+    # max_possible_total_clicks = 1000  # Replace with your maximum value
+    # Replace with your maximum value
+    # max_possible_total_sends = final_data.total_sends
 
-    # Get the hexadecimal representation of the hash
-    hashed_phone = sha256.hexdigest()
+    normalized_bounce_rate = final_data['bounceRate'] / 100
+    normalized_engagement_rate = final_data['engegment_rate_total'] / 100
+    normalized_scrolled_users = final_data['scrolled_user_total'] / \
+        max_possible_scrolled_users
+    normalized_user_engagement = final_data['user_engegment_total'] / \
+        max_possible_user_engagement
+    normalized_total_views = final_data['screen_views_total'] / \
+        max_possible_total_views
+    # normalized_total_clicks = final_data.total_clicks / max_possible_total_clicks
+    # normalized_total_sends = final_data.total_sends / max_possible_total_sends
 
-    return hashed_phone
+    # Calculate the weighted average
+    overall_performance = (
+        bounce_rate_weight * normalized_bounce_rate +
+        engagement_rate_weight * normalized_engagement_rate +
+        scrolled_users_weight * normalized_scrolled_users +
+        user_engagement_weight * normalized_user_engagement +
+        total_views_weight * normalized_total_views
+        # total_clicks_weight * normalized_total_clicks +
+        # total_sends_weight * normalized_total_sends
+    )
+
+    # Convert the result to a percentage
+    overall_performance_percentage = overall_performance * 100
+
+    return overall_performance_percentage
+
+
+# Example usage:
+# overall_performance = calculate_overall_performance(
+#     bounce_rate=10,
+#     engagement_rate=80,
+#     scrolled_users=1000,
+#     user_engagement=120,
+#     total_views=5000,
+#     total_clicks=200,
+#     total_sends=10000
+# )
