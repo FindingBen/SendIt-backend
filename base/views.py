@@ -9,6 +9,7 @@ from .serializers import MessageSerializer, RegisterSerializer, CustomUserSerial
 from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser
 from rest_framework import generics
 from .utils.googleAnalytics import sample_run_report
+from django.db.models import Sum
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -64,13 +65,16 @@ def update_user(request, id):
 @api_view(['GET'])
 def note_view(request, id):
     try:
+
         message = Message.objects.get(id=id)
         elements = Element.objects.filter(message=message).order_by('order')
         serializer = ElementSerializer(elements, many=True)
         message_serializer = MessageSerializer(message)
         response_data = {
             'elements': serializer.data,
-            'message': message_serializer.data,  # You can customize this message
+            'message': message_serializer.data,
+            # You can customize this message
+
         }
     except Exception as e:
         return Response(f'There has been some error: {e}')
@@ -93,14 +97,25 @@ def update_element(request, id):
 @permission_classes([IsAuthenticated])
 def get_notes(request):
     try:
+        from sms.models import Sms
         user = request.user
         notes = user.message_set.all()
+        custom_user = CustomUser.objects.get(id=user.id)
+        sms = Sms.objects.all()
+
+        total_views = sms.aggregate(Sum('total_views'))[
+            'total_views__sum'] or 0
+        overall_perf = sms.aggregate(Sum('total_overall_rate'))[
+            'total_overall_rate__sum'] or 0
+        bounce_rate = sms.aggregate(Sum('total_bounce_rate'))[
+            'total_bounce_rate__sum'] or 0
+
         sent_message_count = notes.filter(status='sent').count()
-        print(sent_message_count)
+
         serializer = MessageSerializer(notes, many=True)
     except Exception as e:
         return Response(f'There has been some error: {e}')
-    return Response({"messages": serializer.data, "messages_count": sent_message_count})
+    return Response({"messages": serializer.data, "messages_count": sent_message_count, "total_values": {"total_views": total_views, "overall_perf": overall_perf, "bounce_rate": bounce_rate}})
 
 # Contact lists
 
