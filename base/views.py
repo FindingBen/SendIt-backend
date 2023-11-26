@@ -95,10 +95,12 @@ def get_notes(request):
     try:
         user = request.user
         notes = user.message_set.all()
+        sent_message_count = notes.filter(status='sent').count()
+        print(sent_message_count)
         serializer = MessageSerializer(notes, many=True)
     except Exception as e:
         return Response(f'There has been some error: {e}')
-    return Response(serializer.data)
+    return Response({"messages": serializer.data, "messages_count": sent_message_count})
 
 # Contact lists
 

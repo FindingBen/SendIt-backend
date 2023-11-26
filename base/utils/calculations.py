@@ -14,12 +14,13 @@ def total_sum(data_value: None):
                       for avgSession in data_value]
     total_sum_object = {'engegment_rate_total': sum(engement_rateSum), 'scrolled_user_total': sum(scrolledUser_sum), 'screen_views_total': sum(screenViews_sum), 'user_engegment_total': sum(userEng_sum),
                         'avg_session_total': sum(avgSession_sum), 'bounceRate': sum(bounceRate_sum)}
+
     # print(total_sum_object)
     return total_sum_object
 
 
 def calculate_overall_performance(final_data: None):
-    print('DATAAAA', final_data)
+
     # Assign weights to each metric
     bounce_rate_weight = 0.1
     engagement_rate_weight = 0.2
