@@ -3,7 +3,8 @@ import hashlib
 
 def total_sum(data_value: None):
 
-    engement_rateSum = [engRate['engegmentRate'] for engRate in data_value]
+    engement_rateSum = [engRate['engegmentRate']
+                        for engRate in data_value]
     scrolledUser_sum = [scrUsr['scrolledUser'] for scrUsr in data_value]
     screenViews_sum = [screenViews['screenViews']
                        for screenViews in data_value]
@@ -13,12 +14,19 @@ def total_sum(data_value: None):
     bounceRate_sum = [avgSession['bounceRate']
                       for avgSession in data_value]
 
-    formatted_engagement_rate = [
-        '{:.2%}'.format(rate) for rate in engement_rateSum]
-    formatted_bounce_rate = ['{:.2%}'.format(rate) for rate in bounceRate_sum]
+    total_engagement_rate = sum(engement_rateSum)
+    total_scrolled_user = sum(scrolledUser_sum)
+    total_screen_views = sum(screenViews_sum)
+    total_user_engegment = sum(userEng_sum)
+    total_avg_session = sum(avgSession_sum)
+    total_bounce_rate = sum(bounceRate_sum)
 
-    total_sum_object = {'engegment_rate_total': sum(formatted_engagement_rate), 'scrolled_user_total': sum(scrolledUser_sum), 'screen_views_total': sum(screenViews_sum), 'user_engegment_total': sum(userEng_sum),
-                        'avg_session_total': sum(avgSession_sum), 'bounceRate': sum(formatted_bounce_rate)}
+    # Format percentage values to show only two digits
+    formatted_engagement_rate, formatted_bounce_rate = [float('{:.2%}'.format(
+        value).rstrip('%')) for value in [total_engagement_rate, total_bounce_rate]]
+
+    total_sum_object = {'engegment_rate_total': formatted_engagement_rate, 'scrolled_user_total': total_scrolled_user, 'screen_views_total': total_screen_views, 'user_engegment_total': total_user_engegment,
+                        'avg_session_total': total_avg_session, 'bounceRate': formatted_bounce_rate}
 
     # print(total_sum_object)
     return total_sum_object
@@ -68,18 +76,6 @@ def calculate_overall_performance(final_data: None):
 
     # Convert the result to a percentage
     overall_performance_percentage = overall_performance * 100
-    overall_performance_percentage = '{:.2%}'.format(
-        overall_performance_percentage)
+    overall_performance_percentage = float('{:.2%}'.format(
+        overall_performance_percentage).rstrip('%'))
     return overall_performance_percentage
-
-
-# Example usage:
-# overall_performance = calculate_overall_performance(
-#     bounce_rate=10,
-#     engagement_rate=80,
-#     scrolled_users=1000,
-#     user_engagement=120,
-#     total_views=5000,
-#     total_clicks=200,
-#     total_sends=10000
-# )
