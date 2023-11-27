@@ -68,7 +68,8 @@ def calculate_overall_performance(final_data: None):
 
     # Convert the result to a percentage
     overall_performance_percentage = overall_performance * 100
-
+    overall_performance_percentage = '{:.2%}'.format(
+        overall_performance_percentage)
     return overall_performance_percentage
 
 
