@@ -89,7 +89,10 @@ def sample_run_report(property_id="400824086", record_id=None, start_date=None, 
 
     final_analysis_data = get_total_values(sorted_final_data)
 
-    get_values_for_sms(final_analysis_data, record_id)
+    from sms.models import Sms
+    sms_model = Sms.objects.get(message_id=record_id)
+
+    sms_model.update_from_values(final_analysis_data, record_id)
 
     return final_analysis_data
 
@@ -103,18 +106,14 @@ def get_total_values(values: None):
     final_analysis_data = {'sorted_data': values,
                            'sorted_total_data': summed_data,
                            'overall_perf': overall_perf}
-    print("final_ana_data", summed_data)
     return final_analysis_data
 
 
-def get_values_for_sms(values: None, record_id: None):
-    from sms.models import Sms
-    sms_model = Sms.objects.get(message_id=record_id)
-    print("FOR SMS:", values['sorted_total_data'])
-    with transaction.atomic():
-        sms_model.total_bounce_rate = values['sorted_total_data']['bounceRate']
-        sms_model.total_views = values['sorted_total_data']['screen_views_total']
-        sms_model.total_overall_rate = values['overall_perf']
-        sms_model.save()
-        print('done')
-# sample_run_report(14)
+# def get_values_for_sms(values: None, record_id: None):
+#     from sms.models import Sms
+#     sms_model = Sms.objects.get(message_id=record_id)
+#     with transaction.atomic():
+#         sms_model.total_bounce_rate = values['sorted_total_data']['bounceRate']
+#         sms_model.total_views = values['sorted_total_data']['screen_views_total']
+#         sms_model.total_overall_rate = values['overall_perf']
+#         sms_model.save()

@@ -39,3 +39,19 @@ class Sms(models.Model):
             self.unique_tracking_id = str(self.unique_tracking_id)[:7]
             print('uuid?', self.unique_tracking_id)
         super().save(*args, **kwargs)
+
+    @classmethod
+    def update_from_values(cls, values, record_id):
+        try:
+            with transaction.atomic():
+                sms_model = cls.objects.get(message_id=record_id)
+                sms_model.total_bounce_rate = values['sorted_total_data']['bounceRate']
+                sms_model.total_views = values['sorted_total_data']['screen_views_total']
+                sms_model.total_overall_rate = values['overall_perf']
+                sms_model.save()
+        except cls.DoesNotExist:
+            # Handle the case when the Sms object with the given message_id is not found
+            pass
+        except Exception as e:
+            # Handle other exceptions that might occur during the update
+            print(f"An error occurred: {e}")

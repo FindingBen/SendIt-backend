@@ -12,8 +12,13 @@ def total_sum(data_value: None):
                       for avgSession in data_value]
     bounceRate_sum = [avgSession['bounceRate']
                       for avgSession in data_value]
-    total_sum_object = {'engegment_rate_total': sum(engement_rateSum), 'scrolled_user_total': sum(scrolledUser_sum), 'screen_views_total': sum(screenViews_sum), 'user_engegment_total': sum(userEng_sum),
-                        'avg_session_total': sum(avgSession_sum), 'bounceRate': sum(bounceRate_sum)}
+
+    formatted_engagement_rate = [
+        '{:.2%}'.format(rate) for rate in engement_rateSum]
+    formatted_bounce_rate = ['{:.2%}'.format(rate) for rate in bounceRate_sum]
+
+    total_sum_object = {'engegment_rate_total': sum(formatted_engagement_rate), 'scrolled_user_total': sum(scrolledUser_sum), 'screen_views_total': sum(screenViews_sum), 'user_engegment_total': sum(userEng_sum),
+                        'avg_session_total': sum(avgSession_sum), 'bounceRate': sum(formatted_bounce_rate)}
 
     # print(total_sum_object)
     return total_sum_object
