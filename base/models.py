@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.apps import apps
+from uuid import uuid4
 
 
 class PackagePlan(models.Model):
@@ -53,6 +54,12 @@ class CustomUser(User):
             'sms_count': self.sms_count,
             # Add other relevant data
         }
+
+
+class EmailConfirmationToken(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
 
 
 class Message(models.Model):

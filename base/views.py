@@ -4,19 +4,22 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from .serializers import MessageSerializer, RegisterSerializer, CustomUserSerializer, ContactListSerializer, ContactSerializer, ElementSerializer, PackageSerializer
-from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser
+from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser, EmailConfirmationToken
 from rest_framework import generics
 from .utils.googleAnalytics import sample_run_report
+from .email.email import send_confirmation_email, send_welcome_email
 from django.db.models import Sum
+import time
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-
+        print(user)
         # Add custom claims
         token['username'] = user.username
         token['first_name'] = user.first_name
@@ -38,6 +41,39 @@ class MyTokenObtainPairView(TokenObtainPairView):
 
     def validate(self, **kwargs):
         pass
+
+
+class SendEmailConfirmationTokenAPIView(APIView):
+
+    # permission_classes = [IsAuthenticated]
+
+    def post(self, request, format=None):
+
+        user = request.data['user']['id']
+
+        user_instance = CustomUser.objects.get(id=user)
+        print(user_instance)
+        token = EmailConfirmationToken.objects.create(user=user_instance)
+        send_confirmation_email(
+            email=user_instance.email, token_id=token.pk, user_id=user_instance.pk)
+        return Response(data=None, status=201)
+
+
+@api_view(['GET'])
+def confirmation_token_view(request, token_id, user_id):
+
+    try:
+        token = EmailConfirmationToken.objects.get(pk=token_id)
+        user = token.user
+        user.is_active = True
+        user.save()
+        if user.is_active is True:
+            print(user)
+            send_welcome_email(user.email, user)
+        return Response(status=status.HTTP_200_OK)
+    except EmailConfirmationToken.DoesNotExist:
+
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])

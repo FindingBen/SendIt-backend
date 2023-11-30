@@ -121,7 +121,6 @@ def stripe_webhook(request):
                 customer_email = session["customer_details"]["email"]
                 product_id = session["metadata"]["product_id"]
                 ######
-                print(product_id)
                 time.sleep(10)
                 ######
                 user_obj = CustomUser.objects.filter(email=customer_email)[0]
@@ -130,7 +129,6 @@ def stripe_webhook(request):
                 user_obj.save()
                 user_payment = UserPayment.objects.get(
                     user_id=user_obj.id)
-                print(package_obj)
                 user_payment.payment_bool = True
                 user_payment.save()
 

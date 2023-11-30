@@ -44,7 +44,7 @@ class CustomUserSerializer(ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ['id', 'username', 'email',
-                  'first_name', 'last_name', 'package_plan', 'sms_count']
+                  'first_name', 'last_name', 'package_plan', 'sms_count', 'is_active']
 
     def update(self, instance, validated_data):
         for attr, value in validated_data.items():
@@ -58,10 +58,11 @@ class RegisterSerializer(ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ['username', 'email', 'password',
-                  'first_name', 'last_name', 'package_plan']
+                  'first_name', 'last_name', 'package_plan', 'is_active']
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
+        validated_data['is_active'] = False
         user = CustomUser.objects.create_user(
             **validated_data)
 
