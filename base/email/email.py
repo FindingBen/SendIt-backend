@@ -23,7 +23,7 @@ def send_confirmation_email(email, token_id, user_id):
         message=f""""
         Please confirm your email by clicking on the link below:
 
-        http://localhost:3000/activate_email/{token_id}/{user_id}/
+        https://sendit-frontend-production.up.railway.app/activate_email/{token_id}/{user_id}/
         """,
         from_email='benarmys4@gmail.com',
         recipient_list=[email],

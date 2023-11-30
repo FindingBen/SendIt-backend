@@ -68,7 +68,6 @@ def confirmation_token_view(request, token_id, user_id):
         user.is_active = True
         user.save()
         if user.is_active is True:
-            print(user)
             send_welcome_email(user.email, user)
         return Response(status=status.HTTP_200_OK)
     except EmailConfirmationToken.DoesNotExist:
