@@ -14,6 +14,7 @@ class Sms(models.Model):
         unique=True,
         editable=False  # Ensures the field is not editable in admin
     )
+    created_at = models.DateField(auto_created=True, default=0)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     message = models.ForeignKey(Message, on_delete=models.CASCADE)
     sender = models.CharField(max_length=20, null=False)
@@ -33,6 +34,9 @@ class Sms(models.Model):
         max_length=100, default='https://sendit-frontend-production.up.railway.app/opt-out')
     not_delivered = models.IntegerField(default=0)
     scheduled_time = models.DateTimeField(null=True, blank=True)
+
+    # def __str__(self):
+    #     return self.created_at.strftime('%Y-%m-%d')
 
     def save(self, *args, **kwargs):
         if not self.pk:

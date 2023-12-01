@@ -25,15 +25,14 @@ def get_all_dates_in_range(start_date, end_date):
 def sample_run_report(property_id="400824086", record_id=None, start_date=None, end_date=None):
     page_specified = f'/message_view/{record_id}'
 
-    # page_specified = f'/message_view/44'
-    # print("ID", record_id)
+
     # Using a default constructor instructs the client to use the credentials
     # specified in GOOGLE_APPLICATION_CREDENTIALS environment variable.
     property_id = "400824086"
     credentials_path = os.path.abspath('base/utils/credentials.json')
-
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials_path
     client = BetaAnalyticsDataClient()
+
     if start_date is None or end_date is None:
         start_date = (datetime.now() - timedelta(days=1)).date().isoformat()
         end_date = datetime.now().date().isoformat()
@@ -108,12 +107,3 @@ def get_total_values(values: None):
                            'overall_perf': overall_perf}
     return final_analysis_data
 
-
-# def get_values_for_sms(values: None, record_id: None):
-#     from sms.models import Sms
-#     sms_model = Sms.objects.get(message_id=record_id)
-#     with transaction.atomic():
-#         sms_model.total_bounce_rate = values['sorted_total_data']['bounceRate']
-#         sms_model.total_views = values['sorted_total_data']['screen_views_total']
-#         sms_model.total_overall_rate = values['overall_perf']
-#         sms_model.save()
