@@ -54,7 +54,7 @@ def sample_run_report(property_id="400824086", record_id=None, start_date=None, 
                  Metric(name='averageSessionDuration'),
                  Metric(name='bounceRate')],
 
-        date_ranges=[date_range],
+        # date_ranges=[date_range],
         dimension_filter=FilterExpression(
             filter=Filter(
                 field_name="pagePath",

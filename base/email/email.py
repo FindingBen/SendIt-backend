@@ -32,8 +32,7 @@ def send_confirmation_email(email, token_id, user_id):
 
 
 def send_welcome_email(email: None, user_object: None):
-    print('AAA', email)
-    print(user_object)
+
     send_mail(
         subject='Welcome to Sendperplane - Your SMS Marketing Platform',
         message=f'''Dear,
