@@ -71,17 +71,41 @@ class Message(models.Model):
         max_length=10, blank=True, null=True, default='Draft')
 
 
+class SurveyResponse(models.Model):
+    element = models.ForeignKey('Element', on_delete=models.CASCADE)
+    survey_type = models.CharField(max_length=20, null=True)
+    like_response = models.IntegerField(null=True, default=0)
+    dislike_response = models.IntegerField(null=True, default=0)
+    numeric_response = models.IntegerField(null=True, default=0)
+
+
 class Element(models.Model):
+
+    SURVEY_CHOICES = [
+        ('Like/Dislike', 'Like/Dislike'),
+        ('Question Survey', 'Question Survey'),
+    ]
 
     element_type = models.CharField(max_length=20, null=True)
     message = models.ForeignKey(Message, on_delete=models.CASCADE)
     image = models.ImageField(blank=True, null=True)
     alignment = models.CharField(max_length=20, null=True)
     text = models.TextField(blank=True)
+    survey = models.CharField(max_length=50, null=True)
+    question_type = models.CharField(
+        max_length=20, choices=SURVEY_CHOICES, null=True)
     button_title = models.CharField(max_length=20, null=True)
     button_link = models.CharField(max_length=100, null=True)
     button_color = models.CharField(max_length=20, default='#000000')
     order = models.PositiveIntegerField()
+
+    def save_response(self, like_response=None, dislike_response=None, numeric_response=None):
+        if self.element_type == 'Survey':
+            survey_response = SurveyResponse(
+                element=self,
+                # Add other fields as needed
+            )
+            survey_response.save()
 
 
 class ContactList(models.Model):

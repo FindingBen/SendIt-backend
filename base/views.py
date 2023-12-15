@@ -7,7 +7,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from .serializers import MessageSerializer, RegisterSerializer, CustomUserSerializer, ContactListSerializer, ContactSerializer, ElementSerializer, PackageSerializer
-from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser, EmailConfirmationToken
+from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser, EmailConfirmationToken, SurveyResponse
 from rest_framework import generics
 from .utils.googleAnalytics import sample_run_report
 from .email.email import send_confirmation_email, send_welcome_email
@@ -313,6 +313,8 @@ class CreateElement(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
 
         element = serializer.save()
+        if element.element_type == 'Survey':
+            element.save_response()
         return Response({
             "element": ElementSerializer(element, context=self.get_serializer_context()).data
         })
@@ -373,3 +375,31 @@ def get_analytics_data(request, record_id):
         record_id=record_id, start_date=start_date, end_date=end_date)
 
     return Response({'message': 'Data returned!', 'data': analytics_data})
+
+
+@api_view(['PUT'])
+def handle_survey_response(request, id):
+    # Get the element and survey response instance
+    element = Element.objects.get(id=id)
+    survey_response = SurveyResponse.objects.get(element=element)
+    survey_type = request.data.get('survey_type')
+    # Assuming the frontend sends the response type ('like' or 'dislike') in the request data
+    response_type = request.data.get('response_type')
+
+    # Update the corresponding field based on the response type
+    if survey_type == 'Like/Dislike':
+        if response_type == 'like':
+            survey_response.like_response = (
+                survey_response.like_response or 0) + 1
+    elif response_type == 'dislike':
+        survey_response.dislike_response = (
+            survey_response.dislike_response or 0) + 1
+
+    elif survey_type == 'Q Survey':
+        survey_response.numeric_response = (
+            survey_response.numeric_response or 0) + 1
+
+    # Save the changes
+    survey_response.save()
+
+    return Response({'message': 'Survey response updated successfully'})

@@ -1,7 +1,7 @@
 from rest_framework.serializers import ModelSerializer
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser
+from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser, SurveyResponse
 
 
 class ElementSerializer(ModelSerializer):
@@ -79,6 +79,12 @@ class ContactSerializer(ModelSerializer):
     class Meta:
         model = Contact
         fields = ['id', 'first_name', 'last_name', 'email', 'phone_number']
+
+
+class SurveySerializer(ModelSerializer):
+    class Meta:
+        model = SurveyResponse
+        fields = '__all__'
 
 
 class ChangePasswordSerializer(serializers.Serializer):
