@@ -12,7 +12,8 @@ from rest_framework import generics
 from .utils.googleAnalytics import sample_run_report
 from .email.email import send_confirmation_email, send_welcome_email
 from django.db.models import Sum
-import time
+from sms.models import Sms
+from datetime import datetime, timedelta
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -368,9 +369,10 @@ def delete_contact_list(request, id):
 
 @api_view(['GET'])
 def get_analytics_data(request, record_id):
+    sms = Sms.objects.get(message=record_id)
 
-    start_date = request.query_params.get('startDate')
-    end_date = request.query_params.get('endDate')
+    start_date = sms.created_at
+    end_date = datetime.now().date()
     analytics_data = sample_run_report(
         record_id=record_id, start_date=start_date, end_date=end_date)
 

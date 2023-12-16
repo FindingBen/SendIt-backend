@@ -1,7 +1,6 @@
 import os
 from google.analytics.data_v1beta import BetaAnalyticsDataClient
-from django.conf import settings
-from django.db import transaction
+from sms.models import Sms
 from google.analytics.data_v1beta.types import (
     DateRange,
     Dimension,
@@ -11,7 +10,6 @@ from google.analytics.data_v1beta.types import (
     Filter
 )
 from datetime import datetime, timedelta
-from google.oauth2 import service_account
 
 
 def get_all_dates_in_range(start_date, end_date):
@@ -24,8 +22,8 @@ def get_all_dates_in_range(start_date, end_date):
 
 def sample_run_report(property_id="400824086", record_id=None, start_date=None, end_date=None):
     page_specified = f'/message_view/{record_id}'
-
-
+    sms_model = Sms.objects.get(message_id=record_id)
+    print(start_date, end_date)
     # Using a default constructor instructs the client to use the credentials
     # specified in GOOGLE_APPLICATION_CREDENTIALS environment variable.
     property_id = "400824086"
@@ -33,25 +31,25 @@ def sample_run_report(property_id="400824086", record_id=None, start_date=None, 
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials_path
     client = BetaAnalyticsDataClient()
 
-    if start_date is None or end_date is None:
-        start_date = (datetime.now() - timedelta(days=1)).date().isoformat()
-        end_date = datetime.now().date().isoformat()
-        date_range = DateRange(start_date=start_date, end_date=end_date)
-    else:
-        date_range = DateRange(start_date=start_date,
-                               end_date=end_date)
+    # start_date = (datetime.now() - timedelta(days=1)).date()
+    end_date = datetime.now().date()
+    date_range = DateRange(
+        start_date=start_date.strftime("%Y-%m-%d"),
+        end_date=end_date.strftime("%Y-%m-%d")
+    )
+
     request = RunReportRequest(
         property=f"properties/{property_id}",
         dimensions=[Dimension(name="pagePath"),
                     Dimension(name='date')],
         metrics=[
 
-                 Metric(name='engagementRate'),
-                 Metric(name='screenPageViews'),
-                 Metric(name='userEngagementDuration'),
-                 Metric(name='scrolledUsers'),
-                 Metric(name='averageSessionDuration'),
-                 Metric(name='bounceRate')],
+            Metric(name='engagementRate'),
+            Metric(name='screenPageViews'),
+            Metric(name='userEngagementDuration'),
+            Metric(name='scrolledUsers'),
+            Metric(name='averageSessionDuration'),
+            Metric(name='bounceRate')],
 
         date_ranges=[date_range],
         dimension_filter=FilterExpression(
@@ -88,9 +86,6 @@ def sample_run_report(property_id="400824086", record_id=None, start_date=None, 
 
     final_analysis_data = get_total_values(sorted_final_data)
 
-    from sms.models import Sms
-    sms_model = Sms.objects.get(message_id=record_id)
-
     sms_model.update_from_values(final_analysis_data, record_id)
 
     return final_analysis_data
@@ -106,4 +101,3 @@ def get_total_values(values: None):
                            'sorted_total_data': summed_data,
                            'overall_perf': overall_perf}
     return final_analysis_data
-
