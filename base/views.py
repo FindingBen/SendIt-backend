@@ -391,9 +391,9 @@ def handle_survey_response(request, id):
         if response_type == 'like':
             survey_response.like_response = (
                 survey_response.like_response or 0) + 1
-    elif response_type == 'dislike':
-        survey_response.dislike_response = (
-            survey_response.dislike_response or 0) + 1
+        elif response_type == 'dislike':
+            survey_response.dislike_response = (
+                survey_response.dislike_response or 0) + 1
 
     elif survey_type == 'Q Survey':
         survey_response.numeric_response = (
