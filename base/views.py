@@ -6,7 +6,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
-from .serializers import MessageSerializer, RegisterSerializer, CustomUserSerializer, ContactListSerializer, ContactSerializer, ElementSerializer, PackageSerializer
+from .serializers import MessageSerializer, RegisterSerializer, CustomUserSerializer, ContactListSerializer, ContactSerializer, ElementSerializer, PackageSerializer, SurveySerializer
 from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser, EmailConfirmationToken, SurveyResponse
 from rest_framework import generics
 from .utils.googleAnalytics import sample_run_report
@@ -377,6 +377,20 @@ def get_analytics_data(request, record_id):
         record_id=record_id, start_date=start_date, end_date=end_date)
 
     return Response({'message': 'Data returned!', 'data': analytics_data})
+
+
+@api_view(['GET'])
+def get_results(request, id):
+    response = {}
+    element = Element.objects.filter(message=id, element_type='Survey')
+    if element:
+        survey = SurveyResponse.objects.get(element=element[0].id)
+        serializer = SurveySerializer(survey)
+        response = serializer.data
+    # If you want to access the related SurveyResponse for each Element
+    else:
+        response = False
+    return Response({'survey_responses': response})
 
 
 @api_view(['PUT'])
