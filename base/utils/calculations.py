@@ -22,14 +22,15 @@ def total_sum(data_value: None, recipients: None):
     total_avg_session = sum(avgSession_sum)
     total_bounce_rate = sum(bounceRate_sum)
 
-    overall_bounce_rate = total_bounce_rate / total_records
-    overall_engaged_rate = total_engagement_rate / total_records
+    average_bounce_rate = total_bounce_rate / total_records
+    average_engagement_rate = total_engagement_rate / total_records
+    average_session = total_avg_session / total_records
     # Format percentage values to show only two digits
     formatted_engagement_rate, formatted_bounce_rate = [float('{:.1%}'.format(
-        value).rstrip('%')) for value in [overall_engaged_rate, overall_bounce_rate]]
+        value).rstrip('%')) for value in [average_bounce_rate, average_engagement_rate]]
 
     total_sum_object = {'engegment_rate_total': formatted_engagement_rate, 'scrolled_user_total': total_scrolled_user, 'screen_views_total': total_screen_views, 'user_engegment_total': total_user_engegment,
-                        'avg_session_total': total_avg_session, 'bounceRate': formatted_bounce_rate}
+                        'avg_session_total': average_session, 'bounceRate': formatted_bounce_rate}
 
     return total_sum_object
 

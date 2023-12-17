@@ -43,7 +43,6 @@ class Sms(models.Model):
 
     @classmethod
     def update_from_values(cls, values, record_id):
-
         try:
             with transaction.atomic():
                 sms_model = cls.objects.get(message_id=record_id)

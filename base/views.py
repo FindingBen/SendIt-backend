@@ -1,4 +1,4 @@
-from django.conf import settings
+from math import ceil
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -133,25 +133,13 @@ def update_element(request, id):
 @permission_classes([IsAuthenticated])
 def get_notes(request):
     try:
-        from sms.models import Sms
         user = request.user
         notes = user.message_set.all()
-        custom_user = CustomUser.objects.get(id=user.id)
-        sms = Sms.objects.all()
-
-        total_views = sms.aggregate(Sum('total_views'))[
-            'total_views__sum'] or 0
-        overall_perf = sms.aggregate(Sum('total_overall_rate'))[
-            'total_overall_rate__sum'] or 0
-        bounce_rate = sms.aggregate(Sum('total_bounce_rate'))[
-            'total_bounce_rate__sum'] or 0
-
         sent_message_count = notes.filter(status='sent').count()
-
         serializer = MessageSerializer(notes, many=True)
     except Exception as e:
         return Response(f'There has been some error: {e}')
-    return Response({"messages": serializer.data, "messages_count": sent_message_count, "total_values": {"total_views": total_views, "overall_perf": overall_perf, "bounce_rate": bounce_rate}})
+    return Response({"messages": serializer.data, "messages_count": sent_message_count})
 
 # Contact lists
 
@@ -398,18 +386,23 @@ def get_total_analytic_values(request, id):
     total_values = Sms.objects.filter(user=id).aggregate(
         total_bounce_rate=Sum('total_bounce_rate'),
         total_overall_rate=Sum('total_overall_rate'),
-        total_views=Sum('total_views')
+        total_views=Sum('total_views'),
+        total_sends=Sum('sms_sends')
     )
-    sms = Sms.objects.get(user=id)
-    print(sms.total_views)
+
     # If there are no matching Sms objects, set default values to 0
     total_bounce_rate = total_values['total_bounce_rate'] or 0
     total_overall_rate = total_values['total_overall_rate'] or 0
     total_views = total_values['total_views'] or 0
 
+    average_bounce_rate = ceil(
+        total_bounce_rate / total_values['total_sends'])
+    average_overall_rate = ceil(
+        total_overall_rate / total_values['total_sends'])
+
     return Response({
-        'total_bounce_rate': total_bounce_rate,
-        'total_overall_rate': total_overall_rate,
+        'average_bounce_rate': average_bounce_rate,
+        'average_overall_rate': average_overall_rate,
         'total_views': total_views,
     })
 
