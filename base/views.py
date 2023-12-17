@@ -393,6 +393,27 @@ def get_results(request, id):
     return Response({'survey_responses': response})
 
 
+@api_view(['GET'])
+def get_total_analytic_values(request, id):
+    total_values = Sms.objects.filter(user=id).aggregate(
+        total_bounce_rate=Sum('total_bounce_rate'),
+        total_overall_rate=Sum('total_overall_rate'),
+        total_views=Sum('total_views')
+    )
+    sms = Sms.objects.get(user=id)
+    print(sms.total_views)
+    # If there are no matching Sms objects, set default values to 0
+    total_bounce_rate = total_values['total_bounce_rate'] or 0
+    total_overall_rate = total_values['total_overall_rate'] or 0
+    total_views = total_values['total_views'] or 0
+
+    return Response({
+        'total_bounce_rate': total_bounce_rate,
+        'total_overall_rate': total_overall_rate,
+        'total_views': total_views,
+    })
+
+
 @api_view(['PUT'])
 def handle_survey_response(request, id):
     # Get the element and survey response instance

@@ -23,7 +23,7 @@ def get_all_dates_in_range(start_date, end_date):
 def sample_run_report(property_id="400824086", record_id=None, start_date=None, end_date=None):
     page_specified = f'/message_view/{record_id}'
     sms_model = Sms.objects.get(message_id=record_id)
-    print(start_date, end_date)
+    print(sms_model)
     # Using a default constructor instructs the client to use the credentials
     # specified in GOOGLE_APPLICATION_CREDENTIALS environment variable.
     property_id = "400824086"
@@ -85,7 +85,7 @@ def sample_run_report(property_id="400824086", record_id=None, start_date=None, 
     sorted_final_data = sorted(final_data, key=lambda x: x["date"])
 
     final_analysis_data = get_total_values(sorted_final_data)
-
+    print(final_analysis_data)
     sms_model.update_from_values(final_analysis_data, record_id)
 
     return final_analysis_data

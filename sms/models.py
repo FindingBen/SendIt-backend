@@ -23,9 +23,9 @@ class Sms(models.Model):
     contact_list = models.ForeignKey(ContactList, on_delete=models.CASCADE)
     sms_sends = models.IntegerField(default=0)
     total_bounce_rate = models.DecimalField(
-        max_digits=2, decimal_places=1, default=0)
+        max_digits=5, decimal_places=2, default=0)
     total_overall_rate = models.DecimalField(
-        max_digits=2, decimal_places=1, default=0)
+        max_digits=5, decimal_places=2, default=0)
     total_views = models.IntegerField(default=0)
     click_number = models.IntegerField(default=0)
     is_sent = models.BooleanField(default=False)
@@ -35,23 +35,24 @@ class Sms(models.Model):
     not_delivered = models.IntegerField(default=0)
     scheduled_time = models.DateTimeField(null=True, blank=True)
 
-    def __str__(self):
-        return self.created_at.strftime('%Y-%m-%d')
-
     def save(self, *args, **kwargs):
         if not self.pk:
             self.unique_tracking_id = str(self.unique_tracking_id)[:7]
+            self.created_at.strftime('%Y-%m-%d')
             print('uuid?', self.unique_tracking_id)
         super().save(*args, **kwargs)
 
     @classmethod
     def update_from_values(cls, values, record_id):
+        print(values)
         try:
             with transaction.atomic():
                 sms_model = cls.objects.get(message_id=record_id)
+                print(sms_model)
                 sms_model.total_bounce_rate = values['sorted_total_data']['bounceRate']
                 sms_model.total_views = values['sorted_total_data']['screen_views_total']
                 sms_model.total_overall_rate = values['overall_perf']
+                print(sms_model.total_views)
                 sms_model.save()
         except cls.DoesNotExist:
             # Handle the case when the Sms object with the given message_id is not found
