@@ -20,10 +20,9 @@ def get_all_dates_in_range(start_date, end_date):
     return set(date.strftime("%Y-%m-%d") for date in date_list)
 
 
-def sample_run_report(property_id="400824086", record_id=None, start_date=None, end_date=None):
+def sample_run_report(property_id="400824086", record_id=None, start_date=None, end_date=None, recipients=None):
     page_specified = f'/message_view/{record_id}'
     sms_model = Sms.objects.get(message_id=record_id)
-    print(sms_model)
     # Using a default constructor instructs the client to use the credentials
     # specified in GOOGLE_APPLICATION_CREDENTIALS environment variable.
     property_id = "400824086"
@@ -84,17 +83,17 @@ def sample_run_report(property_id="400824086", record_id=None, start_date=None, 
             final_data.append(row_obj)
     sorted_final_data = sorted(final_data, key=lambda x: x["date"])
 
-    final_analysis_data = get_total_values(sorted_final_data)
+    final_analysis_data = get_total_values(sorted_final_data, recipients)
 
     sms_model.update_from_values(final_analysis_data, record_id)
 
     return final_analysis_data
 
 
-def get_total_values(values: None):
+def get_total_values(values: None, recipients: None):
     from .calculations import total_sum, calculate_overall_performance
 
-    summed_data = total_sum(values)
+    summed_data = total_sum(values, recipients)
 
     overall_perf = calculate_overall_performance(summed_data)
     final_analysis_data = {'sorted_data': values,

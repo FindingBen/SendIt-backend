@@ -1,7 +1,7 @@
 import hashlib
 
 
-def total_sum(data_value: None):
+def total_sum(data_value: None, recipients: None):
     total_records = len(data_value)
 
     engement_rateSum = [engRate['engegmentRate']
@@ -21,7 +21,7 @@ def total_sum(data_value: None):
     total_user_engegment = sum(userEng_sum)
     total_avg_session = sum(avgSession_sum)
     total_bounce_rate = sum(bounceRate_sum)
-    print('SCREEN_VIEWS', total_screen_views)
+
     overall_bounce_rate = total_bounce_rate / total_records
     overall_engaged_rate = total_engagement_rate / total_records
     # Format percentage values to show only two digits

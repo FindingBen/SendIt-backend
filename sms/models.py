@@ -39,16 +39,15 @@ class Sms(models.Model):
         if not self.pk:
             self.unique_tracking_id = str(self.unique_tracking_id)[:7]
             self.created_at.strftime('%Y-%m-%d')
-            print('uuid?', self.unique_tracking_id)
         super().save(*args, **kwargs)
 
     @classmethod
     def update_from_values(cls, values, record_id):
-        print(values)
+
         try:
             with transaction.atomic():
                 sms_model = cls.objects.get(message_id=record_id)
-                print(sms_model)
+
                 sms_model.total_bounce_rate = values['sorted_total_data']['bounceRate']
                 sms_model.total_views = values['sorted_total_data']['screen_views_total']
                 sms_model.total_overall_rate = values['overall_perf']
