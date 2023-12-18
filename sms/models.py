@@ -53,6 +53,8 @@ class Sms(models.Model):
                 sms_model.total_views = values['sorted_total_data']['screen_views_total']
 
                 print(sms_model.total_views)
+                print(sms_model.total_overall_rate)
+                print(sms_model.total_bounce_rate)
                 sms_model.save()
         except cls.DoesNotExist:
             # Handle the case when the Sms object with the given message_id is not found
