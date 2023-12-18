@@ -138,13 +138,11 @@ def vonage_webhook(request):
     try:
         # Parse the JSON data from the request body
         data = request.data
-        print(data)
         sms_object = Sms.objects.get(unique_tracking_id=data['client-ref'])
         with transaction.atomic():
             # Do some other condition which checks weather the same number already passed
             if data['status'] == 'delivered':
                 sms_object.delivered += 1
-                print('CAME2')
             elif data['status'] == 'failed':
                 sms_object.not_delivered += 1
             elif data['status'] == 'rejected':

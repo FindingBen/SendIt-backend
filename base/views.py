@@ -395,10 +395,10 @@ def get_total_analytic_values(request, id):
     total_overall_rate = total_values['total_overall_rate'] or 0
     total_views = total_values['total_views'] or 0
 
-    average_bounce_rate = ceil(
-        total_bounce_rate / total_values['total_sends'])
-    average_overall_rate = ceil(
-        total_overall_rate / total_values['total_sends'])
+    average_bounce_rate = round(
+        total_bounce_rate / total_values['total_sends'], 2)
+    average_overall_rate = round(
+        total_overall_rate / total_values['total_sends'], 2)
 
     return Response({
         'average_bounce_rate': average_bounce_rate,
