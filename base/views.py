@@ -383,28 +383,31 @@ def get_results(request, id):
 
 @api_view(['GET'])
 def get_total_analytic_values(request, id):
-    total_values = Sms.objects.filter(user=id).aggregate(
+    try:
+        total_values = Sms.objects.filter(user=id).aggregate(
         total_bounce_rate=Sum('total_bounce_rate'),
         total_overall_rate=Sum('total_overall_rate'),
         total_views=Sum('total_views'),
         total_sends=Sum('sms_sends')
-    )
+        )
 
-    # If there are no matching Sms objects, set default values to 0
-    total_bounce_rate = total_values['total_bounce_rate'] or 0
-    total_overall_rate = total_values['total_overall_rate'] or 0
-    total_views = total_values['total_views'] or 0
+        # If there are no matching Sms objects, set default values to 0
+        total_bounce_rate = total_values['total_bounce_rate'] or 0
+        total_overall_rate = total_values['total_overall_rate'] or 0
+        total_views = total_values['total_views'] or 0
 
-    average_bounce_rate = round(
-        total_bounce_rate / total_values['total_sends'], 2)
-    average_overall_rate = round(
-        total_overall_rate / total_values['total_sends'], 2)
+        average_bounce_rate = round(
+            total_bounce_rate / total_values['total_sends'], 2)
+        average_overall_rate = round(
+            total_overall_rate / total_values['total_sends'], 2)
 
-    return Response({
-        'average_bounce_rate': average_bounce_rate,
-        'average_overall_rate': average_overall_rate,
-        'total_views': total_views,
-    })
+        return Response({
+            'average_bounce_rate': average_bounce_rate,
+            'average_overall_rate': average_overall_rate,
+            'total_views': total_views,
+        })
+    except Exception as e:
+        return Response({'No data yet'})
 
 
 @api_view(['PUT'])
