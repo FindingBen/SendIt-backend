@@ -47,9 +47,11 @@ class Sms(models.Model):
             with transaction.atomic():
                 sms_model = cls.objects.get(message_id=record_id)
                 print(values)
-                sms_model.total_bounce_rate = values['sorted_total_data']['bounceRate']
+                sms_model.total_bounce_rate = round(
+                    values['sorted_total_data']['bounceRate'], 2)
+                sms_model.total_overall_rate = round(values['overall_perf'], 2)
                 sms_model.total_views = values['sorted_total_data']['screen_views_total']
-                sms_model.total_overall_rate = values['overall_perf']
+
                 print(sms_model.total_views)
                 sms_model.save()
         except cls.DoesNotExist:
