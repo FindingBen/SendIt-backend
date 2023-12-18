@@ -37,9 +37,9 @@ class Sms(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.pk:
-            print('wokring?', self)
+
             self.unique_tracking_id = str(self.unique_tracking_id)[:7]
-            self.created_at = self.created_at.strftime('%Y-%m-%d')
+            # self.created_at = self.created_at.strftime('%Y-%m-%d')
             print('S')
         super().save(*args, **kwargs)
 
