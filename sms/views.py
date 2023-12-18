@@ -48,12 +48,11 @@ class createSms(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
 
         user_obj = CustomUser.objects.get(id=request.data['user'])
-
+        print('working?', user_obj)
         if user_obj.sms_count > 0:
             if serializer.is_valid():
 
                 sms = serializer.save()
-                print(sms.unique_tracking_id)
                 send_sms.delay(sms.unique_tracking_id)
                 return Response({
                     "sms": SmsSerializer(sms, context=self.get_serializer_context()).data
@@ -64,7 +63,6 @@ class createSms(generics.GenericAPIView):
 
 @api_view(['POST'])
 def schedule_sms(request):
-
     try:
         data = request.data
         user_obj = CustomUser.objects.get(id=request.data['user'])
