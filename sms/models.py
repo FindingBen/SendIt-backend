@@ -23,9 +23,9 @@ class Sms(models.Model):
     contact_list = models.ForeignKey(ContactList, on_delete=models.CASCADE)
     sms_sends = models.IntegerField(default=0)
     total_bounce_rate = models.DecimalField(
-        max_digits=5, decimal_places=1, default=0)
+        max_digits=3, decimal_places=1, default=0)
     total_overall_rate = models.DecimalField(
-        max_digits=5, decimal_places=1, default=0)
+        max_digits=3, decimal_places=1, default=0)
     total_views = models.IntegerField(default=0)
     click_number = models.IntegerField(default=0)
     is_sent = models.BooleanField(default=False)
