@@ -197,9 +197,11 @@ def get_contacts(request, id):
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_message(request, id):
+    print(request.data)
     try:
         message = Message.objects.get(id=id)
-        serializer = MessageSerializer(message, data=request.data)
+        serializer = MessageSerializer(
+            message, data=request.data, partial=True)
         if serializer.is_valid(raise_exception=True):
             serializer.update(message, validated_data=request.data)
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -361,6 +363,7 @@ def get_analytics_data(request, record_id):
 
     start_date = sms.created_at
     end_date = datetime.now().date()
+    print(start_date)
     analytics_data = sample_run_report(
         record_id=record_id, start_date=start_date, end_date=end_date, recipients=sms.sms_sends)
 
@@ -385,10 +388,10 @@ def get_results(request, id):
 def get_total_analytic_values(request, id):
     try:
         total_values = Sms.objects.filter(user=id).aggregate(
-        total_bounce_rate=Sum('total_bounce_rate'),
-        total_overall_rate=Sum('total_overall_rate'),
-        total_views=Sum('total_views'),
-        total_sends=Sum('sms_sends')
+            total_bounce_rate=Sum('total_bounce_rate'),
+            total_overall_rate=Sum('total_overall_rate'),
+            total_views=Sum('total_views'),
+            total_sends=Sum('sms_sends')
         )
 
         # If there are no matching Sms objects, set default values to 0

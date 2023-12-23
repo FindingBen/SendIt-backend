@@ -64,7 +64,7 @@ class EmailConfirmationToken(models.Model):
 
 class Message(models.Model):
     users = models.ForeignKey(User, on_delete=models.CASCADE)
-    message_name = models.CharField(default='Content 1', max_length=20)
+    message_name = models.CharField(max_length=40)
     created_at = models.DateField(
         auto_now_add=True)
     status = models.CharField(

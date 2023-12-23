@@ -28,6 +28,10 @@ class MessageSerializer(ModelSerializer):
         return message
 
     def update(self, instance, validated_data):
+
+        print(validated_data)
+        instance.message_name = validated_data.get(
+            'message_name', instance.message_name)
         instance.save()
         return instance
 
