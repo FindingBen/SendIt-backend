@@ -166,3 +166,67 @@ def stripe_webhook(request):
                 pass
 
     return HttpResponse(status=200)
+
+
+@api_view(['POST'])
+def calculate_plan_usage(request):
+    BASIC_THRESHOLD_CUSTOMERS = 100
+    SILVER_THRESHOLD_CUSTOMERS = 1000
+    GOLD_THRESHOLD_CUSTOMERS = 5000
+
+    BASIC_THRESHOLD_MESSAGES = 1000
+    SILVER_THRESHOLD_MESSAGES = 2500
+    GOLD_THRESHOLD_MESSAGES = 5000
+
+    BASIC_THRESHOLD_BUDGET = 500
+    SILVER_THRESHOLD_BUDGET = 1500
+    GOLD_THRESHOLD_BUDGET = 3000
+    try:
+        messages_count = int(request.data.get('messages_count', 0))
+        customers_count = int(request.data.get('customers_count', 0))
+        budget = int(request.data.get('budget', 0))
+        # is_business = bool(request.data.get('is_business', False))
+        # Initialize scores for each package
+        basic_score = 0
+        silver_score = 0
+        gold_score = 0
+
+        # Evaluate based on the number of messages
+        if messages_count <= BASIC_THRESHOLD_MESSAGES:
+            basic_score += 1
+        elif messages_count <= SILVER_THRESHOLD_MESSAGES:
+            silver_score += 1
+        else:
+            gold_score += 1
+
+        # Evaluate based on the number of customers
+        if customers_count <= BASIC_THRESHOLD_CUSTOMERS:
+            basic_score += 1
+        elif customers_count <= SILVER_THRESHOLD_CUSTOMERS:
+            silver_score += 1
+        else:
+            gold_score += 1
+
+        # Evaluate based on the budget
+        if budget <= BASIC_THRESHOLD_BUDGET:
+            basic_score += 1
+        elif budget <= SILVER_THRESHOLD_BUDGET:
+            silver_score += 1
+        else:
+            gold_score += 1
+
+        # Evaluate based on business status
+        # if is_business:
+        #     silver_score += 1
+        #     gold_score += 1
+
+        # Determine the recommended package
+        if max(basic_score, silver_score, gold_score) == basic_score:
+            return Response({'recommended_package': "BASIC PLAN"})
+        elif max(basic_score, silver_score, gold_score) == silver_score:
+            return Response({'recommended_package': "SILVER PLAN"})
+        else:
+            return Response({'recommended_package': "GOLD PLAN"})
+
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
