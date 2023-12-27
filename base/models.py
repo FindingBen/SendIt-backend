@@ -44,7 +44,8 @@ class CustomUser(User):
 
             package_plan = PackagePlan.objects.get(id=self.package_plan.id)
 
-            self.sms_count = package_plan.sms_count_pack
+            self.sms_count += package_plan.sms_count_pack
+
         super().save(*args, **kwargs)
 
     def serialize_package_plan(self):

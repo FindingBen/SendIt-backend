@@ -20,6 +20,7 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 class StripeCheckoutVIew(APIView):
     def post(self, request):
         data_package = [package for package in settings.ACTIVE_PRODUCTS]
+        print("SS", data_package[0])
         print(request.data)
         package = next(
             (pkg for pkg in data_package if pkg[0] == request.data['name_product']), None)
@@ -181,7 +182,7 @@ def calculate_plan_usage(request):
     BASIC_THRESHOLD_BUDGET = 500
     SILVER_THRESHOLD_BUDGET = 1500
     GOLD_THRESHOLD_BUDGET = 3000
-    
+
     try:
         messages_count = int(request.data.get('messages_count', 0))
         customers_count = int(request.data.get('customers_count', 0))
