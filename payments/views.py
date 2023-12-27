@@ -181,6 +181,7 @@ def calculate_plan_usage(request):
     BASIC_THRESHOLD_BUDGET = 500
     SILVER_THRESHOLD_BUDGET = 1500
     GOLD_THRESHOLD_BUDGET = 3000
+    
     try:
         messages_count = int(request.data.get('messages_count', 0))
         customers_count = int(request.data.get('customers_count', 0))

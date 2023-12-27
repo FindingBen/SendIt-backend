@@ -48,8 +48,11 @@ class createSms(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
 
         user_obj = CustomUser.objects.get(id=request.data['user'])
-        print('working?', user_obj)
-        if user_obj.sms_count > 0:
+        recipient_list = ContactList.objects.get(
+            id=request.data['contact_list'])
+
+        if user_obj.sms_count >= recipient_list.contact_lenght:
+
             if serializer.is_valid():
 
                 sms = serializer.save()
@@ -57,17 +60,21 @@ class createSms(generics.GenericAPIView):
                 return Response({
                     "sms": SmsSerializer(sms, context=self.get_serializer_context()).data
                 })
+        elif user_obj.sms_count < 0:
+            return Response({'error': 'You have insufficient credit amount to cover this send. Top up your credit'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
         else:
-            return Response({'error': 'You have no sms credit left, purchase a new package or extend the current one'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+            return Response({'error': 'You dont have enough credit amount to cover this send. Top up your credit'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 @api_view(['POST'])
 def schedule_sms(request):
+
     try:
         data = request.data
         user_obj = CustomUser.objects.get(id=request.data['user'])
-
-        if user_obj.sms_count > 0:
+        recipient_list = ContactList.objects.get(
+            id=request.data['contact_list'])
+        if user_obj.sms_count >= recipient_list.contact_lenght:
 
             with transaction.atomic():
                 scheduled_time = datetime.fromisoformat(
@@ -110,9 +117,11 @@ def schedule_sms(request):
                     })
                 else:
                     return Response({'error': 'Scheduled time must be in the future.'}, status=status.HTTP_400_BAD_REQUEST)
+        elif user_obj.sms_count < 0:
+            return Response({'error': 'You have insufficient credit amount to cover this send. Top up your credit'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
         else:
-            return Response({'error': 'You have no SMS credit left, purchase a new package or extend the current one'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+            return Response({'error': 'You dont have enough credit amount to cover this send. Top up your credit'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
     except:
         print('There has been an error')
     return Response('failed')
