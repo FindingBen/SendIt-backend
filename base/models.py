@@ -135,9 +135,5 @@ class Contact(models.Model):
     last_name = models.CharField(max_length=20)
     phone_number = models.BigIntegerField()
     email = models.EmailField()
-
-    # def save(self, *args, **kwargs):
-    #     phone_to_hash = generate_hash(self.phone_number)
-    #     self.hashed_phone = phone_to_hash
-
-    #     super(Contact, self).save(*args, **kwargs)
+    created_at = models.DateField(
+        auto_now_add=True)

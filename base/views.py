@@ -195,6 +195,13 @@ def get_contacts(request, id):
     try:
         contact_list = ContactList.objects.get(id=id)
         contact = Contact.objects.filter(contact_list=contact_list)
+        # Default to sorting by name
+        sort_by = request.GET.get('sort_by', 'first_name')
+        if sort_by not in ['first_name', '-first_name', 'created_at', '-created_at']:
+            sort_by = 'first_name'  # Fallback to name if the input is invalid
+
+        # Apply sorting to the queryset
+        contact = contact.order_by(sort_by)
         serializer = ContactSerializer(contact, many=True)
     except Exception as e:
         return Response(f'There has been some error: {e}')
