@@ -135,6 +135,13 @@ def get_notes(request):
     try:
         user = request.user
         notes = user.message_set.all()
+        # Default to sorting by created_at
+        sort_by = request.GET.get('sort_by', 'created_at')
+        if sort_by not in ['created_at', '-created_at']:
+            sort_by = 'created_at'  # Fallback to created_at if the input is invalid
+
+        # Apply sorting to the queryset
+        notes = notes.order_by(sort_by)
         sent_message_count = notes.filter(status='sent').count()
         serializer = MessageSerializer(notes, many=True)
     except Exception as e:
