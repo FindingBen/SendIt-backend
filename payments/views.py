@@ -67,7 +67,7 @@ def payment_successful(request, id):
         user_object = CustomUser.objects.get(id=user_id.id)
         serializer = CustomUserSerializer(user_object)
         user_payment = UserPayment.objects.get(user=user_id.id)
-        time.sleep(5)
+        time.sleep(3)
         if user_payment.payment_bool is True:
             user_payment.stripe_checkout_id = id
             user_payment.save()
@@ -137,7 +137,7 @@ def stripe_webhook(request):
                     user_id=user_obj.id)
                 user_payment.payment_bool = True
                 user_payment.save()
-                print(user_obj.package_plan.plan_type)
+
                 if (user_payment.payment_bool == True):
                     payment_type_details = event['data']['object'].get(
                         'payment_method_types')
