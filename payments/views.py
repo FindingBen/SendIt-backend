@@ -11,6 +11,7 @@ from django.db import transaction, IntegrityError
 from django.http import HttpResponse
 from rest_framework import status
 from base.models import CustomUser, PackagePlan
+from base.serializers import CustomUserSerializer
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.core.mail import send_mail
@@ -63,13 +64,18 @@ class StripeCheckoutVIew(APIView):
 def payment_successful(request, id):
     try:
         user_id = request.user
+        user_object = CustomUser.objects.get(id=user_id.id)
+        serializer = CustomUserSerializer(user_object)
         user_payment = UserPayment.objects.get(user=user_id.id)
-        user_payment.stripe_checkout_id = id
-        user_payment.save()
+        time.sleep(5)
+        if user_payment.payment_bool is True:
+            user_payment.stripe_checkout_id = id
+            user_payment.save()
+
     except Exception as e:
         return Response(f'There has been an error: {e}')
 
-    return Response('Successfull response')
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
@@ -131,7 +137,7 @@ def stripe_webhook(request):
                     user_id=user_obj.id)
                 user_payment.payment_bool = True
                 user_payment.save()
-
+                print(user_obj.package_plan.plan_type)
                 if (user_payment.payment_bool == True):
                     payment_type_details = event['data']['object'].get(
                         'payment_method_types')
