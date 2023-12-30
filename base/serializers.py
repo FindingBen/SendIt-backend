@@ -1,6 +1,7 @@
 from rest_framework.serializers import ModelSerializer
 from django.contrib.auth.models import User
 from rest_framework import serializers
+from django.contrib.auth.password_validation import validate_password
 from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser, SurveyResponse
 
 
@@ -47,8 +48,8 @@ class CustomUserSerializer(ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ['id', 'username', 'email',
-                  'first_name', 'last_name', 'package_plan', 'sms_count', 'is_active']
+        fields = ['id', 'username', 'custom_email',
+                  'first_name', 'last_name', 'package_plan', 'sms_count', 'is_active', 'user_type']
 
     def update(self, instance, validated_data):
         for attr, value in validated_data.items():
@@ -57,18 +58,34 @@ class CustomUserSerializer(ModelSerializer):
         return instance
 
 
-class RegisterSerializer(ModelSerializer):
+class RegisterSerializer(serializers.ModelSerializer):
+    re_password = serializers.CharField(write_only=True)
 
     class Meta:
         model = CustomUser
-        fields = ['username', 'email', 'password',
-                  'first_name', 'last_name', 'package_plan', 'is_active']
+        fields = ['username', 'custom_email', 'password', 're_password',
+                  'first_name', 'last_name', 'package_plan', 'is_active', 'user_type']
         extra_kwargs = {'password': {'write_only': True}}
+
+    def validate(self, data):
+        password = data.get('password')
+        re_password = data.get('re_password')
+
+        if password and re_password and password != re_password:
+            raise serializers.ValidationError("Passwords do not match.")
+
+        # You can include additional password validation here using Django's built-in validators
+        validate_password(password)
+
+        return data
 
     def create(self, validated_data):
         validated_data['is_active'] = False
+        re_password = validated_data.pop('re_password', None)
         user = CustomUser.objects.create_user(
-            **validated_data)
+            email=validated_data.get('custom_email'),
+            **validated_data
+        )
 
         return user
 

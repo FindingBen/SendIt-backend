@@ -1,5 +1,6 @@
 from djoser.email import PasswordResetEmail, ActivationEmail
 from django.core.mail import send_mail
+from base.models import CustomUser
 from django.template.loader import get_template
 
 
@@ -14,13 +15,11 @@ class CustomPasswordResetConfirmationEmail(PasswordResetEmail):
 
 
 def send_confirmation_email(email, token_id, user_id):
-    # data = {
-    #     "token_id": token_id,
-    #     "user_id": str(user_id)
-    # }
+    user_obj = CustomUser.objects.get(id=user_id)
+
     send_mail(
-        subject=f'[SENDPERPLANE] Hi [], we need to confirm your email',
-        message=f""""
+        subject=f'[SENDPERPLANE] Hi {user_obj.first_name}, we need to confirm your email',
+        message=f"""
         Please confirm your email by clicking on the link below:
 
         https://sendit-frontend-production.up.railway.app/activate_email/{token_id}/{user_id}/

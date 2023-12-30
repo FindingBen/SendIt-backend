@@ -23,15 +23,25 @@ class PackagePlan(models.Model):
 
 
 class CustomUser(User):
+    USER_TYPE_CHOICES = [
+        ('Independent', 'Independent'),
+        ('Business', 'Business'),
+        ('Other', 'Other'),
+    ]
+
     package_plan = models.ForeignKey(
         PackagePlan, on_delete=models.CASCADE, blank=True, null=True)
     sms_count = models.IntegerField()
+    user_type = models.CharField(
+        max_length=20, choices=USER_TYPE_CHOICES)
+    custom_email = models.EmailField(unique=True)
 
     def save(self, *args, **kwargs):
         if not self.pk:
             package_plan = PackagePlan.objects.get(id=1)
             self.package_plan = package_plan
             self.sms_count = 2
+            self.custom_email = self.email
 
         is_new_instance = not self.pk
         original_instance = None
