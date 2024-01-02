@@ -150,7 +150,6 @@ def get_notes(request):
 
 # Contact lists
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_packages(request):
@@ -206,6 +205,27 @@ def get_contacts(request, id):
     except Exception as e:
         return Response(f'There has been some error: {e}')
     return Response(serializer.data)
+
+
+@api_view(['GET', 'PUT'])
+def contact_detail(request, id):
+    try:
+        contact = Contact.objects.get(id=id)
+
+    except Contact.DoesNotExist:
+        return Response({"error": "Contact not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        serializer = ContactSerializer(contact)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    elif request.method == 'PUT':
+        serializer = ContactSerializer(
+            contact, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['PUT'])

@@ -20,6 +20,7 @@ urlpatterns = [
     path('create_contact/<str:id>/', views.create_contact),
     path('contact_lists/', views.get_contact_lists),
     path('contact_list/<str:id>/', views.get_contacts),
+    path('contact_detail/<str:id>', views.contact_detail),
     path('package_plan/', views.get_packages),
     path('user_account/<str:id>/', views.get_user),
     path('update_user/<str:id>/', views.update_user),

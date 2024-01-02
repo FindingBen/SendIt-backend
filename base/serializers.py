@@ -30,7 +30,6 @@ class MessageSerializer(ModelSerializer):
 
     def update(self, instance, validated_data):
 
-        print(validated_data)
         instance.message_name = validated_data.get(
             'message_name', instance.message_name)
         instance.save()
@@ -76,7 +75,6 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         # You can include additional password validation here using Django's built-in validators
         validate_password(password)
-
         return data
 
     def create(self, validated_data):
@@ -100,6 +98,7 @@ class ContactSerializer(ModelSerializer):
     class Meta:
         model = Contact
         fields = ['id', 'first_name', 'last_name', 'email', 'phone_number']
+        partial = True
 
 
 class SurveySerializer(ModelSerializer):

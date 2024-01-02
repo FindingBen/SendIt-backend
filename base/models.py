@@ -141,9 +141,9 @@ class ContactList(models.Model):
 class Contact(models.Model):
     contact_list = models.ForeignKey(
         ContactList, null=True, on_delete=models.CASCADE)
-    first_name = models.CharField(max_length=20)
-    last_name = models.CharField(max_length=20)
-    phone_number = models.BigIntegerField()
-    email = models.EmailField()
+    first_name = models.CharField(max_length=20, blank=True, null=True)
+    last_name = models.CharField(max_length=20, blank=True, null=True)
+    phone_number = models.BigIntegerField(blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
     created_at = models.DateField(
         auto_now_add=True)
