@@ -263,23 +263,11 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
+    os.path.join(BASE_DIR, '/static/'),
 ]
+
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-# GOOGLE_APPLICATION_CREDENTIALS = json.dumps({
-#     "type": os.environ.get('TYPE'),
-#     "project_id": os.environ.get('PROJECT_ID'),
-#     "private_key_id": os.environ.get('PRIVATE_KEY_ID'),
-#     "private_key": os.environ.get('PRIVATE_KEY'),
-#     "client_email": os.environ.get('CLIENT_EMAIL'),
-#     "client_id": os.environ.get('CLIENT_ID'),
-#     "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-#     "token_uri": "https://oauth2.googleapis.com/token",
-#     "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-#     "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/starting-account-df0cp6g5qyyc%40sendperplane-1691910051941.iam.gserviceaccount.com",
-#     "universe_domain": os.environ.get('UNI_DOMAIN')
-# })
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
