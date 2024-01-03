@@ -257,14 +257,6 @@ CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL')
 CELERY_CACHE_BACKEND = 'default'
 # USE_TZ = True
 
-STORAGES = {
-    "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
-    },
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    },
-}
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -305,7 +297,7 @@ ACTIVE_PRODUCTS = (('Basic Package', 'price_1O7DtsAD7NIuijySWVToVtvB', 2), ('Sil
                    'price_1NyXK2AD7NIuijySgslBZ5hd', 3), ('Gold Package', 'price_1O7DuLAD7NIuijySn76jns9f', 4))
 
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
