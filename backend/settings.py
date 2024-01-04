@@ -280,9 +280,9 @@ ACTIVE_PRODUCTS = (('Basic Package', 'price_1O7DtsAD7NIuijySWVToVtvB', 2), ('Sil
 
 STATIC_URL = 'static/'
 # STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
-STATIC_ROOT = os.path.join(BASE_DIR, "static")
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-print(BASE_DIR)
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
