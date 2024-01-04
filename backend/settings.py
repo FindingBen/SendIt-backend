@@ -280,7 +280,7 @@ ACTIVE_PRODUCTS = (('Basic Package', 'price_1O7DtsAD7NIuijySWVToVtvB', 2), ('Sil
 
 STATIC_URL = 'static/'
 # STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_ROOT = os.environ.get('STATIC_ENV')
 
 
 # Default primary key field type
