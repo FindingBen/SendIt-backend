@@ -56,6 +56,7 @@ class createSms(generics.GenericAPIView):
             if serializer.is_valid():
 
                 sms = serializer.save()
+                print(sms.unique_tracking_id)
                 send_sms.delay(sms.unique_tracking_id)
                 return Response({
                     "sms": SmsSerializer(sms, context=self.get_serializer_context()).data
@@ -135,7 +136,7 @@ def track_link_click(request, uuid):
     sms_obj.click_number += 1  # Increment click_number by 1
     sms_obj.save()
 
-    redirect_url = f"https://sendit-frontend-production.up.railway.app/message_view/{message_obj.id}"
+    redirect_url = f"https://spplane.app/message_view/{message_obj.id}"
     return HttpResponseRedirect(redirect_url)
 
 

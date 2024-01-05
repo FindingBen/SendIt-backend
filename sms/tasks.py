@@ -101,7 +101,8 @@ def send_sms(unique_tracking_id: None):
     content_link = smsObj.content_link
     sms_text = smsObj.sms_text
     print("Sending...")
-    print('uuid', unique_tracking_id)
+    print('uuid->', unique_tracking_id)
+    print(smsObj)
     with transaction.atomic():
         if not smsObj.is_sent:
 
@@ -115,17 +116,15 @@ def send_sms(unique_tracking_id: None):
                 contact_list=contact_list)
             # Get value for total sms sends based on contact list length
 
-            # numbers_dict = {
-            #     contact.first_name: contact.phone_number for contact in contact_obj
-            # }
+            numbers_dict = {
+                contact.first_name: contact.phone_number for contact in contact_obj
+            }
 
-            content_link = content_link + \
-                f'{unique_tracking_id}'
-
+            print(content_link)
             for recipient in contact_obj:
 
                 if content_link:
-
+                    responseData = []
                     responseData = sms.send_message(
                         {
                             "from": 'spplane',
@@ -141,7 +140,7 @@ def send_sms(unique_tracking_id: None):
 
                     responseData = sms.send_message(
                         {
-                            "from": "spplane",
+                            "from": "+12012550867",
                             "to": f'+{recipient.phone_number}',
                             "text": sms_text.replace('#FirstName', recipient.first_name) +
                             "\n\n\n\n\n" +
