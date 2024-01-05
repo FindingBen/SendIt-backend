@@ -136,7 +136,7 @@ def track_link_click(request, uuid):
     sms_obj.click_number += 1  # Increment click_number by 1
     sms_obj.save()
 
-    redirect_url = f"https://spplane.app/message_view/{message_obj.id}"
+    redirect_url = f"https://spplane.app/view/{message_obj.id}"
     return HttpResponseRedirect(redirect_url)
 
 

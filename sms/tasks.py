@@ -20,7 +20,6 @@ def send_scheduled_sms(unique_tracking_id: None):
         message = Message.objects.get(id=smsObj.message.id)
         content_link = smsObj.content_link
         sms_text = smsObj.sms_text
-        print("Sending...")
 
         with transaction.atomic():
             if not smsObj.is_sent:
@@ -33,9 +32,6 @@ def send_scheduled_sms(unique_tracking_id: None):
 
                 contact_obj = Contact.objects.filter(
                     contact_list=contact_list)
-
-                content_link = content_link + \
-                    str(unique_tracking_id)
 
             try:
                 for recipient in contact_obj:
@@ -100,9 +96,7 @@ def send_sms(unique_tracking_id: None):
     message = Message.objects.get(id=smsObj.message.id)
     content_link = smsObj.content_link
     sms_text = smsObj.sms_text
-    print("Sending...")
-    print('uuid->', unique_tracking_id)
-    print(smsObj)
+
     with transaction.atomic():
         if not smsObj.is_sent:
 
