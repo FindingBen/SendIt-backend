@@ -21,7 +21,7 @@ def get_all_dates_in_range(start_date, end_date):
 
 
 def sample_run_report(property_id="400824086", record_id=None, start_date=None, end_date=None, recipients=None):
-    page_specified = f'/message_view/{record_id}'
+    page_specified = f'/view/{record_id}'
     sms_model = Sms.objects.get(message_id=record_id)
     # Using a default constructor instructs the client to use the credentials
     # specified in GOOGLE_APPLICATION_CREDENTIALS environment variable.
