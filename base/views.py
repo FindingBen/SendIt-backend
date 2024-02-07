@@ -149,7 +149,7 @@ def get_notes(request):
             serialized_data = serializer.data
 
             cache.set(cache_key, {"messages": serialized_data,
-                                  "messages_count": sent_message_count}, timeout=10)
+                                  "messages_count": sent_message_count}, timeout=settings.CACHE_TTL)
             return Response({"messages": serialized_data, "messages_count": sent_message_count})
         else:
             cached_data = cache.get(cache_key)
@@ -160,7 +160,7 @@ def get_notes(request):
                 serializer = MessageSerializer(notes, many=True)
                 serialized_data = serializer.data
                 cache.set(cache_key, {"messages": serialized_data,
-                                      "messages_count": sent_message_count}, timeout=10)
+                                      "messages_count": sent_message_count}, timeout=settings.CACHE_TTL)
                 return Response({"messages": serialized_data, "messages_count": sent_message_count})
             # Cache hit - use the cached data
             else:
