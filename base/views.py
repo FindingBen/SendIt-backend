@@ -135,26 +135,37 @@ def get_notes(request):
     try:
         user = request.user
         cache_key = f"user_messages:{user.id}"
-        print(cache_key)
         # Try to fetch data from cache
         cached_data = cache.get(cache_key)
-
-        if cached_data is None:
+        sort_by = request.GET.get('sort_by', None)
+        if sort_by and sort_by not in ['created_at', '-created_at']:
+            sort_by = ''
+        if sort_by:
             # Cache miss - fetch data from the database
-            notes = user.message_set.all()
+            notes = user.message_set.all().order_by(sort_by)
             # Your sorting logic here
-
             sent_message_count = notes.filter(status='sent').count()
             serializer = MessageSerializer(notes, many=True)
             serialized_data = serializer.data
 
             cache.set(cache_key, {"messages": serialized_data,
-                                  "messages_count": sent_message_count}, timeout=settings.CACHE_TTL)
+                                  "messages_count": sent_message_count}, timeout=10)
             return Response({"messages": serialized_data, "messages_count": sent_message_count})
         else:
+            cached_data = cache.get(cache_key)
+            if cached_data is None:
+                notes = user.message_set.all()
+                # Your sorting logic here
+                sent_message_count = notes.filter(status='sent').count()
+                serializer = MessageSerializer(notes, many=True)
+                serialized_data = serializer.data
+                cache.set(cache_key, {"messages": serialized_data,
+                                      "messages_count": sent_message_count}, timeout=10)
+                return Response({"messages": serialized_data, "messages_count": sent_message_count})
             # Cache hit - use the cached data
-            notes = cached_data["messages"]
-            sent_message_count = cached_data["messages_count"]
+            else:
+                notes = cached_data["messages"]
+                sent_message_count = cached_data["messages_count"]
 
             return Response({"messages": notes, "messages_count": sent_message_count})
 
@@ -206,19 +217,55 @@ def get_contact_list(request, pk):
 @permission_classes([IsAuthenticated])
 def get_contacts(request, id):
     try:
-        contact_list = ContactList.objects.get(id=id)
-        contact = Contact.objects.filter(contact_list=contact_list)
-        # Default to sorting by name
-        sort_by = request.GET.get('sort_by', 'first_name')
-        if sort_by not in ['first_name', '-first_name', 'created_at', '-created_at']:
-            sort_by = 'first_name'  # Fallback to name if the input is invalid
+        user = request.user
+        cache_key = f"user_contacts:{user.id}"
+        print(cache_key)
 
-        # Apply sorting to the queryset
-        contact = contact.order_by(sort_by)
-        serializer = ContactSerializer(contact, many=True)
+        # Check for sorting query parameters
+        sort_by = request.GET.get('sort_by', None)
+        if sort_by and sort_by not in ['first_name', '-first_name', 'created_at', '-created_at']:
+            sort_by = ''
+
+        # Check if sorting parameters are present
+        if sort_by:
+            contact_list = ContactList.objects.get(id=id)
+            contact = Contact.objects.filter(contact_list=contact_list)
+
+            # Apply sorting to the queryset
+            contact = contact.order_by(sort_by)
+
+            serializer = ContactSerializer(contact, many=True)
+
+            # Cache the sorted data
+            cache.set(cache_key, {"contacts": serializer.data},
+                      timeout=settings.CACHE_TTL)
+
+            return Response({"contacts": serializer.data})
+        else:
+            # Sorting parameters are not present, check the cache
+            cached_data = cache.get(cache_key)
+
+            if cached_data is None:
+                # Data is not in the cache, fetch from the database without sorting
+
+                contact_list = ContactList.objects.get(id=id)
+                contact = Contact.objects.filter(contact_list=contact_list)
+
+                serializer = ContactSerializer(contact, many=True)
+
+                # Cache the data without sorting
+                cache.set(
+                    cache_key, {"contacts": serializer.data}, timeout=settings.CACHE_TTL)
+
+                return Response({"contacts": serializer.data})
+            else:
+                # Data is in the cache, use the cached data without querying the database
+                contacts = cached_data['contacts']
+
+                return Response({"contacts": contacts})
+
     except Exception as e:
         return Response(f'There has been some error: {e}')
-    return Response(serializer.data)
 
 
 @api_view(['GET', 'PUT'])
@@ -267,6 +314,8 @@ def create_contact(request, id):
         serializer = ContactSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             serializer.save(contact_list=contact_list)
+            cache_key = f"user_contacts:{request.user.id}"
+            cache.delete(cache_key)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -393,6 +442,8 @@ def delete_contact_recipient(request, id):
     try:
         contact = Contact.objects.get(id=id)
         contact.delete()
+        cache_key = f"user_contacts:{request.user.id}"
+        cache.delete(cache_key)
         return Response("Recipient deleted!")
     except Exception as e:
         return Response(f'There has been an error:{e}')
