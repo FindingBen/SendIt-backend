@@ -56,3 +56,7 @@ def send_welcome_email(email: None, user_object: None):
         recipient_list=[email],  # Use the user's email address
         fail_silently=False,
     )
+
+
+def send_notification_email(email: None):
+    pass

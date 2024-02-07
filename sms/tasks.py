@@ -5,6 +5,7 @@ from django.conf import settings
 import uuid
 from django.db import transaction
 import hashlib
+from django.core.cache import cache
 
 
 @shared_task
@@ -66,7 +67,8 @@ def send_scheduled_sms(unique_tracking_id: None):
                 message.status = 'sent'
                 message.save()
                 smsObj.is_sent = True
-
+                cache_key = f"user_messages:{smsObj.user.id}"
+                cache.delete(cache_key)
                 if responseData["messages"][0]["status"] == "0":
                     pass  # Moved this line inside the if block
 
@@ -88,7 +90,7 @@ def send_scheduled_sms(unique_tracking_id: None):
 def send_sms(unique_tracking_id: None):
 
     from .models import Sms
-    from base.models import CustomUser, ContactList, Message, Contact
+    from base.models import ContactList, Message, Contact
 
     smsObj = Sms.objects.get(unique_tracking_id=unique_tracking_id)
 
@@ -114,7 +116,6 @@ def send_sms(unique_tracking_id: None):
                 contact.first_name: contact.phone_number for contact in contact_obj
             }
 
-            print(content_link)
             for recipient in contact_obj:
 
                 if content_link:
@@ -148,7 +149,8 @@ def send_sms(unique_tracking_id: None):
             smsObj.is_sent = True
             message.status = 'sent'
             message.save()
-
+            cache_key = f"user_messages:{smsObj.user.id}"
+            cache.delete(cache_key)
             if responseData["messages"][0]["status"] == "0":
                 print('done')
             else:

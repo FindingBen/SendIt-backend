@@ -56,7 +56,6 @@ class createSms(generics.GenericAPIView):
             if serializer.is_valid():
 
                 sms = serializer.save()
-                print(sms.unique_tracking_id)
                 send_sms.delay(sms.unique_tracking_id)
                 return Response({
                     "sms": SmsSerializer(sms, context=self.get_serializer_context()).data
@@ -105,7 +104,7 @@ def schedule_sms(request):
                 )
 
                 sms.save()
-                print('CURR TIME', current_datetime)
+          
                 if scheduled_time > current_datetime:
                     message.status = 'Scheduled'
                     message.save()

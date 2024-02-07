@@ -196,7 +196,9 @@ CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
         "LOCATION": os.environ.get('REDIS_URL'),
-    }
+
+    },
+
 }
 
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 4000
@@ -261,7 +263,6 @@ CELERY_CACHE_BACKEND = 'default'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-print(MEDIA_ROOT)
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 

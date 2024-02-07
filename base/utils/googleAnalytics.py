@@ -25,6 +25,7 @@ def sample_run_report(property_id="400824086", record_id=None, start_date=None, 
     sms_model = Sms.objects.get(message_id=record_id)
     # Using a default constructor instructs the client to use the credentials
     # specified in GOOGLE_APPLICATION_CREDENTIALS environment variable.
+    print('RECORD:', record_id)
     property_id = "400824086"
     credentials_path = os.path.abspath('base/utils/credentials.json')
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials_path
@@ -84,7 +85,6 @@ def sample_run_report(property_id="400824086", record_id=None, start_date=None, 
     sorted_final_data = sorted(final_data, key=lambda x: x["date"])
 
     final_analysis_data = get_total_values(sorted_final_data, recipients)
-    print('FINAL', final_analysis_data)
     sms_model.update_from_values(final_analysis_data, record_id)
 
     return final_analysis_data

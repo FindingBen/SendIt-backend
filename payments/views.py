@@ -54,7 +54,6 @@ class StripeCheckoutVIew(APIView):
             return Response({"url": url_str})
 
         except Exception as e:
-
             error_message = str(e)  # Get the error message as a string
             return Response({"error": error_message})
 

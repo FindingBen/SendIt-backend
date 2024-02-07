@@ -13,7 +13,10 @@ from .utils.googleAnalytics import sample_run_report
 from .email.email import send_confirmation_email, send_welcome_email
 from django.db.models import Sum
 from sms.models import Sms
-from datetime import datetime, timedelta
+from datetime import datetime
+from django.core.cache import cache
+from django.views.decorators.cache import cache_page
+from django.conf import settings
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -46,8 +49,6 @@ class MyTokenObtainPairView(TokenObtainPairView):
 
 class SendEmailConfirmationTokenAPIView(APIView):
 
-    # permission_classes = [IsAuthenticated]
-
     def post(self, request, format=None):
 
         user = request.data['user']['id']
@@ -62,7 +63,6 @@ class SendEmailConfirmationTokenAPIView(APIView):
 
 @api_view(['GET'])
 def confirmation_token_view(request, token_id, user_id):
-
     try:
         token = EmailConfirmationToken.objects.get(pk=token_id)
         user = token.user
@@ -134,21 +134,35 @@ def update_element(request, id):
 def get_notes(request):
     try:
         user = request.user
-        notes = user.message_set.all()
-        # Default to sorting by created_at
-        sort_by = request.GET.get('sort_by', 'created_at')
-        if sort_by not in ['created_at', '-created_at']:
-            sort_by = 'created_at'  # Fallback to created_at if the input is invalid
+        cache_key = f"user_messages:{user.id}"
+        print(cache_key)
+        # Try to fetch data from cache
+        cached_data = cache.get(cache_key)
 
-        # Apply sorting to the queryset
-        notes = notes.order_by(sort_by)
-        sent_message_count = notes.filter(status='sent').count()
-        serializer = MessageSerializer(notes, many=True)
+        if cached_data is None:
+            # Cache miss - fetch data from the database
+            notes = user.message_set.all()
+            # Your sorting logic here
+
+            sent_message_count = notes.filter(status='sent').count()
+            serializer = MessageSerializer(notes, many=True)
+            serialized_data = serializer.data
+
+            cache.set(cache_key, {"messages": serialized_data,
+                                  "messages_count": sent_message_count}, timeout=settings.CACHE_TTL)
+            return Response({"messages": serialized_data, "messages_count": sent_message_count})
+        else:
+            # Cache hit - use the cached data
+            notes = cached_data["messages"]
+            sent_message_count = cached_data["messages_count"]
+
+            return Response({"messages": notes, "messages_count": sent_message_count})
+
     except Exception as e:
         return Response(f'There has been some error: {e}')
-    return Response({"messages": serializer.data, "messages_count": sent_message_count})
 
 # Contact lists
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -306,13 +320,16 @@ class CreateNote(generics.GenericAPIView):
 
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        if serializer.is_valid(raise_exception=True):
 
-        message = serializer.save()
-
-        return Response({
-            "note": MessageSerializer(message, context=self.get_serializer_context()).data
-        })
+            message = serializer.save()
+            cache_key = f"user_messages:{request.user.id}"
+            cache.delete(cache_key)
+            return Response({
+                "note": MessageSerializer(message, context=self.get_serializer_context()).data
+            })
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -352,6 +369,8 @@ def delete_message(request, id):
     try:
         message = Message.objects.get(id=id)
         message.delete()
+        cache_key = f"user_messages:{request.user.id}"
+        cache.delete(cache_key)
         return Response("Message deleted!")
     except Exception as e:
         return Response(f'There has been an error:{e}')
@@ -397,7 +416,7 @@ def get_analytics_data(request, record_id):
 
     start_date = sms.created_at
     end_date = datetime.now().date()
-    print(start_date)
+    print(sms)
     analytics_data = sample_run_report(
         record_id=record_id, start_date=start_date, end_date=end_date, recipients=sms.sms_sends)
 
