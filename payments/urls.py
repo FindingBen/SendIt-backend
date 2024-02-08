@@ -4,7 +4,8 @@ from . import views
 
 urlpatterns = [
     path('stripe_checkout_session', StripeCheckoutVIew.as_view()),
-    path('payment_successfull/<str:id>', views.payment_successful),
+    path('payment_successfull/<str:id>',
+         views.payment_successful, name='payment_successful'),
     path('payment_cancelled', views.payment_cancelled),
     path('purchases/<str:id>', views.get_purchases),
     path('calculate_plan/', views.calculate_plan_usage,

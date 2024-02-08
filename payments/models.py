@@ -17,6 +17,7 @@ class Purchase(models.Model):
     price = models.IntegerField(default=0)
     payment_method = models.CharField(max_length=20)
     payment_id = models.CharField(max_length=300)
+    created_at = models.DateField(auto_now_add=True)
 
 
 @receiver(post_save, sender=CustomUser)

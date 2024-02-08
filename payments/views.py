@@ -1,3 +1,4 @@
+from django.urls import reverse
 import stripe
 import time
 from django.conf import settings
@@ -27,7 +28,7 @@ class StripeCheckoutVIew(APIView):
 
         if package is None:
             return Response({"error": "Invalid package name"})
-
+        print(request)
         try:
             checkout_session = stripe.checkout.Session.create(
                 line_items=[
@@ -36,13 +37,10 @@ class StripeCheckoutVIew(APIView):
                         'price': package[1],
                         'quantity': 1,
                     },
-
                 ],
                 metadata={
                     'product_id': package[2],
-
                 },
-
                 payment_method_types=['card'],
                 mode='payment',
                 success_url=settings.DOMAIN_STRIPE_NAME + \
@@ -62,11 +60,15 @@ class StripeCheckoutVIew(APIView):
 @permission_classes([IsAuthenticated])
 def payment_successful(request, id):
     try:
-        user_id = request.user
-        user_object = CustomUser.objects.get(id=user_id.id)
-        serializer = CustomUserSerializer(user_object)
-        user_payment = UserPayment.objects.get(user=user_id.id)
+        user_id = request.user.id
+        user_object = CustomUser.objects.get(id=user_id)
+        user_serializer = CustomUserSerializer(user_object)
+        user_payment = UserPayment.objects.get(user=user_id)
+        purchase_obj = Purchase.objects.filter(
+            userPayment=user_payment).order_by('-created_at').first()
+        serializer_purchase = PurchaseSerializer(purchase_obj)
         time.sleep(3)
+        print(serializer_purchase.data)
         if user_payment.payment_bool is True:
             user_payment.stripe_checkout_id = id
             user_payment.save()
@@ -74,7 +76,7 @@ def payment_successful(request, id):
     except Exception as e:
         return Response(f'There has been an error: {e}')
 
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response({'purchase': serializer_purchase.data, 'user': user_serializer.data}, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
@@ -150,6 +152,7 @@ def stripe_webhook(request):
                     create_purchase.save()
                     user_payment.payment_bool = False
                     user_payment.save()
+
                     send_mail(
                         subject=f'Receipt for sendperplane product {package_obj.plan_type}',
                         message='Thank you for purchasing the package from us! We hope that you will enjoy our sending service.' +

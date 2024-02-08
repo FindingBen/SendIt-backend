@@ -134,7 +134,7 @@ def update_element(request, id):
 def get_notes(request):
     try:
         user = request.user
-        cache_key = f"user_messages:{user.id}"
+        cache_key = f"messages_for_user:{user.id}"
         # Try to fetch data from cache
         cached_data = cache.get(cache_key)
         sort_by = request.GET.get('sort_by', None)
@@ -179,9 +179,20 @@ def get_notes(request):
 @permission_classes([IsAuthenticated])
 def get_packages(request):
     try:
-        package = PackagePlan.objects.all()
-        serializer = PackageSerializer(package, many=True)
-        data = serializer.data
+        user = request.user
+        cache_key = f"plans_for_user:{user.id}"
+        # Try to fetch data from cache
+        cached_data = cache.get(cache_key)
+        if cached_data is None:
+
+            package = PackagePlan.objects.all()
+            serializer = PackageSerializer(package, many=True)
+            data = serializer.data
+            cache.set(cache_key, {"plans": data,
+                                  }, timeout=settings.CACHE_TTL)
+            return Response(data)
+        else:
+            data = cached_data['plans']
     except Exception as e:
         return Response(f'There has been some error: {e}')
     return Response(data)
