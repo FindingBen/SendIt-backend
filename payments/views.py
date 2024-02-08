@@ -28,7 +28,7 @@ class StripeCheckoutVIew(APIView):
 
         if package is None:
             return Response({"error": "Invalid package name"})
-        print(request)
+
         try:
             checkout_session = stripe.checkout.Session.create(
                 line_items=[
@@ -68,7 +68,6 @@ def payment_successful(request, id):
             userPayment=user_payment).order_by('-created_at').first()
         serializer_purchase = PurchaseSerializer(purchase_obj)
         time.sleep(3)
-        print(serializer_purchase.data)
         if user_payment.payment_bool is True:
             user_payment.stripe_checkout_id = id
             user_payment.save()
