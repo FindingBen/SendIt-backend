@@ -1,10 +1,7 @@
 from django.db import models
-from base.models import ContactList, CustomUser, Message, Contact
-import vonage
+from base.models import ContactList, CustomUser, Message
 import shortuuid
-import uuid
 from django.db import transaction
-from django.conf import settings
 
 
 class Sms(models.Model):
@@ -39,8 +36,6 @@ class Sms(models.Model):
         if not self.pk:
 
             self.unique_tracking_id = str(self.unique_tracking_id)[:7]
-            # self.created_at = self.created_at.strftime('%Y-%m-%d')
-            print('S')
         super().save(*args, **kwargs)
 
     @classmethod
