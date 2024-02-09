@@ -132,46 +132,49 @@ def update_element(request, id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_notes(request):
-    try:
-        user = request.user
-        cache_key = f"messages_for_user:{user.id}"
-        # Try to fetch data from cache
+    # try:
+    user = request.user
+    cache_key = f"messages:{user.id}"
+    # Try to fetch data from cache
+    print('AAAA', cache_key)
+    cached_data = cache.get(cache_key)
+    sort_by = request.GET.get('sort_by', None)
+    if sort_by and sort_by not in ['created_at', '-created_at']:
+        sort_by = ''
+    if sort_by:
+        # Cache miss - fetch data from the database
+        notes = user.message_set.all().order_by(sort_by)
+        # Your sorting logic here
+        sent_message_count = notes.filter(status='sent').count()
+        serializer = MessageSerializer(notes, many=True)
+        serialized_data = serializer.data
+        print('SORTING from DB')
+        cache.set(cache_key, {"messages": serialized_data,
+                              "messages_count": sent_message_count}, timeout=5)
+        return Response({"messages": serialized_data, "messages_count": sent_message_count})
+    else:
         cached_data = cache.get(cache_key)
-        sort_by = request.GET.get('sort_by', None)
-        if sort_by and sort_by not in ['created_at', '-created_at']:
-            sort_by = ''
-        if sort_by:
-            # Cache miss - fetch data from the database
-            notes = user.message_set.all().order_by(sort_by)
+        if cached_data is None or not cached_data["messages"]:
+            print('CACHING')
+            notes = user.message_set.all()
             # Your sorting logic here
             sent_message_count = notes.filter(status='sent').count()
             serializer = MessageSerializer(notes, many=True)
             serialized_data = serializer.data
-
             cache.set(cache_key, {"messages": serialized_data,
-                                  "messages_count": sent_message_count}, timeout=settings.CACHE_TTL)
+                                  "messages_count": sent_message_count}, timeout=5)
+
             return Response({"messages": serialized_data, "messages_count": sent_message_count})
+        # Cache hit - use the cached data
         else:
-            cached_data = cache.get(cache_key)
-            if cached_data is None:
+            notes = cached_data["messages"]
+            print(notes)
+            sent_message_count = cached_data["messages_count"]
 
-                notes = user.message_set.all()
-                # Your sorting logic here
-                sent_message_count = notes.filter(status='sent').count()
-                serializer = MessageSerializer(notes, many=True)
-                serialized_data = serializer.data
-                cache.set(cache_key, {"messages": serialized_data,
-                                      "messages_count": sent_message_count}, timeout=settings.CACHE_TTL)
-                return Response({"messages": serialized_data, "messages_count": sent_message_count})
-            # Cache hit - use the cached data
-            else:
-                notes = cached_data["messages"]
-                sent_message_count = cached_data["messages_count"]
+        return Response({"messages": notes, "messages_count": sent_message_count})
 
-            return Response({"messages": notes, "messages_count": sent_message_count})
-
-    except Exception as e:
-        return Response(f'There has been some error: {e}')
+    # except Exception as e:
+    #     return Response(f'There has been some error: {e}')
 
 # Contact lists
 
@@ -384,7 +387,7 @@ class CreateNote(generics.GenericAPIView):
         if serializer.is_valid(raise_exception=True):
 
             message = serializer.save()
-            cache_key = f"user_messages:{request.user.id}"
+            cache_key = f"messages:{request.user.id}"
             cache.delete(cache_key)
             return Response({
                 "note": MessageSerializer(message, context=self.get_serializer_context()).data
@@ -430,8 +433,9 @@ def delete_message(request, id):
     try:
         message = Message.objects.get(id=id)
         message.delete()
-        cache_key = f"user_messages:{request.user.id}"
+        cache_key = f"messages:{request.user.id}"
         cache.delete(cache_key)
+        print('CACHE DELETED')
         return Response("Message deleted!")
     except Exception as e:
         return Response(f'There has been an error:{e}')
