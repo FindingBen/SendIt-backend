@@ -149,18 +149,19 @@ def get_notes(request):
             serialized_data = serializer.data
 
             cache.set(cache_key, {"messages": serialized_data,
-                                  "messages_count": sent_message_count}, timeout=settings.CACHE_TTL)
+                                  "messages_count": sent_message_count}, timeout=5)
             return Response({"messages": serialized_data, "messages_count": sent_message_count})
         else:
             cached_data = cache.get(cache_key)
             if cached_data is None:
+
                 notes = user.message_set.all()
                 # Your sorting logic here
                 sent_message_count = notes.filter(status='sent').count()
                 serializer = MessageSerializer(notes, many=True)
                 serialized_data = serializer.data
                 cache.set(cache_key, {"messages": serialized_data,
-                                      "messages_count": sent_message_count}, timeout=settings.CACHE_TTL)
+                                      "messages_count": sent_message_count}, timeout=5)
                 return Response({"messages": serialized_data, "messages_count": sent_message_count})
             # Cache hit - use the cached data
             else:
