@@ -155,7 +155,6 @@ def get_notes(request):
     else:
         cached_data = cache.get(cache_key)
         if cached_data is None or not cached_data["messages"]:
-            print('CACHING')
             notes = user.message_set.all()
             # Your sorting logic here
             sent_message_count = notes.filter(status='sent').count()
