@@ -67,7 +67,7 @@ def send_scheduled_sms(unique_tracking_id: None):
                 message.status = 'sent'
                 message.save()
                 smsObj.is_sent = True
-                cache_key = f"user_messages:{smsObj.user.id}"
+                cache_key = f"messages:{smsObj.user.id}"
                 cache.delete(cache_key)
                 if responseData["messages"][0]["status"] == "0":
                     pass  # Moved this line inside the if block
@@ -149,7 +149,7 @@ def send_sms(unique_tracking_id: None):
             smsObj.is_sent = True
             message.status = 'sent'
             message.save()
-            cache_key = f"user_messages:{smsObj.user.id}"
+            cache_key = f"messages:{smsObj.user.id}"
             cache.delete(cache_key)
             if responseData["messages"][0]["status"] == "0":
                 print('done')
