@@ -46,7 +46,7 @@ class createSms(generics.GenericAPIView):
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        print('valid?')
+
         user_obj = CustomUser.objects.get(id=request.data['user'])
         recipient_list = ContactList.objects.get(
             id=request.data['contact_list'])
@@ -54,7 +54,6 @@ class createSms(generics.GenericAPIView):
         if user_obj.sms_count >= recipient_list.contact_lenght:
 
             if serializer.is_valid():
-                print('valid?')
 
                 sms = serializer.save()
                 print(sms.unique_tracking_id)
