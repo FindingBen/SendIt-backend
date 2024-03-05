@@ -340,7 +340,7 @@ def create_contact(request, id):
 @api_view(['GET'])
 def handle_unsubscribe(request, id):
     try:
-        contact = Contact.objects.get(hashed_phone=id)
+        contact = Contact.objects.get(phone_number=id)
         contact.delete()
         return Response('Contact deleted successfully', status=status.HTTP_200_OK)
     except Exception as e:
@@ -505,30 +505,31 @@ def get_results(request, id):
 
 @api_view(['GET'])
 def get_total_analytic_values(request, id):
-        total_values = Sms.objects.filter(user=id).aggregate(
-            total_bounce_rate=Sum('total_bounce_rate'),
-            total_overall_rate=Sum('total_overall_rate'),
-            total_views=Sum('total_views'),
-            total_sends=Sum('sms_sends')
-        )
+    total_values = Sms.objects.filter(user=id).aggregate(
+        total_bounce_rate=Sum('total_bounce_rate'),
+        total_overall_rate=Sum('total_overall_rate'),
+        total_views=Sum('total_views'),
+        total_sends=Sum('sms_sends')
+    )
 
-        # If there are no matching Sms objects, set default values to 0
-        total_bounce_rate = total_values['total_bounce_rate'] or 0
-        total_overall_rate = total_values['total_overall_rate'] or 0
-        total_views = total_values['total_views'] or 0
-        total_sends = total_values['total_sends'] or 0
-        print(total_sends)
-        average_bounce_rate = round(
-            total_bounce_rate / total_sends, 2) if total_sends > 0 else None
-        average_overall_rate = round(
-            total_overall_rate / total_sends, 2) if total_sends > 0 else None
+    # If there are no matching Sms objects, set default values to 0
+    total_bounce_rate = total_values['total_bounce_rate'] or 0
+    total_overall_rate = total_values['total_overall_rate'] or 0
+    total_views = total_values['total_views'] or 0
+    total_sends = total_values['total_sends'] or 0
+    print(total_sends)
+    average_bounce_rate = round(
+        total_bounce_rate / total_sends, 2) if total_sends > 0 else None
+    average_overall_rate = round(
+        total_overall_rate / total_sends, 2) if total_sends > 0 else None
 
-        return Response({
-            'average_bounce_rate': average_bounce_rate,
-            'average_overall_rate': average_overall_rate,
-            'total_views': total_views,
-            'total_sends': total_sends
-        })
+    return Response({
+        'average_bounce_rate': average_bounce_rate,
+        'average_overall_rate': average_overall_rate,
+        'total_views': total_views,
+        'total_sends': total_sends
+    })
+
 
 @api_view(['PUT'])
 def handle_survey_response(request, id):
