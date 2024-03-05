@@ -505,7 +505,6 @@ def get_results(request, id):
 
 @api_view(['GET'])
 def get_total_analytic_values(request, id):
-    try:
         total_values = Sms.objects.filter(user=id).aggregate(
             total_bounce_rate=Sum('total_bounce_rate'),
             total_overall_rate=Sum('total_overall_rate'),
@@ -518,7 +517,7 @@ def get_total_analytic_values(request, id):
         total_overall_rate = total_values['total_overall_rate'] or 0
         total_views = total_values['total_views'] or 0
         total_sends = total_values['total_sends'] or 0
-
+        print(total_sends)
         average_bounce_rate = round(
             total_bounce_rate / total_sends, 2) if total_sends > 0 else None
         average_overall_rate = round(
@@ -530,9 +529,6 @@ def get_total_analytic_values(request, id):
             'total_views': total_views,
             'total_sends': total_sends
         })
-    except Exception as e:
-        return Response({'No data yet'})
-
 
 @api_view(['PUT'])
 def handle_survey_response(request, id):

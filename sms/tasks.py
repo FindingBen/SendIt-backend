@@ -88,78 +88,85 @@ def send_scheduled_sms(unique_tracking_id: None):
 
 @shared_task
 def send_sms(unique_tracking_id: None):
+    try:
+        print('REac')
+        from .models import Sms
+        from base.models import ContactList, Message, Contact
+        print('REacssss')
+        smsObj = Sms.objects.get(unique_tracking_id=unique_tracking_id)
+        print('REacdddd')
+        contact_list = ContactList.objects.get(id=smsObj.contact_list.id)
+        message = Message.objects.get(id=smsObj.message.id)
+        content_link = smsObj.content_link
+        sms_text = smsObj.sms_text
+        print(sms_text)
+        print(content_link)
+        print(message)
+        print(contact_list)
 
-    from .models import Sms
-    from base.models import ContactList, Message, Contact
+        with transaction.atomic():
+            if not smsObj.is_sent:
+                print('Reaching 1')
+                client = vonage.Client(
+                    key='33572b56', secret='cq75YEW2e1Z5coGZ')
+                sms = vonage.Sms(client)
 
-    smsObj = Sms.objects.get(unique_tracking_id=unique_tracking_id)
+                # Use self.contact_list to get the related ContactList instance
 
-    contact_list = ContactList.objects.get(id=smsObj.contact_list.id)
-    message = Message.objects.get(id=smsObj.message.id)
-    content_link = smsObj.content_link
-    sms_text = smsObj.sms_text
+                contact_obj = Contact.objects.filter(
+                    contact_list=contact_list)
+                # Get value for total sms sends based on contact list length
 
-    with transaction.atomic():
-        if not smsObj.is_sent:
+                numbers_dict = {
+                    contact.first_name: contact.phone_number for contact in contact_obj
+                }
 
-            client = vonage.Client(
-                key='33572b56', secret='cq75YEW2e1Z5coGZ')
-            sms = vonage.Sms(client)
+                for recipient in contact_obj:
 
-            # Use self.contact_list to get the related ContactList instance
+                    if content_link:
+                        responseData = []
+                        responseData = sms.send_message(
+                            {
+                                "from": 'spplane',
+                                "to": f'+{recipient.phone_number}',
+                                "text": sms_text.replace('#Link', content_link).replace('#FirstName', recipient.first_name) +
+                                "\n\n\n\n\n" +
+                                f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.phone_number}',
+                                "client-ref": unique_tracking_id
+                            }
+                        )
 
-            contact_obj = Contact.objects.filter(
-                contact_list=contact_list)
-            # Get value for total sms sends based on contact list length
+                    else:
 
-            numbers_dict = {
-                contact.first_name: contact.phone_number for contact in contact_obj
-            }
+                        responseData = sms.send_message(
+                            {
+                                "from": "+12012550867",
+                                "to": f'+{recipient.phone_number}',
+                                "text": sms_text.replace('#FirstName', recipient.first_name) +
+                                "\n\n\n\n\n" +
+                                f'\nClick to Opt-out:{smsObj.unsubscribe_path}/{recipient.phone_number}',
+                                "client-ref": unique_tracking_id
+                            }
+                        )
 
-            for recipient in contact_obj:
-
-                if content_link:
-                    responseData = []
-                    responseData = sms.send_message(
-                        {
-                            "from": 'spplane',
-                            "to": f'+{recipient.phone_number}',
-                            "text": sms_text.replace('#Link', content_link).replace('#FirstName', recipient.first_name) +
-                            "\n\n\n\n\n" +
-                            f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.phone_number}',
-                            "client-ref": unique_tracking_id
-                        }
-                    )
-
+                smsObj.sms_sends = contact_list.contact_lenght
+                smsObj.save()
+                smsObj.is_sent = True
+                message.status = 'sent'
+                message.save()
+                cache_key = f"messages:{smsObj.user.id}"
+                cache.delete(cache_key)
+                if responseData["messages"][0]["status"] == "0":
+                    print('done')
                 else:
 
-                    responseData = sms.send_message(
-                        {
-                            "from": "+12012550867",
-                            "to": f'+{recipient.phone_number}',
-                            "text": sms_text.replace('#FirstName', recipient.first_name) +
-                            "\n\n\n\n\n" +
-                            f'\nClick to Opt-out:{smsObj.unsubscribe_path}/{recipient.phone_number}',
-                            "client-ref": unique_tracking_id
-                        }
-                    )
+                    print(
+                        f"Message failed with error: {responseData['messages'][0]['error-text']}")
 
-            smsObj.sms_sends = contact_list.contact_lenght
-            smsObj.save()
-            smsObj.is_sent = True
-            message.status = 'sent'
-            message.save()
-            cache_key = f"messages:{smsObj.user.id}"
-            cache.delete(cache_key)
-            if responseData["messages"][0]["status"] == "0":
-                print('done')
             else:
-
-                print(
-                    f"Message failed with error: {responseData['messages'][0]['error-text']}")
-
-        else:
-            pass  # If is_sent is True, save the instance
+                pass  # If is_sent is True, save the instance
+    except Exception as e:
+        print(str(e))
 
 
 def generate_hash(phone_number):
