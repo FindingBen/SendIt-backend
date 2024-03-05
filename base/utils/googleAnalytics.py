@@ -1,6 +1,7 @@
 import os
 from google.analytics.data_v1beta import BetaAnalyticsDataClient
 from sms.models import Sms
+from base.models import AnalyticsData, CustomUser
 from google.analytics.data_v1beta.types import (
     DateRange,
     Dimension,

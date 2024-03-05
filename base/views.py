@@ -517,6 +517,7 @@ def get_total_analytic_values(request, id):
         total_bounce_rate = total_values['total_bounce_rate'] or 0
         total_overall_rate = total_values['total_overall_rate'] or 0
         total_views = total_values['total_views'] or 0
+        total_sends = total_values['total_sends'] or 0
 
         average_bounce_rate = round(
             total_bounce_rate / total_values['total_sends'], 2)
@@ -527,6 +528,7 @@ def get_total_analytic_values(request, id):
             'average_bounce_rate': average_bounce_rate,
             'average_overall_rate': average_overall_rate,
             'total_views': total_views,
+            'total_sends': total_sends
         })
     except Exception as e:
         return Response({'No data yet'})
