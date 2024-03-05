@@ -520,9 +520,9 @@ def get_total_analytic_values(request, id):
         total_sends = total_values['total_sends'] or 0
 
         average_bounce_rate = round(
-            total_bounce_rate / total_values['total_sends'], 2)
+            total_bounce_rate / total_sends, 2) if total_sends > 0 else None
         average_overall_rate = round(
-            total_overall_rate / total_values['total_sends'], 2)
+            total_overall_rate / total_sends, 2) if total_sends > 0 else None
 
         return Response({
             'average_bounce_rate': average_bounce_rate,
