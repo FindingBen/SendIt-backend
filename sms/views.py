@@ -56,8 +56,11 @@ class createSms(generics.GenericAPIView):
             if serializer.is_valid():
 
                 sms = serializer.save()
-                print(sms.unique_tracking_id)
-                send_sms.delay(sms.unique_tracking_id)
+                sms_result_task = send_sms.delay(sms.unique_tracking_id)
+                print('DDDD')
+                if sms_result_task.ready():
+                    get_task = sms_result_task.get(timeout=1)
+                    print("TASK", get_task)
                 return Response({
                     "sms": SmsSerializer(sms, context=self.get_serializer_context()).data
                 })
