@@ -45,7 +45,7 @@ def send_scheduled_sms(unique_tracking_id: None):
                                 "to": f'+{recipient.phone_number}',
                                 "text": sms_text.replace('#Link', content_link).replace('#FirstName', recipient.first_name) +
                                 "\n\n\n\n\n" +
-                                f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.phone_number}',
+                                f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.id}',
                                 "client-ref": unique_tracking_id
                             }
                         )
@@ -89,20 +89,16 @@ def send_scheduled_sms(unique_tracking_id: None):
 @shared_task
 def send_sms(unique_tracking_id: None):
     try:
-        print('REac')
+
         from .models import Sms
         from base.models import ContactList, Message, Contact
-        print('REacssss')
+
         smsObj = Sms.objects.get(unique_tracking_id=unique_tracking_id)
-        print('REacdddd')
+
         contact_list = ContactList.objects.get(id=smsObj.contact_list.id)
         message = Message.objects.get(id=smsObj.message.id)
         content_link = smsObj.content_link
         sms_text = smsObj.sms_text
-        print(sms_text)
-        print(content_link)
-        print(message)
-        print(contact_list)
 
         with transaction.atomic():
             if not smsObj.is_sent:
@@ -131,7 +127,7 @@ def send_sms(unique_tracking_id: None):
                                 "to": f'+{recipient.phone_number}',
                                 "text": sms_text.replace('#Link', content_link).replace('#FirstName', recipient.first_name) +
                                 "\n\n\n\n\n" +
-                                f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.phone_number}',
+                                f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.id}',
                                 "client-ref": unique_tracking_id
                             }
                         )

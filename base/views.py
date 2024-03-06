@@ -340,7 +340,7 @@ def create_contact(request, id):
 @api_view(['GET'])
 def handle_unsubscribe(request, id):
     try:
-        contact = Contact.objects.get(phone_number=id)
+        contact = Contact.objects.get(id=id)
         contact.delete()
         return Response('Contact deleted successfully', status=status.HTTP_200_OK)
     except Exception as e:
