@@ -22,10 +22,10 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 class StripeCheckoutVIew(APIView):
     def post(self, request):
         data_package = [package for package in settings.ACTIVE_PRODUCTS]
-
+        print("DATAPACKAGE",data_package)
         package = next(
             (pkg for pkg in data_package if pkg[0] == request.data['name_product']), None)
-
+        print(package)
         if package is None:
             return Response({"error": "Invalid package name"}, status=status.HTTP_400_BAD_REQUEST)
 
