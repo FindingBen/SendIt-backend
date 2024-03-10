@@ -68,3 +68,241 @@ class TestSmsSetup(APITestCase):
 
     def tearDown(self) -> None:
         return super().tearDown()
+
+
+class TestInsufficientSmsSetup(APITestCase):
+    def _register_login_user(self):
+        helper = RegisterLoginUser()
+        package_plan = PackagePlan.objects.create(id=1,
+                                                  plan_type='Trial', price=0, sms_count_pack=2)
+        # Register user
+        reg = self.client.post(
+            helper.register_url, helper.user_data, format="json")
+        email = reg.data['user']['custom_email']
+        user = CustomUser.objects.get(custom_email=email)
+        user.is_active = True
+        user.sms_count = 2
+        user.package_plan = package_plan
+        user.save()
+        # Login and get the token
+        res = self.client.post(
+            helper.login_url, helper.login_data, format='json')
+        token = res.data.get('access')
+
+        # Use the token for authentication in subsequent requests
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+        return user
+
+    def setUp(self):
+        user = self._register_login_user()
+        self.create_sms = reverse('sms-send')
+        self.create_msg = reverse('create_message')
+        self.create_list = reverse('create_list', kwargs={
+                                   'id': user.id})
+        self.recipients_data = None
+        list_data = {
+            'list_name': "test_list",
+            "users": user,
+            "contact_lenght": 5
+        }
+
+        message_data = {
+            "users": user,
+            "message_name": "Test"
+        }
+        msg = Message.objects.create(**message_data)
+        contact_list = ContactList.objects.create(**list_data)
+
+        self.sms_data = {
+            "user": user.id,
+            "message": msg.id,
+            "sender": "test",
+            "sms_text": "test",
+            "contact_list": contact_list.id,
+        }
+
+        return super().setUp()
+
+    def tearDown(self) -> None:
+        return super().tearDown()
+
+
+class TestScheduleSmsSetup(APITestCase):
+    def _register_login_user(self):
+        helper = RegisterLoginUser()
+        package_plan = PackagePlan.objects.create(id=1,
+                                                  plan_type='Trial', price=0, sms_count_pack=2)
+        # Register user
+        reg = self.client.post(
+            helper.register_url, helper.user_data, format="json")
+        email = reg.data['user']['custom_email']
+        user = CustomUser.objects.get(custom_email=email)
+        user.is_active = True
+        user.sms_count = 4
+        user.package_plan = package_plan
+        user.save()
+        # Login and get the token
+        res = self.client.post(
+            helper.login_url, helper.login_data, format='json')
+        token = res.data.get('access')
+
+        # Use the token for authentication in subsequent requests
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+        return user
+
+    def setUp(self):
+        user = self._register_login_user()
+        self.schedule_sms = reverse('sms-schedule')
+        self.create_msg = reverse('create_message')
+        self.create_list = reverse('create_list', kwargs={
+                                   'id': user.id})
+        self.recipients_data = None
+        list_data = {
+            'list_name': "test_list",
+            "users": user,
+            "contact_lenght": 2
+        }
+
+        message_data = {
+            "users": user,
+            "message_name": "Test"
+        }
+        msg = Message.objects.create(**message_data)
+        contact_list = ContactList.objects.create(**list_data)
+
+        self.sms_data = {
+            "user": user.id,
+            "message": msg.id,
+            "sender": "test",
+            "sms_text": "test",
+            "contact_list": contact_list.id,
+            "scheduled_time": "2024-03-10 13:00",
+            "content_link": "test"
+        }
+
+        return super().setUp()
+
+    def tearDown(self) -> None:
+        return super().tearDown()
+
+
+class TestScheduleInsufficientSmsSetup(APITestCase):
+    def _register_login_user(self):
+        helper = RegisterLoginUser()
+        package_plan = PackagePlan.objects.create(id=1,
+                                                  plan_type='Trial', price=0, sms_count_pack=2)
+        # Register user
+        reg = self.client.post(
+            helper.register_url, helper.user_data, format="json")
+        email = reg.data['user']['custom_email']
+        user = CustomUser.objects.get(custom_email=email)
+        user.is_active = True
+        user.sms_count = 1
+        user.package_plan = package_plan
+        user.save()
+        # Login and get the token
+        res = self.client.post(
+            helper.login_url, helper.login_data, format='json')
+        token = res.data.get('access')
+
+        # Use the token for authentication in subsequent requests
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+        return user
+
+    def setUp(self):
+        user = self._register_login_user()
+        self.schedule_sms = reverse('sms-schedule')
+        self.create_msg = reverse('create_message')
+        self.create_list = reverse('create_list', kwargs={
+                                   'id': user.id})
+        self.recipients_data = None
+        list_data = {
+            'list_name': "test_list",
+            "users": user,
+            "contact_lenght": 5
+        }
+
+        message_data = {
+            "users": user,
+            "message_name": "Test"
+        }
+        msg = Message.objects.create(**message_data)
+        contact_list = ContactList.objects.create(**list_data)
+
+        self.sms_data = {
+            "user": user.id,
+            "message": msg.id,
+            "sender": "test",
+            "sms_text": "test",
+            "contact_list": contact_list.id,
+            "scheduled_time": "2024-03-10 13:00",
+            "content_link": "test"
+        }
+
+        return super().setUp()
+
+    def tearDown(self) -> None:
+        return super().tearDown()
+
+
+class TestScheduleInvalidDateSetup(APITestCase):
+    def _register_login_user(self):
+        helper = RegisterLoginUser()
+        package_plan = PackagePlan.objects.create(id=1,
+                                                  plan_type='Trial', price=0, sms_count_pack=2)
+        # Register user
+        reg = self.client.post(
+            helper.register_url, helper.user_data, format="json")
+        email = reg.data['user']['custom_email']
+        user = CustomUser.objects.get(custom_email=email)
+        user.is_active = True
+        user.sms_count = 4
+        user.package_plan = package_plan
+        user.save()
+        # Login and get the token
+        res = self.client.post(
+            helper.login_url, helper.login_data, format='json')
+        token = res.data.get('access')
+
+        # Use the token for authentication in subsequent requests
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+        return user
+
+    def setUp(self):
+        user = self._register_login_user()
+        self.schedule_sms = reverse('sms-schedule')
+        self.create_msg = reverse('create_message')
+        self.create_list = reverse('create_list', kwargs={
+                                   'id': user.id})
+        self.recipients_data = None
+        list_data = {
+            'list_name': "test_list",
+            "users": user,
+            "contact_lenght": 2
+        }
+
+        message_data = {
+            "users": user,
+            "message_name": "Test"
+        }
+        msg = Message.objects.create(**message_data)
+        contact_list = ContactList.objects.create(**list_data)
+
+        self.sms_data = {
+            "user": user.id,
+            "message": msg.id,
+            "sender": "test",
+            "sms_text": "test",
+            "contact_list": contact_list.id,
+            "scheduled_time": "2024-03-07 12:00",
+            "content_link": "test"
+        }
+
+        return super().setUp()
+
+    def tearDown(self) -> None:
+        return super().tearDown()
