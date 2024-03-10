@@ -1,0 +1,43 @@
+[
+    {
+      "contact_list": null,
+      "first_name": "John",
+      "last_name": "Doe",
+      "phone_number": 1234567890,
+      "email": "john.doe@example.com",
+      "created_at": "2022-03-06"
+    },
+    {
+      "contact_list": null,
+      "first_name": "Alice",
+      "last_name": "Smith",
+      "phone_number": 9876543210,
+      "email": "alice.smith@example.com",
+      "created_at": "2022-03-06"
+    },
+    {
+      "contact_list": null,
+      "first_name": "Bob",
+      "last_name": "Johnson",
+      "phone_number": 5551234567,
+      "email": "bob.johnson@example.com",
+      "created_at": "2022-03-06"
+    },
+    {
+      "contact_list": null,
+      "first_name": "Emma",
+      "last_name": "Brown",
+      "phone_number": 4567890123,
+      "email": "emma.brown@example.com",
+      "created_at": "2022-03-06"
+    },
+    {
+      "contact_list": null,
+      "first_name": "Michael",
+      "last_name": "Miller",
+      "phone_number": 7890123456,
+      "email": "michael.miller@example.com",
+      "created_at": "2022-03-06"
+    }
+  ]
+  

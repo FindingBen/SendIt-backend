@@ -10,8 +10,8 @@ from .views import RegisterAPI, CreateNote, CreateElement, SendEmailConfirmation
 urlpatterns = [
     path('notes/', views.get_notes),
     path('register/', RegisterAPI.as_view(), name='register'),
-    path('create_notes/', CreateNote.as_view()),
-    path('create_element/', CreateElement.as_view()),
+    path('create_notes/', CreateNote.as_view(), name='create_message'),
+    path('create_element/', CreateElement.as_view(), name='create_element'),
     path('update_element/<str:id>/', views.update_element),
     # Message
     path('view/<str:id>/', views.note_view),
@@ -19,10 +19,11 @@ urlpatterns = [
     path('delete_message/<str:id>', views.delete_message),
     path('delete_element/<str:id>/', views.delete_element),
     # Contact list and contacts
-    path('create_contact/<str:id>/', views.create_contact),
+    path('create_contact/<str:id>/', views.create_contact, name='create_contact'),
     path('contact_lists/', views.get_contact_lists),
     path('contact_list/<str:id>/', views.get_contacts),
     path('contact_detail/<str:id>', views.contact_detail),
+    path('create_list/<str:id>', views.create_list, name='create_list'),
     path('delete_recipient/<str:id>/', views.delete_contact_recipient),
     path('delete_list/<str:id>', views.delete_contact_list),
     # Package plan
@@ -31,10 +32,9 @@ urlpatterns = [
     # User account
     path('user_account/<str:id>/', views.get_user),
     path('update_user/<str:id>/', views.update_user),
-    path('create_list/<str:id>', views.create_list),
     # Opt out
     path('optout/<str:id>', views.handle_unsubscribe),
-    #Analytics
+    # Analytics
     path('get_analytcs/<int:record_id>/', views.get_analytics_data),
     path('get_survey_results/<str:id>', views.get_results),
     path('get_total_analytic_values/<str:id>', views.get_total_analytic_values),

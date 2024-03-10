@@ -16,7 +16,6 @@ def send_scheduled_sms(unique_tracking_id: None):
         from base.models import CustomUser, ContactList, Message, Contact
 
         smsObj = Sms.objects.get(unique_tracking_id=unique_tracking_id)
-        custom_user = CustomUser.objects.get(id=smsObj.user.id)
         contact_list = ContactList.objects.get(id=smsObj.contact_list.id)
         message = Message.objects.get(id=smsObj.message.id)
         content_link = smsObj.content_link
@@ -26,19 +25,15 @@ def send_scheduled_sms(unique_tracking_id: None):
             if not smsObj.is_sent:
 
                 client = vonage.Client(
-                    key=settings.VONAGE_ACCOUNT_ID, secret=settings.VONAGE_TOKEN)
+                    key=settings.VONAGE_ID, secret=settings.VONAGE_TOKEN)
                 sms = vonage.Sms(client)
 
                 # Use self.contact_list to get the related ContactList instance
-
                 contact_obj = Contact.objects.filter(
                     contact_list=contact_list)
-
             try:
                 for recipient in contact_obj:
-
                     if content_link:
-
                         responseData = sms.send_message(
                             {
                                 "from": '+12012550867',
@@ -49,14 +44,13 @@ def send_scheduled_sms(unique_tracking_id: None):
                                 "client-ref": unique_tracking_id
                             }
                         )
-
                     else:
                         responseData = sms.send_message(
                             {
                                 "from": "+12012550867",
                                 "to": f'+{recipient.phone_number}' +
                                 "\n\n\n\n\n" +
-                                f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.phone_number}',
+                                f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.id}',
                                 "text": sms_text.replace('#FirstName', recipient.first_name),
                                 "client-ref": unique_tracking_id
                             }
@@ -102,9 +96,8 @@ def send_sms(unique_tracking_id: None):
 
         with transaction.atomic():
             if not smsObj.is_sent:
-                print('Reaching 1')
                 client = vonage.Client(
-                    key='33572b56', secret='cq75YEW2e1Z5coGZ')
+                    key=settings.VONAGE_ID, secret=settings.VONAGE_TOKEN)
                 sms = vonage.Sms(client)
 
                 # Use self.contact_list to get the related ContactList instance
@@ -112,10 +105,6 @@ def send_sms(unique_tracking_id: None):
                 contact_obj = Contact.objects.filter(
                     contact_list=contact_list)
                 # Get value for total sms sends based on contact list length
-
-                numbers_dict = {
-                    contact.first_name: contact.phone_number for contact in contact_obj
-                }
 
                 for recipient in contact_obj:
 

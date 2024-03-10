@@ -27,7 +27,7 @@ class StripeCheckoutVIew(APIView):
             (pkg for pkg in data_package if pkg[0] == request.data['name_product']), None)
 
         if package is None:
-            return Response({"error": "Invalid package name"})
+            return Response({"error": "Invalid package name"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             checkout_session = stripe.checkout.Session.create(
@@ -52,8 +52,8 @@ class StripeCheckoutVIew(APIView):
             return Response({"url": url_str})
 
         except Exception as e:
-            error_message = str(e)  # Get the error message as a string
-            return Response({"error": error_message})
+            error_message = str(e)
+            return Response({"error": error_message}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])

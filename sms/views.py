@@ -1,15 +1,14 @@
-from rest_framework import status
+from rest_framework import status, generics
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from .models import Sms
+import time
 from django.views.decorators.csrf import csrf_exempt
 from base.models import Message, ContactList, CustomUser
 from base.serializers import MessageSerializer
 from .serializers import SmsSerializer
-from rest_framework import generics
-from django.http import JsonResponse
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from django.db import transaction
 from datetime import datetime, timedelta
 import pytz
@@ -57,10 +56,21 @@ class createSms(generics.GenericAPIView):
 
                 sms = serializer.save()
                 sms_result_task = send_sms.delay(sms.unique_tracking_id)
-                print('DDDD')
+                time.sleep(4)
                 if sms_result_task.ready():
-                    get_task = sms_result_task.get(timeout=1)
-                    print("TASK", get_task)
+                    try:
+                        # If you need to handle different statuses, you can check them here
+                        if sms_result_task.successful():
+                            print("Task succeeded.")
+                        else:
+                            return Response({'error': 'There has been a system error. Contact support for more help.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+                    except ValueError as ve:
+                        return Response({'error': 'There has been a system error. Contact support for more help.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+                    except Exception as e:
+                        return Response({'error': 'There has been a system error. Contact support for more help.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+                else:
+                    return Response({'error': 'Its taking longer then excpected..Contact support for more information'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
                 return Response({
                     "sms": SmsSerializer(sms, context=self.get_serializer_context()).data
                 })
@@ -126,9 +136,8 @@ def schedule_sms(request):
 
         else:
             return Response({'error': 'You dont have enough credit amount to cover this send. Top up your credit'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-    except:
-        print('There has been an error')
-    return Response('failed')
+    except Exception as e:
+        return Response({'There has been an error:': str(e)}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 @api_view(['GET'])

@@ -23,7 +23,6 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-        print(user)
         # Add custom claims
         token['username'] = user.username
         token['first_name'] = user.first_name
@@ -54,7 +53,6 @@ class SendEmailConfirmationTokenAPIView(APIView):
         user = request.data['user']['id']
 
         user_instance = CustomUser.objects.get(id=user)
-        print(user_instance)
         token = EmailConfirmationToken.objects.create(user=user_instance)
         send_confirmation_email(
             email=user_instance.email, token_id=token.pk, user_id=user_instance.pk)
@@ -132,48 +130,45 @@ def update_element(request, id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_notes(request):
-    # try:
-    user = request.user
-    cache_key = f"messages:{user.id}"
-    # Try to fetch data from cache
-    print('AAAA', cache_key)
-    cached_data = cache.get(cache_key)
-    sort_by = request.GET.get('sort_by', None)
-    if sort_by and sort_by not in ['created_at', '-created_at']:
-        sort_by = ''
-    if sort_by:
-        # Cache miss - fetch data from the database
-        notes = user.message_set.all().order_by(sort_by)
-        # Your sorting logic here
-        sent_message_count = notes.filter(status='sent').count()
-        serializer = MessageSerializer(notes, many=True)
-        serialized_data = serializer.data
-        print('SORTING from DB')
-        cache.set(cache_key, {"messages": serialized_data,
-                              "messages_count": sent_message_count}, timeout=settings.CACHE_TTL)
-        return Response({"messages": serialized_data, "messages_count": sent_message_count})
-    else:
+    try:
+        user = request.user
+        cache_key = f"messages:{user.id}"
+        # Try to fetch data from cache
         cached_data = cache.get(cache_key)
-        if cached_data is None or not cached_data["messages"]:
-            notes = user.message_set.all()
+        sort_by = request.GET.get('sort_by', None)
+        if sort_by and sort_by not in ['created_at', '-created_at']:
+            sort_by = ''
+        if sort_by:
+            # Cache miss - fetch data from the database
+            notes = user.message_set.all().order_by(sort_by)
             # Your sorting logic here
             sent_message_count = notes.filter(status='sent').count()
             serializer = MessageSerializer(notes, many=True)
             serialized_data = serializer.data
             cache.set(cache_key, {"messages": serialized_data,
                                   "messages_count": sent_message_count}, timeout=settings.CACHE_TTL)
-
             return Response({"messages": serialized_data, "messages_count": sent_message_count})
-        # Cache hit - use the cached data
         else:
-            notes = cached_data["messages"]
-            print(notes)
-            sent_message_count = cached_data["messages_count"]
+            cached_data = cache.get(cache_key)
+            if cached_data is None or not cached_data["messages"]:
+                notes = user.message_set.all()
+                # Your sorting logic here
+                sent_message_count = notes.filter(status='sent').count()
+                serializer = MessageSerializer(notes, many=True)
+                serialized_data = serializer.data
+                cache.set(cache_key, {"messages": serialized_data,
+                                      "messages_count": sent_message_count}, timeout=settings.CACHE_TTL)
 
-        return Response({"messages": notes, "messages_count": sent_message_count})
+                return Response({"messages": serialized_data, "messages_count": sent_message_count})
+            # Cache hit - use the cached data
+            else:
+                notes = cached_data["messages"]
+                sent_message_count = cached_data["messages_count"]
 
-    # except Exception as e:
-    #     return Response(f'There has been some error: {e}')
+            return Response({"messages": notes, "messages_count": sent_message_count})
+
+    except Exception as e:
+        return Response(f'There has been some error: {e}')
 
 # Contact lists
 
@@ -233,7 +228,6 @@ def get_contacts(request, id):
     try:
         user = request.user
         cache_key = f"user_contacts:{user.id}"
-        print(cache_key)
 
         # Check for sorting query parameters
         sort_by = request.GET.get('sort_by', None)
@@ -306,7 +300,6 @@ def contact_detail(request, id):
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_message(request, id):
-    print(request.data)
     try:
         message = Message.objects.get(id=id)
         serializer = MessageSerializer(
@@ -327,14 +320,18 @@ def create_contact(request, id):
         contact_list = ContactList.objects.get(id=id)
         serializer = ContactSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
+            # print(serializer.validated_data)
+            if not request.data['first_name'] and request.data['phone_number']:
+                return Response({'error': 'Empty form submission.'}, status=status.HTTP_400_BAD_REQUEST)
+
             serializer.save(contact_list=contact_list)
             cache_key = f"user_contacts:{request.user.id}"
             cache.delete(cache_key)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
     except Exception as e:
-        return Response(f'There has been some error: {e}')
+        return Response(f'There has been some error: {e}', status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
@@ -344,7 +341,6 @@ def handle_unsubscribe(request, id):
         contact.delete()
         return Response('Contact deleted successfully', status=status.HTTP_200_OK)
     except Exception as e:
-        print(f'Error occurred while deleting contact: {e}')
         return Response(f'There has been an error: {e}', status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -373,7 +369,7 @@ class RegisterAPI(generics.GenericAPIView):
             user = serializer.save()
             return Response({
                 "user": CustomUserSerializer(user, context=self.get_serializer_context()).data
-            })
+            }, status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -398,6 +394,7 @@ class CreateNote(generics.GenericAPIView):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_list(request, id):
+
     try:
         user = CustomUser.objects.get(id=id)
         serializer = ContactListSerializer(data=request.data)
@@ -407,7 +404,7 @@ def create_list(request, id):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
-        return Response(f'There has been some error: {e}')
+        return Response("Field cannot be blank", status=status.HTTP_400_BAD_REQUEST)
 
 
 class CreateElement(generics.GenericAPIView):
@@ -415,14 +412,23 @@ class CreateElement(generics.GenericAPIView):
 
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        element = serializer.save()
-        if element.element_type == 'Survey':
-            element.save_response()
-        return Response({
-            "element": ElementSerializer(element, context=self.get_serializer_context()).data
-        })
+        if serializer.is_valid(raise_exception=True):
+            element = serializer.save()
+            if element.element_type == 'Text' and not element.text:
+                # Check if the element type is 'Text' and the value is empty
+                return Response({'error': 'Text element must not have a non-empty value'}, status=status.HTTP_400_BAD_REQUEST)
+            elif element.element_type == 'Button' and not element.button_title:
+                return Response({'error': 'Button element must not have a non-empty value'}, status=status.HTTP_400_BAD_REQUEST)
+            elif element.element_type == 'Survey':
+                if not element.survey:
+                    return Response({'error': 'Button element must not have a non-empty value'}, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    element.save_response()
+            return Response({
+                "element": ElementSerializer(element, context=self.get_serializer_context()).data
+            })
+        else:
+            return Response('There has been an error', status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['DELETE'])
@@ -434,7 +440,6 @@ def delete_message(request, id):
         message.delete()
         cache_key = f"messages:{request.user.id}"
         cache.delete(cache_key)
-        print('CACHE DELETED')
         return Response("Message deleted!")
     except Exception as e:
         return Response(f'There has been an error:{e}')
@@ -482,7 +487,6 @@ def get_analytics_data(request, record_id):
 
     start_date = sms.created_at
     end_date = datetime.now().date()
-    print(sms)
     analytics_data = sample_run_report(
         record_id=record_id, start_date=start_date, end_date=end_date, recipients=sms.sms_sends)
 
@@ -517,7 +521,6 @@ def get_total_analytic_values(request, id):
     total_overall_rate = total_values['total_overall_rate'] or 0
     total_views = total_values['total_views'] or 0
     total_sends = total_values['total_sends'] or 0
-    print(total_sends)
     average_bounce_rate = round(
         total_bounce_rate / total_sends, 2) if total_sends > 0 else None
     average_overall_rate = round(
