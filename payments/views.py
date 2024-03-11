@@ -22,10 +22,9 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 class StripeCheckoutVIew(APIView):
     def post(self, request):
         data_package = [package for package in settings.ACTIVE_PRODUCTS]
-        print("DATAPACKAGE",data_package)
         package = next(
             (pkg for pkg in data_package if pkg[0] == request.data['name_product']), None)
-        print(package)
+
         if package is None:
             return Response({"error": "Invalid package name"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -132,6 +131,7 @@ def stripe_webhook(request):
                 user_obj = CustomUser.objects.filter(email=customer_email)[0]
                 package_obj = PackagePlan.objects.get(id=product_id)
                 user_obj.package_plan = package_obj
+                user_obj.sms_count += package_obj.sms_count_pack
                 user_obj.save()
                 user_payment = UserPayment.objects.get(
                     user_id=user_obj.id)

@@ -42,17 +42,6 @@ class CustomUser(User):
             self.package_plan = package_plan
             self.sms_count = 2
             self.custom_email = self.email
-        is_new_instance = not self.pk
-        original_instance = None
-
-        if not is_new_instance:
-            original_instance = CustomUser.objects.get(pk=self.pk)
-
-        # Check if the package_plan value has changed
-        if original_instance and original_instance.package_plan != self.package_plan:
-            package_plan = PackagePlan.objects.get(id=self.package_plan.id)
-
-            self.sms_count += package_plan.sms_count_pack
 
         super().save(*args, **kwargs)
 

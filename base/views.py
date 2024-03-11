@@ -176,23 +176,21 @@ def get_notes(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_packages(request):
-    try:
-        user = request.user
-        cache_key = f"plans_for_user:{user.id}"
-        # Try to fetch data from cache
-        cached_data = cache.get(cache_key)
-        if cached_data is None:
+    user = request.user
+    cache_key = f"plans_for_user:{user.id}"
+    # Try to fetch data from cache
+    cached_data = cache.get(cache_key)
 
-            package = PackagePlan.objects.all()
-            serializer = PackageSerializer(package, many=True)
-            data = serializer.data
-            cache.set(cache_key, {"plans": data,
-                                  }, timeout=settings.CACHE_TTL)
-            return Response(data)
-        else:
-            data = cached_data['plans']
-    except Exception as e:
-        return Response(f'There has been some error: {e}')
+    if cached_data is None:
+
+        package = PackagePlan.objects.all()
+        serializer = PackageSerializer(package, many=True)
+        data = serializer.data
+        cache.set(cache_key, {"plans": data,
+                              }, timeout=settings.CACHE_TTL)
+        return Response(data)
+    else:
+        data = cached_data['plans']
     return Response(data)
 
 
@@ -352,6 +350,7 @@ def purchase_package(request, id):
         package_plan = PackagePlan.objects.get(id=request.data['package_plan'])
 
         user.package_plan = package_plan
+        user.sms_count += package_plan.sms_count_pack
         user.save()
 
         serializer = CustomUserSerializer(user)
