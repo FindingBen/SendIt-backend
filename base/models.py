@@ -36,14 +36,14 @@ class CustomUser(User):
         max_length=20, choices=USER_TYPE_CHOICES)
     custom_email = models.EmailField(unique=True)
 
-    def save(self, *args, **kwargs):
-        if not self.pk:
-            package_plan = PackagePlan.objects.get(id=1)
-            self.package_plan = package_plan
-            self.sms_count = 2
-            self.custom_email = self.email
+    # def save(self, *args, **kwargs):
+    #     if not self.pk:
+    #         package_plan = PackagePlan.objects.get(id=1)
+    #         self.package_plan = package_plan
+    #         self.sms_count = 2
+    #         self.custom_email = self.email
 
-        super().save(*args, **kwargs)
+    #     super().save(*args, **kwargs)
 
     def serialize_package_plan(self):
         # Implement custom serialization logic here
