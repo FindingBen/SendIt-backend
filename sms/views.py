@@ -165,10 +165,10 @@ def vonage_webhook(request):
         sms_object = Sms.objects.get(unique_tracking_id=data['client-ref'])
         print("DATAA", data['status'])
         with transaction.atomic():
+            user = sms_object.user
             # Do some other condition which checks weather the same number already passed
             if data['status'] == 'delivered':
                 sms_object.delivered += 1
-                user = sms_object.user
                 user.sms_count -= 1
 
             elif data['status'] == 'failed':
