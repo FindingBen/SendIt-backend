@@ -81,11 +81,10 @@ def send_scheduled_sms(unique_tracking_id: None):
 
 
 @shared_task
-def send_sms(unique_tracking_id: None):
+def send_sms(unique_tracking_id: None, user: None):
     try:
-
         from .models import Sms
-        from base.models import ContactList, Message, Contact
+        from base.models import ContactList, Message, Contact, CustomUser
 
         smsObj = Sms.objects.get(unique_tracking_id=unique_tracking_id)
 
@@ -99,7 +98,7 @@ def send_sms(unique_tracking_id: None):
                 client = vonage.Client(
                     key=settings.VONAGE_ID, secret=settings.VONAGE_TOKEN)
                 sms = vonage.Sms(client)
-
+                print('step1')
                 # Use self.contact_list to get the related ContactList instance
 
                 contact_obj = Contact.objects.filter(
@@ -107,9 +106,8 @@ def send_sms(unique_tracking_id: None):
                 # Get value for total sms sends based on contact list length
 
                 for recipient in contact_obj:
-
+                    print('step2')
                     if content_link:
-                        responseData = []
                         responseData = sms.send_message(
                             {
                                 "from": 'spplane',
@@ -133,21 +131,14 @@ def send_sms(unique_tracking_id: None):
                                 "client-ref": unique_tracking_id
                             }
                         )
-
                 smsObj.sms_sends = contact_list.contact_lenght
-                smsObj.save()
                 smsObj.is_sent = True
+                print('step5')
+                smsObj.save()
                 message.status = 'sent'
                 message.save()
                 cache_key = f"messages:{smsObj.user.id}"
                 cache.delete(cache_key)
-                if responseData["messages"][0]["status"] == "0":
-                    print('done')
-                else:
-
-                    print(
-                        f"Message failed with error: {responseData['messages'][0]['error-text']}")
-
             else:
                 pass  # If is_sent is True, save the instance
     except Exception as e:

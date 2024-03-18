@@ -55,13 +55,17 @@ class createSms(generics.GenericAPIView):
             if serializer.is_valid():
 
                 sms = serializer.save()
-                sms_result_task = send_sms.delay(sms.unique_tracking_id)
+                sms_result_task = send_sms.delay(
+                    sms.unique_tracking_id, user_obj.id)
+                print('step0')
                 time.sleep(4)
                 if sms_result_task.ready():
                     try:
                         # If you need to handle different statuses, you can check them here
                         if sms_result_task.successful():
                             print("Task succeeded.")
+                            print('step6')
+
                         else:
                             return Response({'error': 'There has been a system error. Contact support for more help.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
@@ -159,15 +163,20 @@ def vonage_webhook(request):
         # Parse the JSON data from the request body
         data = request.data
         sms_object = Sms.objects.get(unique_tracking_id=data['client-ref'])
+
         with transaction.atomic():
             # Do some other condition which checks weather the same number already passed
             if data['status'] == 'delivered':
                 sms_object.delivered += 1
+                user = sms_object.user
+                user.sms_count -= 1
+
             elif data['status'] == 'failed':
                 sms_object.not_delivered += 1
             elif data['status'] == 'rejected':
                 sms_object.not_delivered += 1
 
+            user.save()
             sms_object.save()
 
         print('Received Vonage Delivery Receipt:')
