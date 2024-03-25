@@ -163,7 +163,6 @@ def vonage_webhook(request):
         # Parse the JSON data from the request body
         data = request.data
         sms_object = Sms.objects.get(unique_tracking_id=data['client-ref'])
-        print("DATAA", data['status'])
         with transaction.atomic():
             user = sms_object.user
             # Do some other condition which checks weather the same number already passed

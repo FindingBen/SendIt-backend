@@ -206,7 +206,7 @@ def calculate_plan_usage(request):
             silver_score += 1
         else:
             gold_score += 1
-
+        
         # Evaluate based on the number of customers
         if customers_count <= BASIC_THRESHOLD_CUSTOMERS:
             basic_score += 1
@@ -223,10 +223,6 @@ def calculate_plan_usage(request):
         else:
             gold_score += 1
 
-        # Evaluate based on business status
-        # if is_business:
-        #     silver_score += 1
-        #     gold_score += 1
 
         # Determine the recommended package
         if max(basic_score, silver_score, gold_score) == basic_score:

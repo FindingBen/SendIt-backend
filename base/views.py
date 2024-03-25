@@ -31,7 +31,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         try:
             custom_user = CustomUser.objects.get(username=user.username)
             serialized_data = custom_user.serialize_package_plan()
-
+            token['sms_count'] = custom_user.sms_count
             token['package_plan'] = serialized_data
         except CustomUser.DoesNotExist:
             token['package_plan'] = None
