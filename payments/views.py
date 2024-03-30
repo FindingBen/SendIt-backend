@@ -1,6 +1,7 @@
 from django.urls import reverse
 import stripe
 import time
+from django.core.cache import cache
 from django.conf import settings
 from rest_framework.views import APIView
 from .models import UserPayment, Purchase
@@ -88,14 +89,21 @@ def payment_cancelled(request):
 @permission_classes([IsAuthenticated])
 def get_purchases(request, id):
     try:
-        user_id = request.user
-        user_payment = UserPayment.objects.get(user=user_id.id)
-        purchase_obj = Purchase.objects.filter(userPayment=user_payment)
-        serializer = PurchaseSerializer(purchase_obj, many=True)
+        user = request.user
+        cache_key = f"purchases_for_user:{user.id}"
+        # Try to fetch data from cache
+        cached_data = cache.get(cache_key)
+        if cached_data is None:
+            user_payment = UserPayment.objects.get(user=user.id)
+            purchase_obj = Purchase.objects.filter(userPayment=user_payment)
+            serializer = PurchaseSerializer(purchase_obj, many=True)
+            data = serializer.data
+        else:
+            data = cached_data['purchases']
     except Exception as e:
         return Response(f'There has been an error: {e}')
 
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response(data, status=status.HTTP_200_OK)
 
 
 @require_http_methods(['POST'])
@@ -206,7 +214,7 @@ def calculate_plan_usage(request):
             silver_score += 1
         else:
             gold_score += 1
-        
+
         # Evaluate based on the number of customers
         if customers_count <= BASIC_THRESHOLD_CUSTOMERS:
             basic_score += 1
@@ -222,7 +230,6 @@ def calculate_plan_usage(request):
             silver_score += 1
         else:
             gold_score += 1
-
 
         # Determine the recommended package
         if max(basic_score, silver_score, gold_score) == basic_score:
