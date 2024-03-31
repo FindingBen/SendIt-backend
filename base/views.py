@@ -172,7 +172,6 @@ def get_notes(request):
 
 # Contact lists
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_packages(request):
