@@ -277,6 +277,7 @@ def get_contacts(request, id):
 
 
 @api_view(['GET', 'PUT'])
+@permission_classes([IsAuthenticated])
 def contact_detail(request, id):
     try:
         contact = Contact.objects.get(id=id)
@@ -292,6 +293,8 @@ def contact_detail(request, id):
         serializer = ContactSerializer(
             contact, data=request.data, partial=True)
         if serializer.is_valid():
+            cache_key = f"user_contacts:{request.user.id}"
+            cache.delete(cache_key)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
