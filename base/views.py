@@ -32,7 +32,9 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             custom_user = CustomUser.objects.get(username=user.username)
             serialized_data = custom_user.serialize_package_plan()
             token['sms_count'] = custom_user.sms_count
+            token['user_type'] = custom_user.user_type
             token['package_plan'] = serialized_data
+            token['custom_email'] = custom_user.custom_email
         except CustomUser.DoesNotExist:
             token['package_plan'] = None
 
@@ -171,6 +173,7 @@ def get_notes(request):
         return Response(f'There has been some error: {e}')
 
 # Contact lists
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
