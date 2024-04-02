@@ -57,13 +57,14 @@ class createSms(generics.GenericAPIView):
                 sms = serializer.save()
                 sms_result_task = send_sms.delay(
                     sms.unique_tracking_id, user_obj.id)
-
+                print('step0')
                 time.sleep(4)
                 if sms_result_task.ready():
                     try:
                         # If you need to handle different statuses, you can check them here
                         if sms_result_task.successful():
-                            print('test')
+                            print("Task succeeded.")
+                            print('step6')
 
                         else:
                             return Response({'error': 'There has been a system error. Contact support for more help.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
@@ -96,26 +97,17 @@ def schedule_sms(request):
             with transaction.atomic():
                 scheduled_time = datetime.fromisoformat(
                     str(request.data['scheduled_time']))
-                print(scheduled_time)
+                print('scheduled', scheduled_time)
+
                 scheduled_time_utc = pytz.timezone(
                     'UTC').localize(scheduled_time)
-                print('utc', scheduled_time_utc)
-                # Get the local time zone
-                # Provide your local timezone here
-                local_timezone = pytz.timezone('GMT+2')
-                print('local', local_timezone)
-                # Convert scheduled time to the local time zone
-                scheduled_time_local = scheduled_time_utc.astimezone(
-                    local_timezone)
-
-                # Check if daylight saving time is in effect for the scheduled time
-                is_dst = scheduled_time_local.dst() != timedelta(0)
-                print(is_dst)
-                # Adjust for the time zone difference accounting for daylight saving time
-                if is_dst:
-                    scheduled_time_local -= timedelta(hours=1)
-                    print('last', scheduled_time_local)
-                current_datetime = datetime.now()
+                # Adjust for the time zone difference (1 hours ahead)
+                scheduled_time_local = scheduled_time_utc - timedelta(hours=1)
+                current_datetime = datetime.fromisoformat(
+                    str(datetime.now()))
+                print(scheduled_time_utc)
+                print(scheduled_time_local)
+                print(current_datetime)
                 custom_user = CustomUser.objects.get(id=data['user'])
                 contact_list = ContactList.objects.get(id=data['contact_list'])
 
@@ -140,7 +132,7 @@ def schedule_sms(request):
                     message.save()
 
                     send_scheduled_sms.apply_async(
-                        (sms.unique_tracking_id,), eta=scheduled_time_utc)
+                        (sms.unique_tracking_id,), eta=scheduled_time_local)
 
                     return Response({
                         "sms": f'{data}'
