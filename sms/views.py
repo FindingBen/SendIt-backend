@@ -97,13 +97,26 @@ def schedule_sms(request):
             with transaction.atomic():
                 scheduled_time = datetime.fromisoformat(
                     str(request.data['scheduled_time']))
+
                 scheduled_time_utc = pytz.timezone(
                     'UTC').localize(scheduled_time)
-                # Adjust for the time zone difference (1 hours ahead)
-                scheduled_time_local = scheduled_time_utc - timedelta(hours=1)
-                current_datetime = datetime.fromisoformat(
-                    str(datetime.now()))
 
+                # Get the local time zone
+                # Provide your local timezone here
+                local_timezone = pytz.timezone('Your/Local/Timezone')
+
+                # Convert scheduled time to the local time zone
+                scheduled_time_local = scheduled_time_utc.astimezone(
+                    local_timezone)
+
+                # Check if daylight saving time is in effect for the scheduled time
+                is_dst = scheduled_time_local.dst() != timedelta(0)
+
+                # Adjust for the time zone difference accounting for daylight saving time
+                if is_dst:
+                    scheduled_time_local -= timedelta(hours=1)
+
+                current_datetime = datetime.now()
                 custom_user = CustomUser.objects.get(id=data['user'])
                 contact_list = ContactList.objects.get(id=data['contact_list'])
 
