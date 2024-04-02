@@ -140,7 +140,7 @@ def schedule_sms(request):
                     message.save()
 
                     send_scheduled_sms.apply_async(
-                        (sms.unique_tracking_id,), eta=scheduled_time_local)
+                        (sms.unique_tracking_id,), eta=scheduled_time_utc)
 
                     return Response({
                         "sms": f'{data}'
