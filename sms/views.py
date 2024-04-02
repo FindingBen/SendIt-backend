@@ -102,7 +102,8 @@ def schedule_sms(request):
                 scheduled_time_utc = pytz.timezone(
                     'UTC').localize(scheduled_time)
                 # Adjust for the time zone difference (1 hours ahead)
-                scheduled_time_local = scheduled_time_utc - timedelta(hours=1)
+                # scheduled_time_local = scheduled_time_utc - timedelta(hours=1)
+                scheduled_time_local = scheduled_time_utc
                 current_datetime = datetime.fromisoformat(
                     str(datetime.now()))
                 print(scheduled_time_utc)
