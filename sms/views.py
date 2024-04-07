@@ -13,6 +13,7 @@ from django.db import transaction
 from datetime import datetime, timedelta
 import pytz
 from .tasks import send_scheduled_sms, send_sms
+from base.email.email import send_email_notification
 
 
 @api_view(['GET'])
@@ -57,7 +58,7 @@ class createSms(generics.GenericAPIView):
                 sms = serializer.save()
                 sms_result_task = send_sms.delay(
                     sms.unique_tracking_id, user_obj.id)
-                print('step0')
+
                 time.sleep(4)
                 if sms_result_task.ready():
                     try:
@@ -97,18 +98,18 @@ def schedule_sms(request):
             with transaction.atomic():
                 scheduled_time = datetime.fromisoformat(
                     str(request.data['scheduled_time']))
-                print('scheduled', scheduled_time)
 
                 scheduled_time_utc = pytz.timezone(
                     'UTC').localize(scheduled_time)
-                # Adjust for the time zone difference (1 hours ahead)
-                # scheduled_time_local = scheduled_time_utc - timedelta(hours=1)
-                scheduled_time_local = scheduled_time_utc
+
+                # Adjust for the time zone difference to Copenhagen time
+                scheduled_time_local = scheduled_time_utc.astimezone(
+                    pytz.timezone('Europe/Copenhagen'))
                 current_datetime = datetime.fromisoformat(
                     str(datetime.now()))
-                print(scheduled_time_utc)
-                print(scheduled_time_local)
-                print(current_datetime)
+                scheduled_time_local = scheduled_time_local - \
+                    timedelta(hours=2)
+
                 custom_user = CustomUser.objects.get(id=data['user'])
                 contact_list = ContactList.objects.get(id=data['contact_list'])
 

@@ -6,6 +6,7 @@ import uuid
 from django.db import transaction
 import hashlib
 from django.core.cache import cache
+from base.email.email import send_email_notification
 
 
 @shared_task
@@ -20,6 +21,7 @@ def send_scheduled_sms(unique_tracking_id: None):
         message = Message.objects.get(id=smsObj.message.id)
         content_link = smsObj.content_link
         sms_text = smsObj.sms_text
+        user = CustomUser.objects.get(id=smsObj.user.id)
 
         with transaction.atomic():
             if not smsObj.is_sent:
@@ -31,48 +33,49 @@ def send_scheduled_sms(unique_tracking_id: None):
                 # Use self.contact_list to get the related ContactList instance
                 contact_obj = Contact.objects.filter(
                     contact_list=contact_list)
-            try:
-                for recipient in contact_obj:
-                    if content_link:
-                        responseData = sms.send_message(
-                            {
-                                "from": '+12012550867',
-                                "to": f'+{recipient.phone_number}',
-                                "text": sms_text.replace('#Link', content_link).replace('#FirstName', recipient.first_name) +
-                                "\n\n\n\n\n" +
-                                f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.id}',
-                                "client-ref": unique_tracking_id
-                            }
-                        )
+                try:
+                    for recipient in contact_obj:
+                        if content_link:
+                            responseData = sms.send_message(
+                                {
+                                    "from": '+12012550867',
+                                    "to": f'+{recipient.phone_number}',
+                                    "text": sms_text.replace('#Link', content_link).replace('#FirstName', recipient.first_name) +
+                                    "\n\n\n\n\n" +
+                                    f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.id}',
+                                    "client-ref": unique_tracking_id
+                                }
+                            )
+                        else:
+                            responseData = sms.send_message(
+                                {
+                                    "from": "+12012550867",
+                                    "to": f'+{recipient.phone_number}' +
+                                    "\n\n\n\n\n" +
+                                    f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.id}',
+                                    "text": sms_text.replace('#FirstName', recipient.first_name),
+                                    "client-ref": unique_tracking_id
+                                }
+                            )
+
+                    smsObj.sms_sends = contact_list.contact_lenght
+                    smsObj.save()
+                    message.status = 'sent'
+                    message.save()
+                    smsObj.is_sent = True
+                    cache_key = f"messages:{smsObj.user.id}"
+                    cache.delete(cache_key)
+                    if responseData["messages"][0]["status"] == "0":
+                        pass  # Moved this line inside the if block
+
                     else:
-                        responseData = sms.send_message(
-                            {
-                                "from": "+12012550867",
-                                "to": f'+{recipient.phone_number}' +
-                                "\n\n\n\n\n" +
-                                f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.id}',
-                                "text": sms_text.replace('#FirstName', recipient.first_name),
-                                "client-ref": unique_tracking_id
-                            }
-                        )
 
-                smsObj.sms_sends = contact_list.contact_lenght
-                smsObj.save()
-                message.status = 'sent'
-                message.save()
-                smsObj.is_sent = True
-                cache_key = f"messages:{smsObj.user.id}"
-                cache.delete(cache_key)
-                if responseData["messages"][0]["status"] == "0":
-                    pass  # Moved this line inside the if block
+                        print(
+                            f"Message failed with error: {responseData['messages'][0]['error-text']}")
 
-                else:
-
-                    print(
-                        f"Message failed with error: {responseData['messages'][0]['error-text']}")
-
-            except Exception as e:
-                print("Error sending SMS:", str(e))
+                except Exception as e:
+                    print("Error sending SMS:", str(e))
+                    send_email_notification(user.id)
 
             else:
                 pass
@@ -87,7 +90,7 @@ def send_sms(unique_tracking_id: None, user: None):
         from base.models import ContactList, Message, Contact, CustomUser
 
         smsObj = Sms.objects.get(unique_tracking_id=unique_tracking_id)
-
+        user = CustomUser.objects.get(id=smsObj.user.id)
         contact_list = ContactList.objects.get(id=smsObj.contact_list.id)
         message = Message.objects.get(id=smsObj.message.id)
         content_link = smsObj.content_link
@@ -98,7 +101,7 @@ def send_sms(unique_tracking_id: None, user: None):
                 client = vonage.Client(
                     key=settings.VONAGE_ID, secret=settings.VONAGE_TOKEN)
                 sms = vonage.Sms(client)
-                print('step1')
+
                 # Use self.contact_list to get the related ContactList instance
 
                 contact_obj = Contact.objects.filter(
@@ -106,7 +109,7 @@ def send_sms(unique_tracking_id: None, user: None):
                 # Get value for total sms sends based on contact list length
 
                 for recipient in contact_obj:
-                    print('step2')
+
                     if content_link:
                         responseData = sms.send_message(
                             {
@@ -133,7 +136,7 @@ def send_sms(unique_tracking_id: None, user: None):
                         )
                 smsObj.sms_sends = contact_list.contact_lenght
                 smsObj.is_sent = True
-                print('step5')
+
                 smsObj.save()
                 message.status = 'sent'
                 message.save()
@@ -142,6 +145,7 @@ def send_sms(unique_tracking_id: None, user: None):
             else:
                 pass  # If is_sent is True, save the instance
     except Exception as e:
+        send_email_notification(user.id)
         print(str(e))
 
 

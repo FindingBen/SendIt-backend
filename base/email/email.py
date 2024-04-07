@@ -2,12 +2,13 @@ from djoser.email import PasswordResetEmail, ActivationEmail
 from django.core.mail import send_mail
 from base.models import CustomUser
 from django.template.loader import get_template
+from django.conf import settings
 
 
 class CustomPasswordResetConfirmationEmail(PasswordResetEmail):
     def get_context_data(self):
         context = super().get_context_data()
-        context['domain'] = 'sendit-frontend-production.up.railway.app'
+        context['domain'] = 'spplane.app'
         # context['domain'] = 'localhost:3000'
         context['protocol'] = 'https'
 
@@ -58,5 +59,14 @@ def send_welcome_email(email: None, user_object: None):
     )
 
 
-def send_notification_email(email: None):
-    pass
+def send_email_notification(user_id):
+    try:
+        # Retrieve user email from request
+        user_obj = CustomUser.objects.get(id=user_id)
+        subject = "Scheduled SMS Failed"
+        message = f"Sorry, one of your recent messages has failed."
+        from_email = settings.DEFAULT_FROM_EMAIL
+        recipient_list = [user_obj.email]
+        send_mail(subject, message, from_email, recipient_list)
+    except Exception as e:
+        print("Error sending email notification:", str(e))

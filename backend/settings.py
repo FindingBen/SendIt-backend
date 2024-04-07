@@ -246,12 +246,12 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Copenhagen'
 
 
 USE_I18N = True
 
-CELERY_TIMEZONE = "UTC"
+CELERY_TIMEZONE = 'Europe/Copenhagen'
 CELERY_TASK_TRACK_STARTED = True
 CELERY_IMPORTS = ("sms.tasks", )
 CELERY_BROKER_URL = os.environ.get('REDIS_URL')
@@ -259,6 +259,7 @@ CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL')
 CELERY_CACHE_BACKEND = 'default'
 # USE_TZ = True
 
+DEFAULT_FROM_EMAIL = 'benarmys4@gmail.com'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
