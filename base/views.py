@@ -134,43 +134,38 @@ def update_element(request, id):
 def get_notes(request):
     try:
         user = request.user
-        cache_key = f"messages:{user.id}"
-        # Try to fetch data from cache
-        cached_data = cache.get(cache_key)
+        archive = request.GET.get('archive', None)
+
         sort_by = request.GET.get('sort_by', None)
-        if sort_by and sort_by not in ['created_at', '-created_at']:
-            sort_by = ''
-        if sort_by:
-            # Cache miss - fetch data from the database
-            notes = user.message_set.all().order_by(sort_by)
-            # Your sorting logic here
-            sent_message_count = notes.filter(status='sent').count()
+
+        if archive == 'true':
+            # Fetch only archived messages
+            notes = user.message_set.filter(status='archived')
             serializer = MessageSerializer(notes, many=True)
             serialized_data = serializer.data
-            cache.set(cache_key, {"messages": serialized_data,
-                                  "messages_count": sent_message_count}, timeout=settings.CACHE_TTL)
-            return Response({"messages": serialized_data, "messages_count": sent_message_count})
-        else:
-            cached_data = cache.get(cache_key)
-            if cached_data is None or not cached_data["messages"]:
-                notes = user.message_set.all()
-                # Your sorting logic here
-                sent_message_count = notes.filter(status='sent').count()
-                serializer = MessageSerializer(notes, many=True)
-                serialized_data = serializer.data
-                cache.set(cache_key, {"messages": serialized_data,
-                                      "messages_count": sent_message_count}, timeout=settings.CACHE_TTL)
+            return Response({"messages": serialized_data})
 
-                return Response({"messages": serialized_data, "messages_count": sent_message_count})
-            # Cache hit - use the cached data
-            else:
-                notes = cached_data["messages"]
-                sent_message_count = cached_data["messages_count"]
+        # By default, filter by 'sent' status and exclude archived messages
+        notes = user.message_set.exclude(status='archived')
 
-            return Response({"messages": notes, "messages_count": sent_message_count})
+        if sort_by:
+            # If sorting is applied, apply sorting
+            notes = notes.order_by(sort_by)
+            print('here?')
+        # Exclude archived messages again after sorting, if applicable
+        notes = notes.exclude(status='archived')
+        print('not archived', notes)
+        # Cou  nt the sent messages
+        sent_message_count = notes.filter(status='sent').count()
+
+        serializer = MessageSerializer(notes, many=True)
+        serialized_data = serializer.data
+
+        return Response({"messages": serialized_data, "messages_count": sent_message_count})
 
     except Exception as e:
         return Response(f'There has been some error: {e}')
+
 
 # Contact lists
 
