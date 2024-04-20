@@ -36,7 +36,6 @@ class CustomUser(User):
         max_length=20, choices=USER_TYPE_CHOICES)
     custom_email = models.EmailField(unique=True)
 
-
     def serialize_package_plan(self):
         # Implement custom serialization logic here
         return {
@@ -102,6 +101,7 @@ class ContactList(models.Model):
     users = models.ForeignKey(User, on_delete=models.CASCADE)
     list_name = models.CharField(max_length=20)
     contact_lenght = models.IntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     @receiver(post_save, sender='base.Contact')
     @receiver(post_delete, sender='base.Contact')

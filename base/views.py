@@ -222,7 +222,8 @@ def get_contact_list(request, pk):
 def get_contacts(request, id):
     try:
         user = request.user
-        cache_key = f"user_contacts:{user.id}"
+        contact_list = ContactList.objects.get(id=id)
+        cache_key = f"user_contacts:{contact_list.id}"
 
         # Check for sorting query parameters
         sort_by = request.GET.get('sort_by', None)
@@ -323,7 +324,7 @@ def create_contact(request, id):
                 return Response({'error': 'Empty form submission.'}, status=status.HTTP_400_BAD_REQUEST)
 
             serializer.save(contact_list=contact_list)
-            cache_key = f"user_contacts:{request.user.id}"
+            cache_key = f"user_contacts:{contact_list.id}"
             cache.delete(cache_key)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
