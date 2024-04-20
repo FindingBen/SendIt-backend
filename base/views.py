@@ -195,13 +195,31 @@ def get_packages(request):
 @permission_classes([IsAuthenticated])
 def get_contact_lists(request):
     try:
-        user = request.user
+        user = CustomUser.objects.get(id=request.user.id)
         contact_list = user.contactlist_set.all()
+        recipients = Contact.objects.filter(users=user)
+        recipients_serializer = ContactSerializer(recipients, many=True)
+        package_limits = {
+            'Gold package': {'contact_lists': 20, 'recipients': 10000},
+            'Silver package': {'contact_lists': 8, 'recipients': 5000},
+            'Basic package': {'contact_lists': 5, 'recipients': 1000},
+            'Trial Plan': {'contact_lists': 1, 'recipients': 5}
+        }
 
+        # Get the user's package plan
+        # Replace 'package_plan' with the actual attribute name
+        user_package = user.package_plan
+        print(user_package)
+        # Get the limits based on the user's package plan
+        if user_package.plan_type in package_limits:
+            limits = package_limits[user_package.plan_type]
+        else:
+            # Default to Trial package if user's package is not recognized
+            limits = package_limits['Trial Plan']
         serializer = ContactListSerializer(contact_list, many=True)
     except Exception as e:
         return Response(f'There has been some error: {e}')
-    return Response(serializer.data)
+    return Response({"data": serializer.data, "limits": limits, "recipients": recipients_serializer.data})
 
 
 @api_view(['GET,PUT'])
@@ -323,7 +341,8 @@ def create_contact(request, id):
             if not request.data['first_name'] and request.data['phone_number']:
                 return Response({'error': 'Empty form submission.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            serializer.save(contact_list=contact_list)
+            serializer.save(contact_list=contact_list, users=request.user)
+
             cache_key = f"user_contacts:{contact_list.id}"
             cache.delete(cache_key)
         else:
@@ -331,6 +350,34 @@ def create_contact(request, id):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response(f'There has been some error: {e}', status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_package_limits(request):
+    # Assuming the user's package plan is stored in the user object or user profile
+    user = request.user  # Assuming user is authenticated
+
+    # Define package limits
+    package_limits = {
+        'Gold': {'contact_lists': 20, 'recipients': 10000},
+        'Silver': {'contact_lists': 8, 'recipients': 5000},
+        'Basic': {'contact_lists': 5, 'recipients': 1000},
+        'Trial': {'contact_lists': 1, 'recipients': 5}
+    }
+
+    # Get the user's package plan
+    # Replace 'package_plan' with the actual attribute name
+    user_package = user.package_plan
+
+    # Get the limits based on the user's package plan
+    if user_package in package_limits:
+        limits = package_limits[user_package]
+    else:
+        # Default to Trial package if user's package is not recognized
+        limits = package_limits['Trial']
+
+    return Response(limits)
 
 
 @api_view(['GET'])

@@ -118,6 +118,7 @@ class ContactList(models.Model):
 
 
 class Contact(models.Model):
+    users = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
     contact_list = models.ForeignKey(
         ContactList, null=True, on_delete=models.CASCADE)
     first_name = models.CharField(max_length=20, blank=True, null=True)
