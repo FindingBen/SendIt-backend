@@ -85,6 +85,7 @@ def calculate_avg_performance(data_entry: List[Dict[str, any]]) -> Dict[str, flo
     total_engagement_rate = 0
     total_user_engagement = 0
     total_scrolled_users = 0
+    total_session_duration = 0
 
     # Loop through each entry in the data
     for entry in data_entry:
@@ -106,5 +107,5 @@ def calculate_avg_performance(data_entry: List[Dict[str, any]]) -> Dict[str, flo
         "average_engagement_rate": avg_engagement_rate,
         "average_user_engagement": avg_user_engagement,
         "average_scrolled_users": avg_scrolled_users,
-        "average_session_duration":avg_session_duration
+        "average_session_duration": avg_session_duration
     }
