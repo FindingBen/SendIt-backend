@@ -17,7 +17,7 @@ from datetime import datetime
 from django.core.cache import cache
 from django.views.decorators.cache import cache_page
 from django.conf import settings
-from utils.calculations import calculate_avg_performance
+from base.utils.calculations import calculate_avg_performance
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
