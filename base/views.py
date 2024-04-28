@@ -17,6 +17,7 @@ from datetime import datetime
 from django.core.cache import cache
 from django.views.decorators.cache import cache_page
 from django.conf import settings
+from utils.calculations import calculate_avg_performance
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -536,6 +537,8 @@ def get_analytics_data(request, record_id):
     end_date = datetime.now().date()
     analytics_data, periodic_data = sample_run_report(
         record_id=record_id, start_date=start_date, end_date=end_date, recipients=sms.sms_sends)
+    avg_data_calc = calculate_avg_performance(periodic_data)
+    print('AVG', avg_data_calc)
     print("PERIOD!", periodic_data)
     return Response({'message': 'Data returned!', 'data': analytics_data, 'period_data': periodic_data})
 
