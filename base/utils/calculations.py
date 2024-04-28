@@ -86,10 +86,10 @@ def calculate_avg_performance(data_entry: List[Dict[str, any]]) -> Dict[str, flo
     total_user_engagement = 0
     total_scrolled_users = 0
     total_session_duration = 0
-
+    print("CALCULATION", data_entry)
     # Loop through each entry in the data
     for entry in data_entry:
-        print(entry)
+
         # Increment sums with values from each day
         total_engagement_rate += entry.get("engegmentRate", 0)
         total_user_engagement += entry.get("userEngegment", 0)
