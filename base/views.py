@@ -534,10 +534,10 @@ def get_analytics_data(request, record_id):
 
     start_date = sms.created_at
     end_date = datetime.now().date()
-    analytics_data = sample_run_report(
+    analytics_data, periodic_data = sample_run_report(
         record_id=record_id, start_date=start_date, end_date=end_date, recipients=sms.sms_sends)
-
-    return Response({'message': 'Data returned!', 'data': analytics_data})
+    print("PERIOD!", periodic_data)
+    return Response({'message': 'Data returned!', 'data': analytics_data, 'period_data': periodic_data})
 
 
 @api_view(['GET'])

@@ -77,3 +77,7 @@ def calculate_overall_performance(final_data: None):
         return overall_performance_percentage
     except Exception as e:
         return str(e)
+
+
+def calculate_avg_performance(data_entry:None):
+    pass

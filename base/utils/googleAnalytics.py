@@ -88,7 +88,7 @@ def sample_run_report(property_id="400824086", record_id=None, start_date=None, 
     final_analysis_data = get_total_values(sorted_final_data, recipients)
     sms_model.update_from_values(final_analysis_data, record_id)
 
-    return final_analysis_data
+    return final_analysis_data, sorted_final_data
 
 
 def get_total_values(values: None, recipients: None):

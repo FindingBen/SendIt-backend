@@ -1,9 +1,10 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
 from django.apps import apps
 from uuid import uuid4
+from django.utils import timezone
 
 
 class PackagePlan(models.Model):
@@ -116,6 +117,10 @@ class ContactList(models.Model):
         contact_list.contact_lenght = contact_count
         contact_list.save()
 
+    def save(self, *args, **kwargs):
+            if not self.created_at:
+                self.created_at = timezone.now().date()
+            super().save(*args, **kwargs)
 
 class Contact(models.Model):
     users = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
