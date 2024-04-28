@@ -88,20 +88,23 @@ def calculate_avg_performance(data_entry: List[Dict[str, any]]) -> Dict[str, flo
 
     # Loop through each entry in the data
     for entry in data_entry:
+        print(entry)
         # Increment sums with values from each day
-        total_engagement_rate += entry.get("engagement_rate", 0)
-        total_user_engagement += entry.get("user_engagement", 0)
-        total_scrolled_users += entry.get("scrolled_users", 0)
+        total_engagement_rate += entry.get("engegmentRate", 0)
+        total_user_engagement += entry.get("userEngegment", 0)
+        total_scrolled_users += entry.get("scrolledUser", 0)
+        total_session_duration += entry.get("avgSessionDuration", 0)
 
     # Calculate averages
     num_days = len(data_entry)
     avg_engagement_rate = total_engagement_rate / num_days if num_days > 0 else 0
     avg_user_engagement = total_user_engagement / num_days if num_days > 0 else 0
     avg_scrolled_users = total_scrolled_users / num_days if num_days > 0 else 0
-
+    avg_session_duration = total_session_duration / num_days if num_days > 0 else 0
     # Return averages as a dictionary
     return {
         "average_engagement_rate": avg_engagement_rate,
         "average_user_engagement": avg_user_engagement,
-        "average_scrolled_users": avg_scrolled_users
+        "average_scrolled_users": avg_scrolled_users,
+        "average_session_duration":avg_session_duration
     }
