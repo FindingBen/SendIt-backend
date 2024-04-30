@@ -334,9 +334,40 @@ def update_message(request, id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_contact(request, id):
+    trial_limit = 10
+    basic_limit = 1000
+    silver_limit = 3000
+    gold_limit = 8000
     try:
-        contact_list = ContactList.objects.get(id=id)
-        serializer = ContactSerializer(data=request.data)
+
+        custom_user = CustomUser.objects.get(id=request.user.id)
+        contacts = Contact.objects.filter(users=request.user.id)
+        package_plan = custom_user.package_plan
+        print(len(contacts))
+        if package_plan.plan_type == 'Basic package':
+            if len(contacts) < basic_limit:
+                contact_list = ContactList.objects.get(id=id)
+                serializer = ContactSerializer(data=request.data)
+            else:
+                return Response({"Error, max number of recipients reached! Upgrade your package."}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        elif package_plan.plan_type == 'Silver package':
+            if len(contacts) < silver_limit:
+                contact_list = ContactList.objects.get(id=id)
+                serializer = ContactSerializer(data=request.data)
+            else:
+                return Response({"Error, max number of recipients reached! Upgrade your package."}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        elif package_plan.plan_type == 'Gold package':
+            if len(contacts) < gold_limit:
+                contact_list = ContactList.objects.get(id=id)
+                serializer = ContactSerializer(data=request.data)
+            else:
+                return Response({"Error, max number of recipients reached! Upgrade your package."}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        else:
+            if len(contacts) < trial_limit:
+                contact_list = ContactList.objects.get(id=id)
+                serializer = ContactSerializer(data=request.data)
+            else:
+                return Response({"Error, max number of recipients reached! Upgrade your package."}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
         if serializer.is_valid(raise_exception=True):
             # print(serializer.validated_data)
             if not request.data['first_name'] and request.data['phone_number']:
