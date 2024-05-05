@@ -261,6 +261,8 @@ CELERY_CACHE_BACKEND = 'default'
 
 DEFAULT_FROM_EMAIL = 'benarmys4@gmail.com'
 
+DATE_INPUT_FORMATS = ('%d-%m-%Y', '%Y-%m-%d')
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 

@@ -32,6 +32,7 @@ class MessageSerializer(ModelSerializer):
 
         instance.message_name = validated_data.get(
             'message_name', instance.message_name)
+        instance.status = validated_data.get('status', instance.status)
         instance.save()
         return instance
 
@@ -91,7 +92,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 class ContactListSerializer(ModelSerializer):
     class Meta:
         model = ContactList
-        fields = ['id', 'list_name', 'contact_lenght','created_at']
+        fields = ['id', 'list_name', 'contact_lenght', 'created_at']
 
 
 class ContactSerializer(ModelSerializer):

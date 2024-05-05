@@ -71,16 +71,18 @@ def sample_run_report(property_id="400824086", record_id=None, start_date=None, 
     merged_set = existing_dates.union(date_range_list)
     final_data = []
     for date in merged_set:
+        formatted_date = datetime.strptime(
+            date, "%Y-%m-%d").strftime("%m-%d")
         # Check if the date is in existing_dates
         for row in response.rows:
             if date == datetime.strptime(row.dimension_values[1].value, "%Y%m%d").strftime("%Y-%m-%d"):
-                row_obj = {"date": date, "engegmentRate": float(row.metric_values[0].value), "screenViews": int(row.metric_values[1].value), "userEngegment": float(row.metric_values[2].value),
+                row_obj = {"date": formatted_date, "engegmentRate": float(row.metric_values[0].value), "screenViews": int(row.metric_values[1].value), "userEngegment": float(row.metric_values[2].value),
                            "scrolledUser": int(row.metric_values[3].value), "avgSessionDuration": float(row.metric_values[4].value), "bounceRate": float(row.metric_values[5].value)}
                 final_data.append(row_obj)
                 break
         else:
             # If it doesn't exist, just append the date
-            row_obj = {"date": date, "engegmentRate": 0, "screenViews": 0, "userEngegment": 0,
+            row_obj = {"date": formatted_date, "engegmentRate": 0, "screenViews": 0, "userEngegment": 0,
                        "scrolledUser": 0, "avgSessionDuration": 0, 'bounceRate': 0}
             final_data.append(row_obj)
     sorted_final_data = sorted(final_data, key=lambda x: x["date"])[:7]

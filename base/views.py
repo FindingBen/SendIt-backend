@@ -195,31 +195,32 @@ def get_packages(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_contact_lists(request):
-    try:
-        user = CustomUser.objects.get(id=request.user.id)
-        contact_list = user.contactlist_set.all()
-        recipients = Contact.objects.filter(users=user)
-        recipients_serializer = ContactSerializer(recipients, many=True)
-        package_limits = {
-            'Gold package': {'contact_lists': 20, 'recipients': 10000},
-            'Silver package': {'contact_lists': 8, 'recipients': 5000},
-            'Basic package': {'contact_lists': 5, 'recipients': 1000},
-            'Trial Plan': {'contact_lists': 1, 'recipients': 5}
-        }
 
-        # Get the user's package plan
-        # Replace 'package_plan' with the actual attribute name
-        user_package = user.package_plan
-        print(user_package)
-        # Get the limits based on the user's package plan
-        if user_package.plan_type in package_limits:
-            limits = package_limits[user_package.plan_type]
-        else:
-            # Default to Trial package if user's package is not recognized
-            limits = package_limits['Trial Plan']
-        serializer = ContactListSerializer(contact_list, many=True)
-    except Exception as e:
-        return Response(f'There has been some error: {e}')
+    user = CustomUser.objects.get(id=request.user.id)
+    contact_list = user.contactlist_set.all()
+
+    recipients = Contact.objects.filter(users=user)
+    recipients_serializer = ContactSerializer(recipients, many=True)
+    package_limits = {
+        'Gold package': {'contact_lists': 20, 'recipients': 10000},
+        'Silver package': {'contact_lists': 8, 'recipients': 5000},
+        'Basic package': {'contact_lists': 5, 'recipients': 1000},
+        'Trial Plan': {'contact_lists': 1, 'recipients': 5}
+    }
+
+    # Get the user's package plan
+    # Replace 'package_plan' with the actual attribute name
+    user_package = user.package_plan
+    print(user_package)
+    # Get the limits based on the user's package plan
+    if user_package.plan_type in package_limits:
+        limits = package_limits[user_package.plan_type]
+    else:
+        # Default to Trial package if user's package is not recognized
+        limits = package_limits['Trial Plan']
+    serializer = ContactListSerializer(contact_list, many=True)
+    # except Exception as e:
+    #     return Response(f'There has been some error: {e}')
     return Response({"data": serializer.data, "limits": limits, "recipients": recipients_serializer.data})
 
 
@@ -320,10 +321,12 @@ def contact_detail(request, id):
 def update_message(request, id):
     try:
         message = Message.objects.get(id=id)
+        print(request.data)
         serializer = MessageSerializer(
             message, data=request.data, partial=True)
         if serializer.is_valid(raise_exception=True):
             serializer.update(message, validated_data=request.data)
+            print('AAAA', serializer.data)
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

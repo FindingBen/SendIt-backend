@@ -5,6 +5,7 @@ from django.dispatch import receiver
 from django.apps import apps
 from uuid import uuid4
 from django.utils import timezone
+from django.conf import settings
 
 
 class PackagePlan(models.Model):
@@ -102,7 +103,8 @@ class ContactList(models.Model):
     users = models.ForeignKey(User, on_delete=models.CASCADE)
     list_name = models.CharField(max_length=20)
     contact_lenght = models.IntegerField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateField(
+        auto_now_add=True)
 
     @receiver(post_save, sender='base.Contact')
     @receiver(post_delete, sender='base.Contact')
@@ -118,9 +120,10 @@ class ContactList(models.Model):
         contact_list.save()
 
     def save(self, *args, **kwargs):
-            if not self.created_at:
-                self.created_at = timezone.now().date()
-            super().save(*args, **kwargs)
+        if not self.created_at:
+            self.created_at = timezone.now().date()
+        super().save(*args, **kwargs)
+
 
 class Contact(models.Model):
     users = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
