@@ -9,6 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from .serializers import MessageSerializer, RegisterSerializer, CustomUserSerializer, ContactListSerializer, ContactSerializer, ElementSerializer, PackageSerializer, SurveySerializer
 from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser, EmailConfirmationToken, SurveyResponse
 from rest_framework import generics
+from sms.models import Sms
 from .utils.googleAnalytics import sample_run_report
 from .email.email import send_confirmation_email, send_welcome_email
 from django.db.models import Sum
@@ -211,7 +212,6 @@ def get_contact_lists(request):
     # Get the user's package plan
     # Replace 'package_plan' with the actual attribute name
     user_package = user.package_plan
-    print(user_package)
     # Get the limits based on the user's package plan
     if user_package.plan_type in package_limits:
         limits = package_limits[user_package.plan_type]

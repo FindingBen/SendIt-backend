@@ -33,6 +33,7 @@ class MessageSerializer(ModelSerializer):
         instance.message_name = validated_data.get(
             'message_name', instance.message_name)
         instance.status = validated_data.get('status', instance.status)
+        instance.total_overall_progress = validated_data.get('total_overall_progress', instance.total_overall_progress)
         instance.save()
         return instance
 

@@ -1,7 +1,7 @@
 import os
 from google.analytics.data_v1beta import BetaAnalyticsDataClient
 from sms.models import Sms
-from base.models import AnalyticsData, CustomUser
+from base.models import AnalyticsData, CustomUser, Message
 from google.analytics.data_v1beta.types import (
     DateRange,
     Dimension,
@@ -89,6 +89,10 @@ def sample_run_report(property_id="400824086", record_id=None, start_date=None, 
 
     final_analysis_data = get_total_values(sorted_final_data, recipients)
     sms_model.update_from_values(final_analysis_data, record_id)
+
+    message = Message.objects.get(id=record_id)
+    message.total_overall_progress = sms_model.total_overall_rate
+    message.save()
 
     return final_analysis_data, sorted_final_data
 

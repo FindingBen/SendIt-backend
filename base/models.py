@@ -60,6 +60,7 @@ class Message(models.Model):
         auto_now_add=True)
     status = models.CharField(
         max_length=10, blank=True, null=True, default='Draft')
+    total_overall_progress = models.IntegerField(default=0)
 
 
 class SurveyResponse(models.Model):
