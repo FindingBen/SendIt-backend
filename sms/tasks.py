@@ -10,7 +10,6 @@ from django.db import transaction
 import hashlib
 from django.core.cache import cache
 from base.email.email import send_email_notification
-from .views import schedule_archive_task
 
 
 @shared_task
@@ -74,6 +73,7 @@ def send_scheduled_sms(unique_tracking_id: None):
 
                     else:
                         pass
+                    from .views import schedule_archive_task
                     schedule_archive_task(smsObj.id, smsObj.scheduled_time)
                     print(
                         f"Message failed with error: {responseData['messages'][0]['error-text']}")
