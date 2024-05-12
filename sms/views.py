@@ -12,7 +12,7 @@ from django.http import HttpResponseRedirect, JsonResponse
 from django.db import transaction
 from datetime import datetime, timedelta
 import pytz
-from .tasks import send_scheduled_sms, send_sms
+from .tasks import send_scheduled_sms, send_sms, archive_message
 from base.email.email import send_email_notification
 
 
@@ -59,7 +59,10 @@ class createSms(generics.GenericAPIView):
                 sms_result_task = send_sms.delay(
                     sms.unique_tracking_id, user_obj.id)
 
-                time.sleep(4)
+                time.sleep(2)
+                archive_message.apply_async(
+                    (sms.id,), countdown=24 * 60 * 60)
+
                 if sms_result_task.ready():
                     try:
                         # If you need to handle different statuses, you can check them here
@@ -193,3 +196,11 @@ def vonage_webhook(request):
         print('Error handling Vonage delivery receipt:', str(e))
 
         return JsonResponse({'error': 'Error processing delivery receipt'}, status=200)
+
+
+def schedule_archive_task(sms_id, scheduled_time):
+    # Calculate the scheduled time for archiving the message (5 days after scheduled time)
+
+    archive_time = scheduled_time + timedelta(days=1)
+    archive_message.apply_async((sms_id,), eta=archive_time)
+    print("scheduled for archive")

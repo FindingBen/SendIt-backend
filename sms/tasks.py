@@ -1,4 +1,7 @@
 from __future__ import absolute_import, unicode_literals
+from datetime import timedelta
+from base.models import Message
+from .models import Sms
 from celery import shared_task
 import vonage
 from django.conf import settings
@@ -7,6 +10,7 @@ from django.db import transaction
 import hashlib
 from django.core.cache import cache
 from base.email.email import send_email_notification
+from .views import schedule_archive_task
 
 
 @shared_task
@@ -69,9 +73,10 @@ def send_scheduled_sms(unique_tracking_id: None):
                         pass  # Moved this line inside the if block
 
                     else:
-
-                        print(
-                            f"Message failed with error: {responseData['messages'][0]['error-text']}")
+                        pass
+                    schedule_archive_task(smsObj.id, smsObj.scheduled_time)
+                    print(
+                        f"Message failed with error: {responseData['messages'][0]['error-text']}")
 
                 except Exception as e:
                     print("Error sending SMS:", str(e))
@@ -159,3 +164,16 @@ def generate_hash(phone_number):
     hashed_phone = sha256.hexdigest()
 
     return hashed_phone
+
+
+@shared_task
+def archive_message(sms_id: None):
+
+    try:
+        sms = Sms.objects.get(id=sms_id)
+        message = Message.objects.get(id=sms.message.id)
+
+        message.status = 'archived'
+        message.save()
+    except Exception as e:
+        return 'There has been some error'
