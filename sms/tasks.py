@@ -170,10 +170,13 @@ def generate_hash(phone_number):
 def archive_message(sms_id: None):
 
     try:
-        sms = Sms.objects.get(id=sms_id)
-        message = Message.objects.get(id=sms.message.id)
+        with transaction.atomic():
+            sms = Sms.objects.get(id=sms_id)
+            message = Message.objects.get(id=sms.message.id)
 
-        message.status = 'archived'
-        message.save()
+            message.status = 'archived'
+            message.save()
+
+            sms.delete()
     except Exception as e:
         return 'There has been some error'
