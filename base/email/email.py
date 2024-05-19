@@ -8,9 +8,9 @@ from django.conf import settings
 class CustomPasswordResetConfirmationEmail(PasswordResetEmail):
     def get_context_data(self):
         context = super().get_context_data()
-        # context['domain'] = 'spplane.app'
-        context['domain'] = 'localhost:3000'
-        context['protocol'] = 'http'
+        context['domain'] = 'spplane.app'
+        # context['domain'] = 'localhost:3000'
+        context['protocol'] = 'https'
 
         return context
 
@@ -23,7 +23,7 @@ def send_confirmation_email(email, token_id, user_id):
         message=f"""
         Please confirm your email by clicking on the link below:
 
-        https://sendit-frontend-production.up.railway.app/activate_email/{token_id}/{user_id}/
+        https://spplane.app/activate_email/{token_id}/{user_id}/
         """,
         from_email='benarmys4@gmail.com',
         recipient_list=[email],
