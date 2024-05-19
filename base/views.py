@@ -18,6 +18,8 @@ from datetime import datetime
 from django.core.cache import cache
 from django.views.decorators.cache import cache_page
 from django.conf import settings
+from django.utils.timezone import now
+from djoser.views import UserViewSet
 from base.utils.calculations import calculate_avg_performance
 
 
@@ -48,6 +50,16 @@ class MyTokenObtainPairView(TokenObtainPairView):
 
     def validate(self, **kwargs):
         pass
+
+
+class CustomUserViewSet(UserViewSet):
+    def set_password(self, request, *args, **kwargs):
+        response = super().set_password(request, *args, **kwargs)
+        if response.status_code == status.HTTP_204_NO_CONTENT:
+            user = CustomUser.objects.get(id=request.user.id)
+            user.last_password_change = now()
+            user.save(update_fields=['last_password_change'])
+        return response
 
 
 class SendEmailConfirmationTokenAPIView(APIView):

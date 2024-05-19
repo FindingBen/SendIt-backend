@@ -37,6 +37,7 @@ class CustomUser(User):
     user_type = models.CharField(
         max_length=20, choices=USER_TYPE_CHOICES)
     custom_email = models.EmailField(unique=True)
+    last_password_change = models.DateField(null=True, blank=True)
 
     def serialize_package_plan(self):
         # Implement custom serialization logic here

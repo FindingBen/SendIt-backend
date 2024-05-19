@@ -33,7 +33,8 @@ class MessageSerializer(ModelSerializer):
         instance.message_name = validated_data.get(
             'message_name', instance.message_name)
         instance.status = validated_data.get('status', instance.status)
-        instance.total_overall_progress = validated_data.get('total_overall_progress', instance.total_overall_progress)
+        instance.total_overall_progress = validated_data.get(
+            'total_overall_progress', instance.total_overall_progress)
         instance.save()
         return instance
 
@@ -46,11 +47,12 @@ class UserSerializer(ModelSerializer):
 
 class CustomUserSerializer(ModelSerializer):
     package_plan = PackageSerializer()
+    last_password_change = serializers.DateField(read_only=True)
 
     class Meta:
         model = CustomUser
         fields = ['id', 'username', 'custom_email',
-                  'first_name', 'last_name', 'package_plan', 'sms_count', 'is_active', 'user_type']
+                  'first_name', 'last_name', 'package_plan', 'sms_count', 'is_active', 'user_type', 'last_password_change']
 
     def update(self, instance, validated_data):
         for attr, value in validated_data.items():

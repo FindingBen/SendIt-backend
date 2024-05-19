@@ -174,7 +174,7 @@ DJOSER = {
     'SEND_ACTIVATION_EMAIL': True,
     'PASSWORD_RESET_CONFIRMATION_EMAIL': 'base.email.CustomPasswordResetConfirmationEmail',
     'SERIALIZERS': {
-
+        'user': 'base.serializers.CustomUserSerializer',
     },
     'EMAIL': {
         'password_reset': 'base.email.CustomPasswordResetConfirmationEmail',

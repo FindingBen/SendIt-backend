@@ -4,7 +4,7 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 from .views import MyTokenObtainPairView
-from .views import RegisterAPI, CreateNote, CreateElement, SendEmailConfirmationTokenAPIView
+from .views import RegisterAPI, CreateNote, CreateElement, CustomUserViewSet, SendEmailConfirmationTokenAPIView
 
 
 urlpatterns = [
@@ -43,8 +43,8 @@ urlpatterns = [
     path('token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     # Password
-    path('set_password/',
-         include('django_rest_passwordreset.urls', namespace='set_password')),
+    path('users/set_password/',
+         CustomUserViewSet.as_view({'post': 'set_password'}), name='set_password'),
     # Email confirmation
     path('confirm_email_verification/',
          SendEmailConfirmationTokenAPIView.as_view()),

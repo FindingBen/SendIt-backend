@@ -17,6 +17,7 @@ from base.serializers import CustomUserSerializer
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.core.mail import send_mail
+import vonage
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
@@ -160,6 +161,8 @@ def stripe_webhook(request):
                     user_payment.payment_bool = False
                     user_payment.save()
 
+                    # vonage_account_topup(package=package_obj.plan_typ)
+
                     send_mail(
                         subject=f'Receipt for sendperplane product {package_obj.plan_type}',
                         message='Thank you for purchasing the package from us! We hope that you will enjoy our sending service.' +
@@ -241,3 +244,32 @@ def calculate_plan_usage(request):
 
     except Exception as e:
         return Response({'error': str(e)}, status=400)
+
+
+def vonage_account_topup(package):
+    try:
+        vonage_client = vonage.Client(
+            key=settings.VONAGE_ID, secret=settings.VONAGE_TOKEN)
+        account = vonage.Account(vonage_client)
+        if account:
+            adjusted_amount = ammount_split(package)
+        response = account.top_up(adjusted_amount)
+        print(response)
+        if response['status'] == '0':
+            print("Top-up successful!")
+        else:
+            print(f"Top-up failed: {response['error-text']}")
+    except Exception as e:
+        print(f"Error topping up Vonage account: {e}")
+
+
+def ammount_split(package: None):
+    try:
+        if package.plan_type == 'Gold package':
+            return settings.GOLD_PACKAGE_AMOUNT
+        elif package.plan_type == 'Silver package':
+            return settings.SILVER_PACKAGE_AMOUNT
+        elif package.plan_type == 'Basic package':
+            return settings.BASIC_PACKAGE_AMOUNT
+    except Exception as e:
+        return e
