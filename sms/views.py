@@ -58,7 +58,7 @@ class createSms(generics.GenericAPIView):
                 sms = serializer.save()
                 sms_result_task = send_sms.delay(
                     sms.unique_tracking_id, user_obj.id)
-
+                time.sleep(2)
                 archive_message.apply_async(
                     (sms.id,), countdown=60)
 
