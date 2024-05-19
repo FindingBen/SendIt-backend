@@ -167,16 +167,22 @@ def generate_hash(phone_number):
 
 
 @shared_task
-def archive_message(sms_id: None):
-
+def archive_message(sms_id):
     try:
         with transaction.atomic():
             sms = Sms.objects.get(id=sms_id)
-            message = Message.objects.get(id=sms.message.id)
+            message = sms.message  # Assuming Sms has a ForeignKey to Message
 
             message.status = 'archived'
             message.save()
 
             sms.delete()
+
+            return 'Message archived and SMS deleted successfully'
+    except Sms.DoesNotExist:
+        return f'SMS with id {sms_id} does not exist'
+    except Message.DoesNotExist:
+        return f'Message related to SMS id {sms_id} does not exist'
     except Exception as e:
-        return 'There has been some error'
+        # Log the exception details for debugging purposes
+        return f'An error occurred: {str(e)}'
