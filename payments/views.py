@@ -65,8 +65,10 @@ def payment_successful(request, id):
         user_object = CustomUser.objects.get(id=user_id)
         user_serializer = CustomUserSerializer(user_object)
         user_payment = UserPayment.objects.get(user=user_id)
-        purchase_obj = Purchase.objects.filter(
-            userPayment=user_payment).order_by('-created_at').first()
+
+        purchase_obj = Purchase.objects.get(
+            payment_id=user_payment.purchase_id)
+
         serializer_purchase = PurchaseSerializer(purchase_obj)
         time.sleep(3)
         if user_payment.payment_bool is True:
@@ -145,6 +147,7 @@ def stripe_webhook(request):
                 user_payment = UserPayment.objects.get(
                     user_id=user_obj.id)
                 user_payment.payment_bool = True
+
                 user_payment.save()
 
                 if (user_payment.payment_bool == True):
@@ -158,6 +161,7 @@ def stripe_webhook(request):
                                                payment_method=payment_type_details)
 
                     create_purchase.save()
+                    user_payment.purchase_id = event['data']['object']['payment_intent']
                     user_payment.payment_bool = False
                     user_payment.save()
 
