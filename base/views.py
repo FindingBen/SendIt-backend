@@ -333,12 +333,14 @@ def contact_detail(request, id):
 def update_message(request, id):
     try:
         message = Message.objects.get(id=id)
-        print(request.data)
+
         serializer = MessageSerializer(
             message, data=request.data, partial=True)
         if serializer.is_valid(raise_exception=True):
             serializer.update(message, validated_data=request.data)
-            print('AAAA', serializer.data)
+            if 'archived' in request.data['status']:
+                print('DDSS')
+                Sms.objects.filter(message=message.id).delete()
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
