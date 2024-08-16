@@ -263,48 +263,24 @@ def get_contacts(request, id):
         # Check for sorting query parameters
         sort_by = request.GET.get('sort_by', None)
         if sort_by and sort_by not in ['first_name', '-first_name', 'created_at', '-created_at']:
-            sort_by = ''
+            sort_by = None
 
-        # Check if sorting parameters are present
+        # Always invalidate the cache if sorting is applied or not.
+        # This ensures you fetch the latest data after any changes like add, delete, or update
         if sort_by:
-            contact_list = ContactList.objects.get(id=id)
+            contact = Contact.objects.filter(contact_list=contact_list).order_by(sort_by)
+        else:
+            # This will be executed when no sorting parameter is provided
             contact = Contact.objects.filter(contact_list=contact_list)
 
-            # Apply sorting to the queryset
-            contact = contact.order_by(sort_by)
+        serializer = ContactSerializer(contact, many=True)
+        cache.set(cache_key, {"contacts": serializer.data}, timeout=settings.CACHE_TTL)
 
-            serializer = ContactSerializer(contact, many=True)
-
-            # Cache the sorted data
-            cache.set(cache_key, {"contacts": serializer.data},
-                      timeout=settings.CACHE_TTL)
-
-            return Response({"contacts": serializer.data})
-        else:
-            # Sorting parameters are not present, check the cache
-            cached_data = cache.get(cache_key)
-
-            if cached_data is None:
-                # Data is not in the cache, fetch from the database without sorting
-
-                contact_list = ContactList.objects.get(id=id)
-                contact = Contact.objects.filter(contact_list=contact_list)
-
-                serializer = ContactSerializer(contact, many=True)
-
-                # Cache the data without sorting
-                cache.set(
-                    cache_key, {"contacts": serializer.data}, timeout=settings.CACHE_TTL)
-
-                return Response({"contacts": serializer.data})
-            else:
-                # Data is in the cache, use the cached data without querying the database
-                contacts = cached_data['contacts']
-
-                return Response({"contacts": contacts})
+        return Response({"contacts": serializer.data})
 
     except Exception as e:
         return Response(f'There has been some error: {e}')
+
 
 
 @api_view(['GET', 'PUT'])
