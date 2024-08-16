@@ -143,42 +143,37 @@ def update_element(request, id):
         raise Response("Element not found")
 
 
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@api_view(['GET'])
 def get_notes(request):
     try:
         user = request.user
         archive = request.GET.get('archive', None)
-
         sort_by = request.GET.get('sort_by', None)
 
+        # Determine which messages to fetch based on 'archive' parameter
         if archive == 'true':
             # Fetch only archived messages
             notes = user.message_set.filter(status='archived')
-            serializer = MessageSerializer(notes, many=True)
-            serialized_data = serializer.data
-            return Response({"messages": serialized_data})
+        else:
+            # Fetch only non-archived messages
+            notes = user.message_set.exclude(status='archived')
 
-        # By default, filter by 'sent' status and exclude archived messages
-        notes = user.message_set.exclude(status='archived')
-
+        # Apply sorting if provided
         if sort_by:
-            # If sorting is applied, apply sorting
             notes = notes.order_by(sort_by)
-            print('here?')
-        # Exclude archived messages again after sorting, if applicable
-        notes = notes.exclude(status='archived')
-        print('not archived', notes)
-        # Cou  nt the sent messages
-        sent_message_count = notes.filter(status='sent').count()
 
+        # Serialize the notes
         serializer = MessageSerializer(notes, many=True)
         serialized_data = serializer.data
+
+        # Count the 'sent' messages for additional information
+        sent_message_count = notes.filter(status='sent').count()
 
         return Response({"messages": serialized_data, "messages_count": sent_message_count})
 
     except Exception as e:
-        return Response(f'There has been some error: {e}')
+        return Response({"error": f"There has been some error: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # Contact lists
@@ -268,19 +263,20 @@ def get_contacts(request, id):
         # Always invalidate the cache if sorting is applied or not.
         # This ensures you fetch the latest data after any changes like add, delete, or update
         if sort_by:
-            contact = Contact.objects.filter(contact_list=contact_list).order_by(sort_by)
+            contact = Contact.objects.filter(
+                contact_list=contact_list).order_by(sort_by)
         else:
             # This will be executed when no sorting parameter is provided
             contact = Contact.objects.filter(contact_list=contact_list)
 
         serializer = ContactSerializer(contact, many=True)
-        cache.set(cache_key, {"contacts": serializer.data}, timeout=settings.CACHE_TTL)
+        cache.set(cache_key, {"contacts": serializer.data},
+                  timeout=settings.CACHE_TTL)
 
         return Response({"contacts": serializer.data})
 
     except Exception as e:
         return Response(f'There has been some error: {e}')
-
 
 
 @api_view(['GET', 'PUT'])
