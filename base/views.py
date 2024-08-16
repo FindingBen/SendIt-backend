@@ -225,6 +225,7 @@ def get_contact_lists(request):
     # Get the user's package plan
     # Replace 'package_plan' with the actual attribute name
     user_package = user.package_plan
+    print(user_package.plan_type)
     # Get the limits based on the user's package plan
     if user_package.plan_type in package_limits:
         limits = package_limits[user_package.plan_type]
