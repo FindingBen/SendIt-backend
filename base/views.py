@@ -213,6 +213,7 @@ def get_contact_lists(request):
     contact_list = user.contactlist_set.all()
 
     recipients = Contact.objects.filter(users=user)
+    print(len(recipients))
     recipients_serializer = ContactSerializer(recipients, many=True)
     package_limits = {
         'Gold package': {'contact_lists': 20, 'recipients': 10000},
@@ -231,6 +232,7 @@ def get_contact_lists(request):
         # Default to Trial package if user's package is not recognized
         limits = package_limits['Trial Plan']
     serializer = ContactListSerializer(contact_list, many=True)
+    print(limits)
     # except Exception as e:
     #     return Response(f'There has been some error: {e}')
     return Response({"data": serializer.data, "limits": limits, "recipients": recipients_serializer.data})
