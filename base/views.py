@@ -124,8 +124,8 @@ def note_view(request, id):
             'elements': serializer.data,
             'message': message_serializer.data,
             # You can customize this message
-
         }
+
     except Exception as e:
         return Response(f'There has been some error: {e}')
     return Response(response_data)
@@ -561,7 +561,7 @@ def get_analytics_data(request, record_id):
     analytics_data, periodic_data = sample_run_report(
         record_id=record_id, start_date=start_date, end_date=end_date, recipients=sms.sms_sends)
     avg_data_calc = calculate_avg_performance(periodic_data)
-    print("AAAA", len(periodic_data))
+
     return Response({'message': 'Data returned!', 'data': analytics_data, 'period_data': periodic_data, "avg_data": avg_data_calc})
 
 
