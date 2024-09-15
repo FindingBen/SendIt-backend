@@ -173,6 +173,7 @@ def track_button_click(request, id):
         redirect_url = element.button_link
         if element.element_type == 'Button':
             sms_obj.click_button += 1
+            sms_obj.has_button = True
             sms_obj.save()
         else:
             print('Not a button')
