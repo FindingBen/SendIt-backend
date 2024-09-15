@@ -1,6 +1,6 @@
 from __future__ import absolute_import, unicode_literals
 from datetime import timedelta
-from base.models import Message
+from base.models import Message, Element
 from .models import Sms
 from celery import shared_task
 import vonage
@@ -25,7 +25,10 @@ def send_scheduled_sms(unique_tracking_id: None):
         content_link = smsObj.content_link
         sms_text = smsObj.sms_text
         user = CustomUser.objects.get(id=smsObj.user.id)
-
+        element = Element.objects.get(message=message.id)
+        if element.element_type == 'Button':
+            smsObj.has_button = True
+            smsObj.save()
         with transaction.atomic():
             if not smsObj.is_sent:
 
@@ -100,6 +103,11 @@ def send_sms(unique_tracking_id: None, user: None):
         message = Message.objects.get(id=smsObj.message.id)
         content_link = smsObj.content_link
         sms_text = smsObj.sms_text
+        element = Element.objects.get(message=message.id)
+
+        if element.element_type == 'Button':
+            smsObj.has_button = True
+            smsObj.save()
 
         with transaction.atomic():
             if not smsObj.is_sent:
