@@ -153,9 +153,9 @@ def schedule_sms(request):
 
 
 @api_view(['GET'])
-def track_link_click(request, uuid):
+def track_link_click(request, id):
     print(request)
-    sms_obj = Sms.objects.get(unique_tracking_id=uuid)
+    sms_obj = Sms.objects.get(message=id)
     message_obj = Message.objects.get(id=sms_obj.message.id)
     sms_obj.click_number += 1  # Increment click_number by 1
     sms_obj.save()
