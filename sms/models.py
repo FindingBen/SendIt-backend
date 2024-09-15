@@ -25,6 +25,7 @@ class Sms(models.Model):
         max_digits=3, decimal_places=1, default=0)
     total_views = models.IntegerField(default=0)
     click_number = models.IntegerField(default=0)
+    click_button = models.IntegerField(default=0)
     is_sent = models.BooleanField(default=False)
     delivered = models.IntegerField(default=0)
     unsubscribe_path = models.CharField(

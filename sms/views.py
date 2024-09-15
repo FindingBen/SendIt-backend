@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from .models import Sms
 import time
 from django.views.decorators.csrf import csrf_exempt
-from base.models import Message, ContactList, CustomUser
+from base.models import Message, ContactList, CustomUser, Element
 from base.serializers import MessageSerializer
 from .serializers import SmsSerializer
 from django.http import HttpResponseRedirect, JsonResponse
@@ -162,6 +162,23 @@ def track_link_click(request, id):
 
     redirect_url = f"https://spplane.app/view/{message_obj.id}"
     return HttpResponseRedirect(redirect_url)
+
+
+@api_view(['GET'])
+def track_button_click(request, id):
+    print(request)
+    try:
+        sms_obj = Sms.objects.get(message=id)
+        element = Element.objects.get(message=id)
+        redirect_url = element.button_link
+        if element.element_type == 'Button':
+            sms_obj.click_button += 1
+            sms_obj.save()
+        else:
+            print('Not a button')
+        return HttpResponseRedirect(redirect_url)
+    except Exception as e:
+        return Response(f'There has been error retrieving the object: {e}')
 
 
 @csrf_exempt
