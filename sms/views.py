@@ -169,7 +169,7 @@ def track_button_click(request, id):
     print(request)
     try:
         # my el object
-        element = Element.objects.get(unique_button_id=id)
+        element = Element.objects.filter(unique_button_id=id)[0]
         sms_obj = Sms.objects.get(message=element.message.id)
         redirect_url = element.button_link
         if element.element_type == 'Button':
