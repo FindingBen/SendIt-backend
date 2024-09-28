@@ -168,9 +168,10 @@ def track_link_click(request, id):
 def track_button_click(request, id):
     try:
         # my el object
-        element = Element.objects.filter(unique_button_id=id)[0]
+        element = Element.objects.get(unique_button_id=id)
         redirect_url = element.button_link
-
+        if not redirect_url.startswith(('http://', 'https://')):
+            redirect_url = 'http://' + redirect_url
         sms_obj = Sms.objects.get(message=element.message.id)
 
         if element.element_type == 'Button':
