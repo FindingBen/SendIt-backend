@@ -78,7 +78,7 @@ class Element(models.Model):
         ('Like/Dislike', 'Like/Dislike'),
         ('Question Survey', 'Question Survey'),
     ]
-
+    unique_button_id = models.CharField(null=True)
     element_type = models.CharField(max_length=20, null=True)
     message = models.ForeignKey(Message, on_delete=models.CASCADE)
     image = models.ImageField(blank=True, null=True)
@@ -89,6 +89,7 @@ class Element(models.Model):
         max_length=20, choices=SURVEY_CHOICES, null=True)
     button_title = models.CharField(max_length=20, null=True)
     button_link = models.CharField(max_length=100, null=True)
+    button_link_track = models.CharField(max_length=100, null=True)
     button_color = models.CharField(max_length=20, default='#000000')
     order = models.PositiveIntegerField()
 
@@ -99,6 +100,10 @@ class Element(models.Model):
                 # Add other fields as needed
             )
             survey_response.save()
+        # elif self.element_type == 'Button':
+        #     print('HEEEYY', self.unique_button_id)
+        #     self.button_link_track = f'{self.button_link_track}/{self.unique_button_id}'
+        #     self.save()
 
 
 class ContactList(models.Model):
