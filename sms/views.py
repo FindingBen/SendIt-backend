@@ -166,12 +166,13 @@ def track_link_click(request, id):
 
 @api_view(['GET'])
 def track_button_click(request, id):
-    print(request)
     try:
         # my el object
         element = Element.objects.filter(unique_button_id=id)[0]
-        sms_obj = Sms.objects.get(message=element.message.id)
         redirect_url = element.button_link
+
+        sms_obj = Sms.objects.get(message=element.message.id)
+
         if element.element_type == 'Button':
             sms_obj.click_button += 1
             sms_obj.has_button = True
