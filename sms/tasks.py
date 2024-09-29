@@ -96,17 +96,16 @@ def send_sms(unique_tracking_id: None, user: None):
     try:
         from .models import Sms
         from base.models import ContactList, Message, Contact, CustomUser
-
+        print(unique_tracking_id)
         smsObj = Sms.objects.get(unique_tracking_id=unique_tracking_id)
-        print('SMS', smsObj)
+        print("SMS", smsObj)
         user = CustomUser.objects.get(id=smsObj.user.id)
         contact_list = ContactList.objects.get(id=smsObj.contact_list.id)
-        print('contact_list', contact_list)
         message = Message.objects.get(id=smsObj.message.id)
         content_link = smsObj.content_link
         sms_text = smsObj.sms_text
-        element = Element.objects.get(message=message.id)
-        print('ELEME', element)
+        element = Element.objects.filter(message=message.id)[0]
+        print(element)
         if element.element_type == 'Button':
             smsObj.has_button = True
             smsObj.save()
@@ -161,7 +160,7 @@ def send_sms(unique_tracking_id: None, user: None):
                 pass  # If is_sent is True, save the instance
     except Exception as e:
         send_email_notification(user.id)
-        print(str(e))
+        print(f'There has been an error {str(e)}')
 
 
 def generate_hash(phone_number):

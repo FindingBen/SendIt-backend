@@ -8,8 +8,8 @@ class Sms(models.Model):
     unique_tracking_id = models.CharField(
         max_length=22,
         default=shortuuid.uuid,
-        unique=True,
-        editable=False  # Ensures the field is not editable in admin
+        unique=True
+        # Ensures the field is not editable in admin
     )
     created_at = models.DateField(auto_now_add=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
@@ -25,6 +25,14 @@ class Sms(models.Model):
     total_overall_rate = models.DecimalField(
         max_digits=3, decimal_places=1, default=0)
     total_views = models.IntegerField(default=0)
+    button_1 = models.IntegerField(default=0)
+    button_2 = models.IntegerField(default=0)
+    button_3 = models.IntegerField(default=0)
+    button_4 = models.IntegerField(default=0)
+    button_1_name = models.CharField(null=True)
+    button_2_name = models.CharField(null=True)
+    button_3_name = models.CharField(null=True)
+    button_4_name = models.CharField(null=True)
     click_number = models.IntegerField(default=0)
     click_button = models.IntegerField(default=0)
     is_sent = models.BooleanField(default=False)

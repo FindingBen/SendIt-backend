@@ -78,7 +78,7 @@ class Element(models.Model):
         ('Like/Dislike', 'Like/Dislike'),
         ('Question Survey', 'Question Survey'),
     ]
-    unique_button_id = models.CharField(null=True)
+    unique_button_id = models.CharField(editable=False)
     element_type = models.CharField(max_length=20, null=True)
     message = models.ForeignKey(Message, on_delete=models.CASCADE)
     image = models.ImageField(blank=True, null=True)
@@ -100,10 +100,6 @@ class Element(models.Model):
                 # Add other fields as needed
             )
             survey_response.save()
-        # elif self.element_type == 'Button':
-        #     print('HEEEYY', self.unique_button_id)
-        #     self.button_link_track = f'{self.button_link_track}/{self.unique_button_id}'
-        #     self.save()
 
 
 class ContactList(models.Model):
