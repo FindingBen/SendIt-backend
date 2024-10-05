@@ -36,7 +36,7 @@ def send_scheduled_sms(unique_tracking_id: None):
                 smsObj.has_button = True
                 smsObj.save()
         button_count = 0
-        
+
         with transaction.atomic():
             if not smsObj.is_sent:
 
@@ -113,7 +113,6 @@ def send_sms(unique_tracking_id: None, user: None):
         content_link = smsObj.content_link
         sms_text = smsObj.sms_text
         elements = Element.objects.filter(message=message.id)[0]
-        print(element)
 
         button_count = 0
 
