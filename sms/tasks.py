@@ -25,7 +25,7 @@ def send_scheduled_sms(unique_tracking_id: None):
         content_link = smsObj.content_link
         sms_text = smsObj.sms_text
         user = CustomUser.objects.get(id=smsObj.user.id)
-        elements = Element.objects.get(message=message.id)
+        elements = Element.objects.filter(message=message.id)
         button_count = 0
 
         for element in elements:
@@ -112,7 +112,7 @@ def send_sms(unique_tracking_id: None, user: None):
         message = Message.objects.get(id=smsObj.message.id)
         content_link = smsObj.content_link
         sms_text = smsObj.sms_text
-        elements = Element.objects.filter(message=message.id)[0]
+        elements = Element.objects.filter(message=message.id)
 
         button_count = 0
 
