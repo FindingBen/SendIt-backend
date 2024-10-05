@@ -185,7 +185,7 @@ def track_button_click(request, id):
                 break
 
         if button_index is not None:
-            setattr(sms_obj, f'button_click_{button_index}', getattr(
+            setattr(sms_obj, f'button_{button_index}', getattr(
                 sms_obj, f'button_{button_index}', 0) + 1)
             sms_obj.click_button += 1  # General click count
             sms_obj.save()
