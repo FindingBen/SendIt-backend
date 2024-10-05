@@ -174,12 +174,23 @@ def track_button_click(request, id):
             redirect_url = 'http://' + redirect_url
         sms_obj = Sms.objects.get(message=element.message.id)
 
-        if element.element_type == 'Button':
-            sms_obj.click_button += 1
-            sms_obj.has_button = True
+        elements = Element.objects.filter(
+            message=element.message.id, element_type='Button')
+        button_index = None
+
+        # Loop through the buttons to find the index of the clicked button
+        for index, btn_element in enumerate(elements, start=1):
+            if btn_element.unique_button_id == id:
+                button_index = index
+                break
+
+        if button_index is not None:
+            setattr(sms_obj, f'button_click_{button_index}', getattr(
+                sms_obj, f'button_click_{button_index}', 0) + 1)
+            sms_obj.click_button += 1  # General click count
             sms_obj.save()
         else:
-            print('Not a button')
+            print('No matching button found')
         return HttpResponseRedirect(redirect_url)
     except Exception as e:
         return Response(f'There has been error retrieving the object: {e}')

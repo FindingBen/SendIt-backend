@@ -483,10 +483,8 @@ class CreateElement(generics.GenericAPIView):
 
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
-        print('ADADAD')
         if serializer.is_valid(raise_exception=True):
             element = serializer.save()
-            print('SAVING')
             if element.element_type == 'Text' and not element.text:
                 # Check if the element type is 'Text' and the value is empty
                 return Response({'error': 'Text element must not have a non-empty value'}, status=status.HTTP_400_BAD_REQUEST)

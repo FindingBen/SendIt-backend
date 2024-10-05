@@ -25,10 +25,18 @@ def send_scheduled_sms(unique_tracking_id: None):
         content_link = smsObj.content_link
         sms_text = smsObj.sms_text
         user = CustomUser.objects.get(id=smsObj.user.id)
-        element = Element.objects.get(message=message.id)
-        if element.element_type == 'Button':
-            smsObj.has_button = True
-            smsObj.save()
+        elements = Element.objects.get(message=message.id)
+        button_count = 0
+
+        for element in elements:
+            if element.element_type == 'Button':
+                button_count += 1
+                setattr(
+                    smsObj, f'button_{button_count}_name', element.button_title)
+                smsObj.has_button = True
+                smsObj.save()
+        button_count = 0
+        
         with transaction.atomic():
             if not smsObj.is_sent:
 
@@ -104,11 +112,19 @@ def send_sms(unique_tracking_id: None, user: None):
         message = Message.objects.get(id=smsObj.message.id)
         content_link = smsObj.content_link
         sms_text = smsObj.sms_text
-        element = Element.objects.filter(message=message.id)[0]
+        elements = Element.objects.filter(message=message.id)[0]
         print(element)
-        if element.element_type == 'Button':
-            smsObj.has_button = True
-            smsObj.save()
+
+        button_count = 0
+
+        for element in elements:
+            if element.element_type == 'Button':
+                button_count += 1
+                setattr(
+                    smsObj, f'button_{button_count}_name', element.button_title)
+                smsObj.has_button = True
+                smsObj.save()
+        button_count = 0
 
         with transaction.atomic():
             if not smsObj.is_sent:
