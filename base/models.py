@@ -78,7 +78,7 @@ class Element(models.Model):
         ('Like/Dislike', 'Like/Dislike'),
         ('Question Survey', 'Question Survey'),
     ]
-    unique_button_id = models.CharField(editable=False)
+    unique_button_id = models.CharField(default=None, null=True)
     element_type = models.CharField(max_length=20, null=True)
     message = models.ForeignKey(Message, on_delete=models.CASCADE)
     image = models.ImageField(blank=True, null=True)
