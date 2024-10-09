@@ -147,3 +147,4 @@ class AnalyticsData(models.Model):
     total_bounce_rate = models.IntegerField(default=0)
     total_overall_rate = models.IntegerField(default=0)
     last_updated = models.DateField(auto_now_add=True)
+

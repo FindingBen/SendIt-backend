@@ -64,3 +64,18 @@ class Sms(models.Model):
         except Exception as e:
             # Handle other exceptions that might occur during the update
             print(f"An error occurred: {e}")
+
+
+class CampaignStats(models.Model):
+    message = models.ForeignKey(Message, on_delete=models.CASCADE)
+    engagement = models.IntegerField(default=0)
+    total_clicks = models.IntegerField(default=0)
+    audience = models.IntegerField(default=0)
+    unsub_users = models.IntegerField(default=0)
+    overall_perfromance = models.IntegerField(default=0)
+    campaign_start = models.DateField(null=True)
+    campaign_end = models.DateField(auto_now_add=True)
+
+
+class OverallStats(models.Model):
+    pass

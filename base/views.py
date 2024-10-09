@@ -632,3 +632,8 @@ def handle_survey_response(request, id):
     survey_response.save()
 
     return Response({'message': 'Survey response updated successfully'})
+
+
+@api_view(['POST'])
+def export_analytics(request, message_id, sms_id):
+    pass

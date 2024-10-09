@@ -1,10 +1,11 @@
 from __future__ import absolute_import, unicode_literals
 from datetime import timedelta
 from base.models import Message, Element
-from .models import Sms
+from .models import Sms, CampaignStats
 from celery import shared_task
 import vonage
 from django.conf import settings
+from django.utils import timezone
 import uuid
 from django.db import transaction
 import hashlib
@@ -200,7 +201,44 @@ def archive_message(sms_id):
             message.status = 'archived'
             message.save()
 
-            sms.delete()
+            total_clicks = (
+                sms.button_1 + sms.button_2 +
+                sms.button_3 + sms.button_4 + sms.click_button + sms.click_number
+            )
+            audience = sms.sms_sends
+            total_views = sms.total_views
+            unsub_users = 1
+            # Weights for performance calculation
+            w1 = 0.4  # Weight for total views
+            w2 = 0.5  # Weight for total clicks
+            w3 = 0.1  # Weight for unsubscribes
+
+            # Performance calculation based on the provided formula
+            if audience > 0 and total_views > 0:
+                overall_performance = (
+                    (total_views / audience) * w1 +
+                    (total_clicks / total_views) * w2 -
+                    (unsub_users / audience) * w3
+                )
+            else:
+                # Set to 0 if audience or views are zero to avoid division by zero
+                overall_performance = 0
+
+            # Convert performance to a percentage (out of 100)
+            overall_performance = int(overall_performance * 100)
+
+            campaign_stats = CampaignStats.objects.create(
+                message=message,
+                engagement=total_views,
+                total_clicks=total_clicks,
+                audience=audience,
+                unsub_users=unsub_users,
+                overall_perfromance=overall_performance,  # Store the calculated performance
+                campaign_start=sms.created_at,
+                campaign_end=timezone.now()  # Assuming the archive happens at the end
+            )
+
+            campaign_stats.save()
 
             return 'Message archived and SMS deleted successfully'
     except Sms.DoesNotExist:
