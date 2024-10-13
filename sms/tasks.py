@@ -229,6 +229,8 @@ def archive_message(sms_id):
 
             campaign_stats = CampaignStats.objects.create(
                 message=message,
+                user=sms.user,
+                name=message.message_name,
                 engagement=total_views,
                 total_clicks=total_clicks,
                 audience=audience,

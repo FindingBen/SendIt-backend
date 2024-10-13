@@ -2,18 +2,19 @@ from rest_framework import status, generics
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
-from .models import Sms
+from .models import Sms, CampaignStats
 import time
 from django.views.decorators.csrf import csrf_exempt
 from base.models import Message, ContactList, CustomUser, Element
 from base.serializers import MessageSerializer
-from .serializers import SmsSerializer
+from .serializers import SmsSerializer, CampaignStatsSerializer
 from django.http import HttpResponseRedirect, JsonResponse
 from django.db import transaction
 from datetime import datetime, timedelta
 import pytz
 from .tasks import send_scheduled_sms, send_sms, archive_message
 from base.email.email import send_email_notification
+from django.utils import timezone
 
 
 @api_view(['GET'])
@@ -85,6 +86,21 @@ class createSms(generics.GenericAPIView):
             return Response({'error': 'You have insufficient credit amount to cover this send. Top up your credit'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
         else:
             return Response({'error': 'You dont have enough credit amount to cover this send. Top up your credit'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+@api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+def get_campaign_stats(request):
+    try:
+        today = timezone.now().date()
+        user = request.user
+        campaigns = CampaignStats.objects.filter(
+            user=2, campaign_end__lte=today).order_by('-campaign_end')[:3]
+        serializer = CampaignStatsSerializer(campaigns, many=True)
+    except Exception as e:
+        return Response(f'There has been an error: {e}')
+
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
