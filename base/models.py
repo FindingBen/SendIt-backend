@@ -150,6 +150,42 @@ class AnalyticsData(models.Model):
     total_spend = models.IntegerField(default=0)
     last_updated = models.DateField(auto_now_add=True)
 
+    def calculate_performance(self):
+        # Ensure we don't divide by zero
+        if self.total_sends == 0:
+            return 0  # No messages sent, so no performance to calculate
 
-    def calculate_peformance(self):
-        pass
+        # Calculate Click-Through Rate (CTR)
+        ctr = (self.total_clicks / self.total_sends) * \
+            100 if self.total_clicks > 0 else 0
+
+        # Calculate View Rate
+        view_rate = (self.total_views / self.total_sends) * \
+            100 if self.total_views > 0 else 0
+
+        # Calculate Cost per Click (CPC) and Cost per View (CPV)
+        cpc = self.total_spend / self.total_clicks if self.total_clicks > 0 else 0
+        cpv = self.total_spend / self.total_views if self.total_views > 0 else 0
+
+        # Define weight factors for each component (these can be adjusted based on preference)
+        ctr_weight = 0.4
+        view_rate_weight = 0.4
+        cost_efficiency_weight = 0.2
+
+        # Cost efficiency: You might want to penalize higher costs, so we inverse them
+        # Normalize by multiplying with 100 to balance with other factors
+        cost_efficiency = (1 / cpc * 100 if cpc > 0 else 0) + \
+            (1 / cpv * 100 if cpv > 0 else 0)
+
+        # Calculate overall performance as a weighted sum
+        overall_performance = (
+            (ctr * ctr_weight) +
+            (view_rate * view_rate_weight) +
+            (cost_efficiency * cost_efficiency_weight)
+        )
+
+        # Update the total overall rate and save
+        self.total_overall_rate = int(overall_performance)
+        self.save()
+
+        return overall_performance
