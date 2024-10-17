@@ -89,8 +89,7 @@ def sample_run_report(property_id="400824086", record_id=None, start_date=None, 
 
     final_analysis_data = get_total_values(sorted_final_data, recipients)
     sms_model.update_from_values(final_analysis_data, record_id)
-    analytics_data = AnalyticsData.objects.get(user=sms_model.user.id)
-    
+    analytics_data = AnalyticsData.objects.get(custom_user=sms_model.user.id)
 
     if final_analysis_data['sorted_total_data']['screen_views_total'] > sms_model.total_views:
         # Calculate the difference

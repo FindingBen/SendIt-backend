@@ -581,7 +581,7 @@ def get_results(request, id):
 
 @api_view(['GET'])
 def get_total_analytic_values(request, id):
-    analytics_data = AnalyticsData.objects.get(user=id)
+    analytics_data = AnalyticsData.objects.get(custom_user=id)
 
     return Response({
 

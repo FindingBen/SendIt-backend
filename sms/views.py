@@ -173,7 +173,7 @@ def track_link_click(request, id):
     print(request)
     try:
         sms_obj = Sms.objects.get(message=id)
-        analytics_data = AnalyticsData.objects.get(user=sms_obj.user.id)
+        analytics_data = AnalyticsData.objects.get(custom_user=sms_obj.user.id)
 
         message_obj = Message.objects.get(id=sms_obj.message.id)
         with transaction.atomic():
@@ -196,7 +196,7 @@ def track_button_click(request, id):
         if not redirect_url.startswith(('http://', 'https://')):
             redirect_url = 'http://' + redirect_url
         sms_obj = Sms.objects.get(message=element.message.id)
-        analytics_data = AnalyticsData.objects.get(user=sms_obj.user.id)
+        analytics_data = AnalyticsData.objects.get(custom_user=sms_obj.user.id)
         elements = Element.objects.filter(
             message=element.message.id, element_type='Button')
         button_index = None
