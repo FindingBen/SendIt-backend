@@ -582,7 +582,7 @@ def get_results(request, id):
 @api_view(['GET'])
 def get_total_analytic_values(request, id):
     custom_user_id = CustomUser.objects.get(user_ptr_id=id)
-    print(custom_user_id)
+    print(request.user)
     analytics_data = AnalyticsData.objects.get(custom_user=custom_user_id)
 
     return Response({
@@ -591,7 +591,7 @@ def get_total_analytic_values(request, id):
         'total_views': analytics_data.total_views,
         'total_sends': analytics_data.total_sends,
         'total_clicks': analytics_data.total_clicks,
-        'total_spend': analytics_data.total_sends
+        'total_spend': analytics_data.total_spend
     })
 
 
