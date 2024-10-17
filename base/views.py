@@ -7,7 +7,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from .serializers import MessageSerializer, RegisterSerializer, CustomUserSerializer, ContactListSerializer, ContactSerializer, ElementSerializer, PackageSerializer, SurveySerializer
-from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser, EmailConfirmationToken, SurveyResponse
+from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser, EmailConfirmationToken, SurveyResponse, AnalyticsData
 from rest_framework import generics
 from sms.models import Sms
 from .utils.googleAnalytics import sample_run_report
@@ -581,28 +581,15 @@ def get_results(request, id):
 
 @api_view(['GET'])
 def get_total_analytic_values(request, id):
-    total_values = Sms.objects.filter(user=id).aggregate(
-        total_bounce_rate=Sum('total_bounce_rate'),
-        total_overall_rate=Sum('total_overall_rate'),
-        total_views=Sum('total_views'),
-        total_sends=Sum('sms_sends')
-    )
-
-    # If there are no matching Sms objects, set default values to 0
-    total_bounce_rate = total_values['total_bounce_rate'] or 0
-    total_overall_rate = total_values['total_overall_rate'] or 0
-    total_views = total_values['total_views'] or 0
-    total_sends = total_values['total_sends'] or 0
-    average_bounce_rate = round(
-        total_bounce_rate / total_sends, 2) if total_sends > 0 else None
-    average_overall_rate = round(
-        total_overall_rate / total_sends, 2) if total_sends > 0 else None
+    analytics_data = AnalyticsData.objects.get(user=id)
 
     return Response({
-        'average_bounce_rate': average_bounce_rate,
-        'average_overall_rate': average_overall_rate,
-        'total_views': total_views,
-        'total_sends': total_sends
+
+        'overall_rate': analytics_data.total_overall_rate,
+        'total_views': analytics_data.total_views,
+        'total_sends': analytics_data.total_sends,
+        'total_clicks': analytics_data.total_clicks,
+        'total_spend':analytics_data.total_sends
     })
 
 
