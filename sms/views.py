@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from .models import Sms, CampaignStats
 import time
 from django.views.decorators.csrf import csrf_exempt
-from base.models import Message, ContactList, CustomUser, Element
+from base.models import Message, ContactList, CustomUser, Element, AnalyticsData
 from base.serializers import MessageSerializer
 from .serializers import SmsSerializer, CampaignStatsSerializer
 from django.http import HttpResponseRedirect, JsonResponse
@@ -171,13 +171,20 @@ def schedule_sms(request):
 @api_view(['GET'])
 def track_link_click(request, id):
     print(request)
-    sms_obj = Sms.objects.get(message=id)
-    message_obj = Message.objects.get(id=sms_obj.message.id)
-    sms_obj.click_number += 1  # Increment click_number by 1
-    sms_obj.save()
+    try:
+        sms_obj = Sms.objects.get(message=id)
+        analytics_data = AnalyticsData.objects.get(user=sms_obj.user.id)
 
-    redirect_url = f"https://spplane.app/view/{message_obj.id}"
-    return HttpResponseRedirect(redirect_url)
+        message_obj = Message.objects.get(id=sms_obj.message.id)
+        with transaction.atomic():
+            sms_obj.click_number += 1  # Increment click_number by 1
+            sms_obj.save()
+            analytics_data.total_clicks += 1
+            analytics_data.save()
+        redirect_url = f"https://spplane.app/view/{message_obj.id}"
+        return HttpResponseRedirect(redirect_url)
+    except Exception as e:
+        return Response(f'There has been am error:{e}')
 
 
 @api_view(['GET'])
@@ -189,7 +196,7 @@ def track_button_click(request, id):
         if not redirect_url.startswith(('http://', 'https://')):
             redirect_url = 'http://' + redirect_url
         sms_obj = Sms.objects.get(message=element.message.id)
-
+        analytics_data = AnalyticsData.objects.get(user=sms_obj.user.id)
         elements = Element.objects.filter(
             message=element.message.id, element_type='Button')
         button_index = None
@@ -205,6 +212,7 @@ def track_button_click(request, id):
                 sms_obj, f'button_{button_index}', 0) + 1)
             sms_obj.click_button += 1  # General click count
             sms_obj.save()
+            analytics_data.total_clicks += 1
         else:
             print('No matching button found')
         return HttpResponseRedirect(redirect_url)

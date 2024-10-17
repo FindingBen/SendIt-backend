@@ -80,4 +80,10 @@ class CampaignStats(models.Model):
 
 
 class OverallStats(models.Model):
-    pass
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    total_views = models.IntegerField(default=0)
+    total_clicks = models.IntegerField(default=0)
+    total_sends = models.IntegerField(default=0)
+    performance = models.IntegerField(default=0)
+    total_spend = models.IntegerField(default=0)
+    signup_date = models.DateField(null=True)

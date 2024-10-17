@@ -144,7 +144,12 @@ class AnalyticsData(models.Model):
     custom_user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     total_sends = models.IntegerField(default=0)
     total_views = models.IntegerField(default=0)
+    total_clicks = models.IntegerField(default=0)
     total_bounce_rate = models.IntegerField(default=0)
     total_overall_rate = models.IntegerField(default=0)
+    total_spend = models.IntegerField(default=0)
     last_updated = models.DateField(auto_now_add=True)
 
+
+    def calculate_peformance(self):
+        pass

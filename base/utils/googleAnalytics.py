@@ -89,10 +89,17 @@ def sample_run_report(property_id="400824086", record_id=None, start_date=None, 
 
     final_analysis_data = get_total_values(sorted_final_data, recipients)
     sms_model.update_from_values(final_analysis_data, record_id)
+    analytics_data = AnalyticsData.objects.get(user=sms_model.user.id)
+    
 
-    message = Message.objects.get(id=record_id)
-    message.total_overall_progress = sms_model.total_overall_rate
-    message.save()
+    if final_analysis_data['sorted_total_data']['screen_views_total'] > sms_model.total_views:
+        # Calculate the difference
+        new_views_to_add = final_analysis_data['sorted_total_data']['screen_views_total'] - \
+            sms_model.total_views
+
+        # Increment the total views by the difference
+        analytics_data.total_views += new_views_to_add
+        analytics_data.save()
 
     return final_analysis_data, sorted_final_data
 

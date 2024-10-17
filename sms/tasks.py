@@ -1,6 +1,6 @@
 from __future__ import absolute_import, unicode_literals
 from datetime import timedelta
-from base.models import Message, Element
+from base.models import Message, Element, AnalyticsData
 from .models import Sms, CampaignStats
 from celery import shared_task
 import vonage
@@ -26,6 +26,7 @@ def send_scheduled_sms(unique_tracking_id: None):
         content_link = smsObj.content_link
         sms_text = smsObj.sms_text
         user = CustomUser.objects.get(id=smsObj.user.id)
+        analytics_data = AnalyticsData.objects.get(user=user)
         elements = Element.objects.filter(message=message.id)
         button_count = 0
 
@@ -78,11 +79,12 @@ def send_scheduled_sms(unique_tracking_id: None):
                     message.status = 'sent'
                     message.save()
                     smsObj.is_sent = True
+                    analytics_data.total_sends += contact_list.contact_lenght
+                    analytics_data.save()
                     cache_key = f"messages:{smsObj.user.id}"
                     cache.delete(cache_key)
                     if responseData["messages"][0]["status"] == "0":
                         pass  # Moved this line inside the if block
-
                     else:
                         pass
                     from .views import schedule_archive_task
@@ -109,6 +111,7 @@ def send_sms(unique_tracking_id: None, user: None):
         smsObj = Sms.objects.get(unique_tracking_id=unique_tracking_id)
         print("SMS", smsObj)
         user = CustomUser.objects.get(id=smsObj.user.id)
+        analytics_data = AnalyticsData.objects.get(user=user)
         contact_list = ContactList.objects.get(id=smsObj.contact_list.id)
         message = Message.objects.get(id=smsObj.message.id)
         content_link = smsObj.content_link
@@ -170,6 +173,8 @@ def send_sms(unique_tracking_id: None, user: None):
                 smsObj.save()
                 message.status = 'sent'
                 message.save()
+                analytics_data.total_sends += contact_list.contact_lenght
+                analytics_data.save()
                 cache_key = f"messages:{smsObj.user.id}"
                 cache.delete(cache_key)
             else:
@@ -210,14 +215,14 @@ def archive_message(sms_id):
             unsub_users = 1
             # Weights for performance calculation
             w1 = 0.4  # Weight for total views
-            w2 = 0.5  # Weight for total clicks
+            w2 = 0.6  # Weight for total clicks
             w3 = 0.1  # Weight for unsubscribes
 
             # Performance calculation based on the provided formula
             if audience > 0 and total_views > 0:
                 overall_performance = (
                     (total_views / audience) * w1 +
-                    (total_clicks / total_views) * w2 -
+                    (total_clicks / audience) * w2 -
                     (unsub_users / audience) * w3
                 )
             else:
