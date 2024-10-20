@@ -9,17 +9,24 @@ from rest_framework.permissions import IsAuthenticated
 from .serializers import MessageSerializer, RegisterSerializer, CustomUserSerializer, ContactListSerializer, ContactSerializer, ElementSerializer, PackageSerializer, SurveySerializer
 from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser, EmailConfirmationToken, SurveyResponse, AnalyticsData
 from rest_framework import generics
-from sms.models import Sms
+from sms.models import Sms, CampaignStats
+from io import BytesIO
+from django.http import HttpResponse
 from .utils.googleAnalytics import sample_run_report
 from .email.email import send_confirmation_email, send_welcome_email
 from django.db.models import Sum
 from sms.models import Sms
 from datetime import datetime
+import os
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.platypus import Table, TableStyle
 from django.core.cache import cache
 from django.views.decorators.cache import cache_page
 from django.conf import settings
 from django.utils.timezone import now
 from djoser.views import UserViewSet
+from reportlab.pdfgen import canvas
 from base.utils.calculations import calculate_avg_performance
 
 
@@ -623,6 +630,129 @@ def handle_survey_response(request, id):
     return Response({'message': 'Survey response updated successfully'})
 
 
-@api_view(['POST'])
-def export_analytics(request, message_id, sms_id):
+@api_view(['GET'])
+def export_analytics(request, id):
+
+    try:
+
+        campaign_stats = CampaignStats.objects.get(id=id)
+        fileName = f'Analyticss report for {campaign_stats.name}.pdf'
+        doc_title = f'Analytics for {campaign_stats.name}'
+        title = f'Results of your {campaign_stats.name} campaign'
+        table_data = [
+            ['Start Date', 'End Date', 'Views', 'Clicks', 'Unsubscribed',
+             'Performance', 'Audience'],  # Headers
+            [campaign_stats.campaign_start, campaign_stats.campaign_end, campaign_stats.engagement, campaign_stats.total_clicks,
+             campaign_stats.unsub_users, campaign_stats.overall_perfromance, campaign_stats.audience]
+        ]
+        textLines = [
+            'Below you can find table with detailed information about progress of this campaign.', 'If you have any questions please dont hesitate to contact us beniagic@gmail.com']
+        buffer = BytesIO()
+        pdf = canvas.Canvas(buffer)
+        pdf.setTitle(doc_title)
+
+        # Change to desired font family and size
+        pdf.setFont("Helvetica-Bold", 20)
+        pdf.drawCentredString(250, 770, title)
+
+        pdf.setFont("Helvetica", 12)
+        y = 700
+        x = 50
+        for line in textLines:
+            pdf.drawString(x, y, line)  # Position each line appropriately
+            y -= 20
+
+        table = Table(table_data)
+
+        # Add styling to the table
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),  # Header row background
+            # Header row text color
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            # Align all columns to center
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),  # Header font bold
+            ('FONTSIZE', (0, 0), (-1, 0), 12),  # Header font size
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),  # Header padding
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),  # Row background
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),  # Grid lines for table
+        ]))
+
+        # Draw the table at a specific position on the canvas
+        table.wrapOn(pdf, 400, 500)  # Define available width and height
+        table.drawOn(pdf, 50, 600)  # Position the table on the PDF page
+
+        explanation_start_y = 550  # Starting Y position for explanations
+        explanations = [
+            ("Start Date", "Campaign start date, the campaign by default runs for 5 days, then it gets" +
+             "automatically archived and stats are being calculated."),
+            ("End Date", "Campaign end date. As stated above, the date which campaign ends unless user manually stops it before the 5th day."),
+            ("Views", "Total amount of views accumulated during the days of campaign run. So the amount of people who viewed your content."),
+            ("Clicks", "Total amount of clicks, this takes into account button clicks, link clicks, and SMS clicks of the campaign itself."),
+            ("Unsubscribed", "The amount of users who unsubscribed from your contact list."),
+            ("Performance", "The overall performance of this campaign. It's measured by engagement" +
+             "success versus how many people the message was sent to minus unsubscribed users."),
+            ("Audience", "Total amount of people to whom the message was sent, including SMS messages that didn't reach recipients.")
+        ]
+
+        def draw_wrapped_text(pdf, x, y, text, max_width):
+            words = text.split(' ')
+            line = ''
+            for word in words:
+                if pdf.stringWidth(line + word + ' ', "Helvetica", 10) < max_width:
+                    line += word + ' '
+                else:
+                    pdf.drawString(x, y, line)
+                    y -= 15  # Adjust Y position for next line
+                    line = word + ' '  # Start a new line with the current word
+            if line:  # Draw the last line
+                pdf.drawString(x, y, line)
+                y -= 15
+            return y
+
+        for header, explanation in explanations:
+            pdf.setFont("Helvetica-Bold", 10)  # Set font to bold for header
+            pdf.drawString(50, explanation_start_y, f'{header} - ')
+            # Measure width of the header text
+            text_width = pdf.stringWidth(f'{header} - ', "Helvetica-Bold", 10)
+
+            # Set font back to normal for the explanation text
+            pdf.setFont("Helvetica", 10)
+            # Call the draw_wrapped_text function to handle wrapping
+            explanation_start_y = draw_wrapped_text(
+                pdf, 50 + text_width, explanation_start_y, explanation, 400)  # Max width 500
+            explanation_start_y -= 10  # Max width 500
+
+        # Update with the correct path to your logo
+        logo_path = os.path.join(os.getcwd(), 'base/spp.logo.png')
+
+        if not os.path.exists(logo_path):
+            raise FileNotFoundError(f"Logo file not found at: {logo_path}")
+        # Adjust position and size as needed
+
+        # Add thank you message
+        pdf.setFont("Helvetica-Bold", 12)
+        # Adjust Y position for the thank you message
+        thank_you_y = 150  # Y position for the thank you text
+        pdf.drawCentredString(
+            150, thank_you_y, "Thank you for using Sendperplane")
+
+        logo_y = thank_you_y - 60  # Adjust for spacing
+        pdf.drawImage(logo_path, 50, logo_y, width=150, height=50)
+        pdf.setFont("Helvetica", 8)  # Set a smaller font size
+        pdf.drawString(30, 30, "All rights reserved ©Sendperplane 2024")
+        pdf.save()
+
+        buffer.seek(0)
+        response = HttpResponse(buffer, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{fileName}"'
+
+        return response
+
+    except Exception as e:
+        return Response(f'There has been an error: {e}')
+
+
+@api_view(['GET'])
+def export_analytics_csv(request, id):
     pass

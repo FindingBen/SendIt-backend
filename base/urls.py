@@ -39,6 +39,7 @@ urlpatterns = [
     path('get_survey_results/<str:id>', views.get_results),
     path('get_total_analytic_values/<str:id>', views.get_total_analytic_values),
     path('handle_survey/<str:id>', views.handle_survey_response),
+    path('export_analytics/<str:id>', views.export_analytics),
     # Toekn
     path('token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
