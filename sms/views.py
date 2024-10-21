@@ -94,8 +94,9 @@ def get_campaign_stats(request):
     try:
         today = timezone.now().date()
         user = request.user
+
         campaigns = CampaignStats.objects.filter(
-            user=2, campaign_end__lte=today).order_by('-campaign_end')[:3]
+            user=user, campaign_end__lte=today).order_by('-campaign_end')[:3]
         serializer = CampaignStatsSerializer(campaigns, many=True)
     except Exception as e:
         return Response(f'There has been an error: {e}')
@@ -210,7 +211,7 @@ def track_button_click(request, id):
         if button_index is not None:
             with transaction.atomic():
                 setattr(sms_obj, f'button_{button_index}', getattr(
-                sms_obj, f'button_{button_index}', 0) + 1)
+                    sms_obj, f'button_{button_index}', 0) + 1)
                 sms_obj.click_button += 1  # General click count
                 sms_obj.save()
                 analytics_data.total_clicks += 1

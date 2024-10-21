@@ -1,5 +1,6 @@
 from django.db import models
 from base.models import ContactList, CustomUser, Message
+from django.contrib.auth.models import User
 import shortuuid
 from django.db import transaction
 
@@ -67,7 +68,7 @@ class Sms(models.Model):
 
 
 class CampaignStats(models.Model):
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     message = models.ForeignKey(Message, on_delete=models.CASCADE)
     engagement = models.IntegerField(default=0)
     name = models.CharField(null=True)
@@ -77,13 +78,3 @@ class CampaignStats(models.Model):
     overall_perfromance = models.IntegerField(default=0)
     campaign_start = models.DateField(null=True)
     campaign_end = models.DateField(null=True)
-
-
-class OverallStats(models.Model):
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    total_views = models.IntegerField(default=0)
-    total_clicks = models.IntegerField(default=0)
-    total_sends = models.IntegerField(default=0)
-    performance = models.IntegerField(default=0)
-    total_spend = models.IntegerField(default=0)
-    signup_date = models.DateField(null=True)
