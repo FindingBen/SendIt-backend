@@ -89,7 +89,7 @@ class createSms(generics.GenericAPIView):
 
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 def get_campaign_stats(request):
     try:
         today = timezone.now().date()
