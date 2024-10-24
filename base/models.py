@@ -182,7 +182,7 @@ class AnalyticsData(models.Model):
             (ctr * ctr_weight) +
             (view_rate * view_rate_weight) +
             (cost_efficiency * cost_efficiency_weight)
-        )
+        ) / self.total_sends
 
         # Update the total overall rate and save
         self.total_overall_rate = int(overall_performance)
