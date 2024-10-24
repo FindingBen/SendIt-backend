@@ -36,7 +36,7 @@ def total_sum(data_value: None, recipients: None):
     return total_sum_object
 
 
-def calculate_overall_performance(final_data: None):
+def calculate_overall_performance(final_data: None, recipients: None):
 
     try:
         # Assign weights to each metric
@@ -69,7 +69,7 @@ def calculate_overall_performance(final_data: None):
             user_engagement_weight * normalized_user_engagement +
             total_views_weight * normalized_total_views
 
-        )
+        ) / recipients
 
         # Convert the result to a percentage
 

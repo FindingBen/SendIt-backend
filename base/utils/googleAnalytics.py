@@ -108,7 +108,7 @@ def get_total_values(values: None, recipients: None):
 
     summed_data = total_sum(values, recipients)
 
-    overall_perf = calculate_overall_performance(summed_data)
+    overall_perf = calculate_overall_performance(summed_data, recipients)
     final_analysis_data = {'sorted_data': values,
                            'sorted_total_data': summed_data,
                            'overall_perf': overall_perf}
