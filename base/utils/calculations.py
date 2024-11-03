@@ -75,7 +75,7 @@ def calculate_overall_performance(final_data: None, recipients: None):
 
         overall_performance_percentage = float('{:.2%}'.format(
             overall_performance).rstrip('%'))
-        return overall_performance_percentage
+        return overall_performance
     except Exception as e:
         return str(e)
 
