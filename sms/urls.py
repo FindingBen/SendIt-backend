@@ -10,7 +10,7 @@ urlpatterns = [
     path('sms-send-schedule/', views.schedule_sms, name='sms-schedule'),
     path('sms/newsletter/<str:id>', views.track_link_click),
     path('sms/button/<str:id>', views.track_button_click),
-    path('campaign-stats', views.get_campaign_stats),
+    path('campaign-stats/', views.get_campaign_stats),
     path('webhooks_delivery', views.vonage_webhook)
 
 ]
