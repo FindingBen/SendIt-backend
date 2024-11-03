@@ -591,10 +591,11 @@ def get_total_analytic_values(request, id):
     custom_user_id = CustomUser.objects.get(user_ptr_id=id)
     print(request.user)
     analytics_data = AnalyticsData.objects.get(custom_user=custom_user_id)
-    analytics_data.total_overall_rate = analytics_data.calculate_performance()
+    overall_calculated_data = analytics_data.calculate_performance()
+
     return Response({
 
-        'overall_rate': analytics_data.total_overall_rate,
+        'overall_rate': overall_calculated_data,
         'total_views': analytics_data.total_views,
         'total_sends': analytics_data.total_sends,
         'total_clicks': analytics_data.total_clicks,
