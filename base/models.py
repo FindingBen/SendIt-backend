@@ -185,7 +185,7 @@ class AnalyticsData(models.Model):
         ) / self.total_sends
 
         # Update the total overall rate and save
-        self.total_overall_rate = int(overall_performance)
+        self.total_overall_rate = round(overall_performance,2)
         self.save()
 
         return overall_performance
