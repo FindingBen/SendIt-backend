@@ -206,6 +206,10 @@ def archive_message(sms_id):
             message.status = 'archived'
             message.save()
 
+            custom_user = sms.user
+            custom_user.archived_state = True
+            custom_user.save()
+
             total_clicks = (
                 sms.button_1 + sms.button_2 +
                 sms.button_3 + sms.button_4 + sms.click_button + sms.click_number

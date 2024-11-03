@@ -44,6 +44,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             serialized_data = custom_user.serialize_package_plan()
             token['sms_count'] = custom_user.sms_count
             token['user_type'] = custom_user.user_type
+            token['archived_state'] = custom_user.archived_state
             token['package_plan'] = serialized_data
             token['custom_email'] = custom_user.custom_email
         except CustomUser.DoesNotExist:
@@ -158,6 +159,11 @@ def get_notes(request):
         archive = request.GET.get('archive', None)
         sort_by = request.GET.get('sort_by', None)
 
+        customUser = CustomUser.objects.get(user_ptr_id=user.id)
+
+        if customUser.archived_state == True:
+            customUser.archived_state = False
+            customUser.save()
         # Determine which messages to fetch based on 'archive' parameter
         if archive == 'true':
             # Fetch only archived messages
@@ -589,7 +595,7 @@ def get_results(request, id):
 @api_view(['GET'])
 def get_total_analytic_values(request, id):
     custom_user_id = CustomUser.objects.get(user_ptr_id=id)
-    print(request.user)
+    print(custom_user_id.archived_state)
     analytics_data = AnalyticsData.objects.get(custom_user=custom_user_id)
     overall_calculated_data = analytics_data.calculate_performance()
 
@@ -599,7 +605,8 @@ def get_total_analytic_values(request, id):
         'total_views': analytics_data.total_views,
         'total_sends': analytics_data.total_sends,
         'total_clicks': analytics_data.total_clicks,
-        'total_spend': analytics_data.total_spend
+        'total_spend': analytics_data.total_spend,
+        'archived_state': custom_user_id.archived_state
     })
 
 

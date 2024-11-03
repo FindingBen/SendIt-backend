@@ -38,6 +38,7 @@ class CustomUser(User):
         max_length=20, choices=USER_TYPE_CHOICES)
     custom_email = models.EmailField(unique=True)
     last_password_change = models.DateField(null=True, blank=True)
+    archived_state = models.BooleanField(default=False)
 
     def serialize_package_plan(self):
         # Implement custom serialization logic here
@@ -185,7 +186,7 @@ class AnalyticsData(models.Model):
         ) / self.total_sends
 
         # Update the total overall rate and save
-        self.total_overall_rate = round(overall_performance,2)
+        self.total_overall_rate = round(overall_performance, 2)
         self.save()
 
         return overall_performance
