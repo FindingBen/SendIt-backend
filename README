@@ -1,0 +1,11 @@
+Information about the project
+
+TBA..
+
+BUG LOG SECTION
+
+1. Archived function bug
+   This occoured or it was spotted on 3rd of November 2024. The Archive function executed multiple times, but it was suppose to be executed only once.
+   As a result of that, over a 50 campaign_stat objects were created because the way it works is eveyrtime archive func is ran, it creates new campaign_stat
+   object. Its assuming that campaign is finished and it collects all the information about it and stores the info in campaign_stat object. It seems that celery can
+   execute it multiple times when it restores the Tasks that were initially created.
