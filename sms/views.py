@@ -259,6 +259,38 @@ def vonage_webhook(request):
         print('Error handling Vonage delivery receipt:', str(e))
 
         return JsonResponse({'error': 'Error processing delivery receipt'}, status=200)
+    
+@csrf_exempt
+@api_view(['POST'])
+def vonage_webhook_message(request):
+    try:
+        # Parse the JSON data from the request body
+        data = request.data
+        sms_object = Sms.objects.get(unique_tracking_id=data['client-ref'])
+        with transaction.atomic():
+            user = sms_object.user
+            # Do some other condition which checks weather the same number already passed
+            if data['status'] == 'delivered':
+                sms_object.delivered += 1
+                user.sms_count -= 1
+
+            elif data['status'] == 'failed':
+                sms_object.not_delivered += 1
+            elif data['status'] == 'rejected':
+                sms_object.not_delivered += 1
+
+            user.save()
+            sms_object.save()
+
+        print('Received Vonage Delivery Receipt:')
+
+        # Respond with a success message
+        return JsonResponse({'message': 'Delivery receipt received successfully'}, status=200)
+
+    except Exception as e:
+        print('Error handling Vonage delivery receipt:', str(e))
+
+        return JsonResponse({'error': 'Error processing delivery receipt'}, status=200)
 
 
 def schedule_archive_task(sms_id, scheduled_time):
@@ -267,3 +299,5 @@ def schedule_archive_task(sms_id, scheduled_time):
     archive_time = scheduled_time + timedelta(days=1)
     archive_message.apply_async((sms_id,), eta=archive_time)
     print("scheduled for archive")
+
+
