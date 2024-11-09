@@ -189,4 +189,4 @@ class AnalyticsData(models.Model):
         self.total_overall_rate = round(overall_performance, 2)
         self.save()
 
-        return overall_performance
+        return self.total_overall_rate
