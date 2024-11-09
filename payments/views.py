@@ -151,19 +151,20 @@ def stripe_webhook(request):
                 user_payment.save()
 
                 if (user_payment.payment_bool == True):
-                    payment_type_details = event['data']['object'].get(
-                        'payment_method_types')
+                    if not Purchase.objects.filter(payment_id=event['data']['object']['payment_intent']).exists():
+                        payment_type_details = event['data']['object'].get(
+                            'payment_method_types')
 
-                    create_purchase = Purchase(userPayment=user_payment,
-                                               package_name=package_obj.plan_type,
-                                               price=package_obj.price,
-                                               payment_id=event['data']['object']['payment_intent'],
-                                               payment_method=payment_type_details)
+                        create_purchase = Purchase(userPayment=user_payment,
+                                                   package_name=package_obj.plan_type,
+                                                   price=package_obj.price,
+                                                   payment_id=event['data']['object']['payment_intent'],
+                                                   payment_method=payment_type_details)
 
-                    create_purchase.save()
-                    user_payment.purchase_id = event['data']['object']['payment_intent']
-                    user_payment.payment_bool = False
-                    user_payment.save()
+                        create_purchase.save()
+                        user_payment.purchase_id = event['data']['object']['payment_intent']
+                        user_payment.payment_bool = False
+                        user_payment.save()
 
                     # vonage_account_topup(package=package_obj.plan_typ)
 
