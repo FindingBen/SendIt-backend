@@ -303,3 +303,10 @@ STATICFILES_FINDERS = [
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Package list
+
+TRIAL_PLAN = 'Trial Plan'
+BASIC_PLAN = 'Basic package'
+SILVER_PLAN = 'Silver package'
+GOLD_PLAN = 'Gold package'

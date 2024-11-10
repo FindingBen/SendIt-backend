@@ -103,6 +103,7 @@ def get_purchases(request, id):
             data = serializer.data
         else:
             data = cached_data['purchases']
+
     except Exception as e:
         return Response(f'There has been an error: {e}')
 
