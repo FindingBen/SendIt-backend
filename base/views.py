@@ -15,6 +15,7 @@ from django.http import HttpResponse
 from .utils.googleAnalytics import sample_run_report
 from .email.email import send_confirmation_email, send_welcome_email
 from django.db.models import Sum
+from django.db import transaction
 from sms.models import Sms
 from datetime import datetime
 import os
@@ -87,17 +88,25 @@ class SendEmailConfirmationTokenAPIView(APIView):
 @api_view(['GET'])
 def confirmation_token_view(request, token_id, user_id):
     try:
-        token = EmailConfirmationToken.objects.get(pk=token_id)
-        user = token.user
-        user.is_active = True
-        user.save()
-        if user.is_active is True:
-            stripe.Customer.create(
-                name=f'{user.first_name} {user.last_name}',
-                email=user.email,
-            )
-            send_welcome_email(user.email, user)
-        return Response(status=status.HTTP_200_OK)
+        with transaction.atomic():
+            token = EmailConfirmationToken.objects.get(pk=token_id)
+            user = token.user
+            user.is_active = True
+            user.save()
+
+            if user.is_active is True:
+                if user.stripe_custom_id is None:
+                    stripe_customer = stripe.Customer.create(
+                        name=f'{user.first_name} {user.last_name}',
+                        email=user.email,
+                    )
+                    user.stripe_custom_id = stripe_customer['id']
+                    user.save()
+                if user.welcome_mail_sent is False:
+                    send_welcome_email(user.email, user)
+                    user.welcome_mail_sent = True
+                    user.save()
+            return Response(status=status.HTTP_200_OK)
     except EmailConfirmationToken.DoesNotExist:
 
         return Response(status=status.HTTP_400_BAD_REQUEST)

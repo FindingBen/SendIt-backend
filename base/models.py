@@ -39,6 +39,8 @@ class CustomUser(User):
     custom_email = models.EmailField(unique=True)
     last_password_change = models.DateField(null=True, blank=True)
     archived_state = models.BooleanField(default=False)
+    welcome_mail_sent = models.BooleanField(default=False)
+    stripe_custom_id = models.CharField(default=None, null=True)
 
     def serialize_package_plan(self):
         # Implement custom serialization logic here
