@@ -27,6 +27,7 @@ from django.conf import settings
 from django.utils.timezone import now
 from djoser.views import UserViewSet
 from reportlab.pdfgen import canvas
+import stripe
 from base.utils.calculations import calculate_avg_performance
 
 
@@ -91,6 +92,10 @@ def confirmation_token_view(request, token_id, user_id):
         user.is_active = True
         user.save()
         if user.is_active is True:
+            stripe.Customer.create(
+                name=f'{user.first_name} {user.last_name}',
+                email=user.email,
+            )
             send_welcome_email(user.email, user)
         return Response(status=status.HTTP_200_OK)
     except EmailConfirmationToken.DoesNotExist:
