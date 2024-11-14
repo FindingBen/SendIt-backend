@@ -24,6 +24,10 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 class StripeCheckoutVIew(APIView):
     def post(self, request):
         data_package = [package for package in settings.ACTIVE_PRODUCTS]
+
+        customer = CustomUser.objects.get(
+            id=2)
+
         package = next(
             (pkg for pkg in data_package if pkg[0] == request.data['name_product']), None)
 
@@ -44,11 +48,11 @@ class StripeCheckoutVIew(APIView):
                 },
                 payment_method_types=['card'],
                 mode='payment',
+                customer=customer,
                 success_url=settings.DOMAIN_STRIPE_NAME + \
                 '/?success=true&session_id={CHECKOUT_SESSION_ID}',
                 cancel_url=settings.DOMAIN_STRIPE_NAME_CANCEL + '/?cancel=true',
             )
-
             url_str = str(checkout_session.url)
             return Response({"url": url_str})
 
