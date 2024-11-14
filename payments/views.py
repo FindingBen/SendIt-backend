@@ -27,7 +27,7 @@ class StripeCheckoutVIew(APIView):
 
         try:
             customer = CustomUser.objects.get(
-                id=2)
+                id=request.data['currentUser'])
         except Exception as e:
             return Response({"error": e}, status=status.HTTP_400_BAD_REQUEST)
 
