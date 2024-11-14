@@ -25,8 +25,11 @@ class StripeCheckoutVIew(APIView):
     def post(self, request):
         data_package = [package for package in settings.ACTIVE_PRODUCTS]
 
-        customer = CustomUser.objects.get(
-            id=2)
+        try:
+            customer = CustomUser.objects.get(
+                id=2)
+        except Exception as e:
+            return Response({"error": e}, status=status.HTTP_400_BAD_REQUEST)
 
         package = next(
             (pkg for pkg in data_package if pkg[0] == request.data['name_product']), None)
