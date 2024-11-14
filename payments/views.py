@@ -51,7 +51,7 @@ class StripeCheckoutVIew(APIView):
                 },
                 payment_method_types=['card'],
                 mode='payment',
-                customer=customer,
+                customer=customer.stripe_custom_id,
                 success_url=settings.DOMAIN_STRIPE_NAME + \
                 '/?success=true&session_id={CHECKOUT_SESSION_ID}',
                 cancel_url=settings.DOMAIN_STRIPE_NAME_CANCEL + '/?cancel=true',
