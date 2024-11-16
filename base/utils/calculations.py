@@ -133,7 +133,8 @@ def clicks_rate(clicks=None, sends=None):
 
 
 def calculate_deliveribility(delivered=None, sends=None):
-
+    if sends === 0:
+        return 0
     final_division = delivered/sends
 
     formated_value = float('{:.2%}'.format(
