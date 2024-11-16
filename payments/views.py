@@ -13,7 +13,7 @@ from .serializers import PurchaseSerializer
 from django.db import transaction, IntegrityError
 from django.http import HttpResponse
 from rest_framework import status
-from base.models import CustomUser, PackagePlan
+from base.models import CustomUser, PackagePlan, AnalyticsData
 from base.serializers import CustomUserSerializer
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -163,22 +163,24 @@ def stripe_webhook(request):
                 user_payment.payment_bool = True
 
                 user_payment.save()
-
+                analytics = AnalyticsData.objects.get(custom_user=user_obj.id)
+                analytics.total_sends += package_obj.price
+                analytics.save()
                 if (user_payment.payment_bool == True):
-                    if not Purchase.objects.filter(payment_id=event['data']['object']['payment_intent']).exists():
-                        payment_type_details = event['data']['object'].get(
-                            'payment_method_types')
+                    user_payment.payment_bool = False
+                    user_payment.save()
+                    # if not Purchase.objects.filter(payment_id=event['data']['object']['payment_intent']).exists():
+                    #     payment_type_details = event['data']['object'].get(
+                    #         'payment_method_types')
 
-                        create_purchase = Purchase(userPayment=user_payment,
-                                                   package_name=package_obj.plan_type,
-                                                   price=package_obj.price,
-                                                   payment_id=event['data']['object']['payment_intent'],
-                                                   payment_method=payment_type_details)
+                    #     create_purchase = Purchase(userPayment=user_payment,
+                    #                                package_name=package_obj.plan_type,
+                    #                                price=package_obj.price,
+                    #                                payment_id=event['data']['object']['payment_intent'],
+                    #                                payment_method=payment_type_details)
 
-                        create_purchase.save()
-                        user_payment.purchase_id = event['data']['object']['payment_intent']
-                        user_payment.payment_bool = False
-                        user_payment.save()
+                    #     create_purchase.save()
+                    #     user_payment.purchase_id = event['data']['object']['payment_intent']
 
                     # vonage_account_topup(package=package_obj.plan_typ)
 
