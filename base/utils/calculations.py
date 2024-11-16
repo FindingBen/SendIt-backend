@@ -133,7 +133,7 @@ def clicks_rate(clicks=None, sends=None):
 
 
 def calculate_deliveribility(delivered=None, sends=None):
-    if sends === 0:
+    if sends == 0 or sends is None:
         return 0
     final_division = delivered/sends
 
