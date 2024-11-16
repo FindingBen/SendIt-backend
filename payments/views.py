@@ -1,6 +1,7 @@
 from django.urls import reverse
 import stripe
 import time
+from datetime import datetime
 from django.core.cache import cache
 from django.conf import settings
 from rest_framework.views import APIView
@@ -28,6 +29,7 @@ class StripeCheckoutVIew(APIView):
         try:
             customer = CustomUser.objects.get(
                 id=request.data['currentUser'])
+
         except Exception as e:
             return Response({"error": e}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -100,21 +102,25 @@ def payment_cancelled(request):
 def get_purchases(request, id):
     try:
         user = request.user
-        cache_key = f"purchases_for_user:{user.id}"
-        # Try to fetch data from cache
-        cached_data = cache.get(cache_key)
-        if cached_data is None:
-            user_payment = UserPayment.objects.get(user=user.id)
-            purchase_obj = Purchase.objects.filter(userPayment=user_payment)
-            serializer = PurchaseSerializer(purchase_obj, many=True)
-            data = serializer.data
-        else:
-            data = cached_data['purchases']
+        customer = CustomUser.objects.get(id=user.id)
+
+        transactions = stripe.PaymentIntent.list(
+            customer=customer.stripe_custom_id)
+        transaction_data = []
+        for transaction in transactions['data']:
+            transac_dict_obj = {
+                "payment_id": transaction.id,
+                "price": transaction.amount,
+                "type": transaction.payment_method_types[0],
+                "created_at": datetime.fromtimestamp(transaction.created).strftime('%Y-%m-%d %H:%M:%S'),
+                "status": transaction.status
+            }
+            transaction_data.append(transac_dict_obj)
 
     except Exception as e:
         return Response(f'There has been an error: {e}')
 
-    return Response(data, status=status.HTTP_200_OK)
+    return Response(transaction_data, status=status.HTTP_200_OK)
 
 
 @require_http_methods(['POST'])
