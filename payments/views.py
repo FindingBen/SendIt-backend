@@ -164,7 +164,7 @@ def stripe_webhook(request):
 
                 user_payment.save()
                 analytics = AnalyticsData.objects.get(custom_user=user_obj.id)
-                analytics.total_sends += package_obj.price
+                analytics.total_spend += package_obj.price
                 analytics.save()
                 if (user_payment.payment_bool == True):
                     user_payment.payment_bool = False
