@@ -29,7 +29,7 @@ from django.utils.timezone import now
 from djoser.views import UserViewSet
 from reportlab.pdfgen import canvas
 import stripe
-from base.utils.calculations import calculate_avg_performance
+from base.utils.calculations import calculate_avg_performance, format_number, clicks_rate, calculate_deliveribility
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -609,9 +609,14 @@ def get_results(request, id):
 @api_view(['GET'])
 def get_total_analytic_values(request, id):
     custom_user_id = CustomUser.objects.get(user_ptr_id=id)
-    print(custom_user_id.archived_state)
     analytics_data = AnalyticsData.objects.get(custom_user=custom_user_id)
     overall_calculated_data = analytics_data.calculate_performance()
+    formatted_total_spend = format_number(analytics_data.total_spend)
+    formatted_clicks_rate = clicks_rate(
+        analytics_data.total_clicks, analytics_data.total_sends)
+    formated_deliveribility = calculate_deliveribility(
+        analytics_data.total_delivered, analytics_data.total_sends)
+    print('HEE', formatted_clicks_rate)
 
     return Response({
 
@@ -619,7 +624,9 @@ def get_total_analytic_values(request, id):
         'total_views': analytics_data.total_views,
         'total_sends': analytics_data.total_sends,
         'total_clicks': analytics_data.total_clicks,
-        'total_spend': analytics_data.total_spend,
+        'clicks_rate': analytics_data.total_clicks,
+        'total_spend': formatted_total_spend,
+        'deliveribility': formated_deliveribility,
         'archived_state': custom_user_id.archived_state
     })
 

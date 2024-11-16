@@ -110,3 +110,32 @@ def calculate_avg_performance(data_entry: List[Dict[str, any]]) -> Dict[str, flo
         "average_scrolled_users": avg_scrolled_users,
         "average_session_duration": avg_session_duration
     }
+
+
+def format_number(value):
+    print(value)
+    if value >= 1000000:  # 1M or more
+        return f"{value / 1_000_000:.1f}M"
+    elif value >= 1000:  # 1K or more
+        return f"{value / 1000:.1f}k"
+    return str(value)
+
+
+def clicks_rate(clicks=None, sends=None):
+    print(clicks, sends)
+    if clicks > 0 and sends > 0:
+        click_rate = clicks/sends
+        final_click_rate = float('{:.2%}'.format(
+            click_rate).rstrip('%'))
+        return final_click_rate
+    else:
+        return 0
+
+
+def calculate_deliveribility(delivered=None, sends=None):
+
+    final_division = delivered/sends
+
+    formated_value = float('{:.2%}'.format(
+        final_division).rstrip('%'))
+    return formated_value
