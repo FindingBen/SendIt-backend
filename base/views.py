@@ -6,8 +6,8 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
-from .serializers import MessageSerializer, RegisterSerializer, CustomUserSerializer, ContactListSerializer, ContactSerializer, ElementSerializer, PackageSerializer, SurveySerializer
-from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser, EmailConfirmationToken, SurveyResponse, AnalyticsData
+from .serializers import MessageSerializer, RegisterSerializer, CustomUserSerializer, ContactListSerializer, ContactSerializer, ElementSerializer, PackageSerializer, SurveySerializer, QRSerializer
+from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser, EmailConfirmationToken, SurveyResponse, AnalyticsData, QRCode
 from rest_framework import generics
 from sms.models import Sms, CampaignStats
 from io import BytesIO
@@ -362,28 +362,25 @@ def create_contact(request, id):
         custom_user = CustomUser.objects.get(id=request.user.id)
         contacts = Contact.objects.filter(users=request.user.id)
         package_plan = custom_user.package_plan
+        contact_list = ContactList.objects.get(id=id)
         print(len(contacts))
         if package_plan.plan_type == 'Basic package':
             if len(contacts) < basic_limit:
-                contact_list = ContactList.objects.get(id=id)
                 serializer = ContactSerializer(data=request.data)
             else:
                 return Response({"Error, max number of recipients reached! Upgrade your package."}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
         elif package_plan.plan_type == 'Silver package':
             if len(contacts) < silver_limit:
-                contact_list = ContactList.objects.get(id=id)
                 serializer = ContactSerializer(data=request.data)
             else:
                 return Response({"Error, max number of recipients reached! Upgrade your package."}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
         elif package_plan.plan_type == 'Gold package':
             if len(contacts) < gold_limit:
-                contact_list = ContactList.objects.get(id=id)
                 serializer = ContactSerializer(data=request.data)
             else:
                 return Response({"Error, max number of recipients reached! Upgrade your package."}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
         else:
             if len(contacts) < trial_limit:
-                contact_list = ContactList.objects.get(id=id)
                 serializer = ContactSerializer(data=request.data)
             else:
                 return Response({"Error, max number of recipients reached! Upgrade your package."}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
@@ -400,6 +397,37 @@ def create_contact(request, id):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     except Exception as e:
+        return Response(f'There has been some error: {e}', status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+def create_contact_via_qr(request, id):
+    try:
+        contact_list = ContactList.objects.get(unique_id=id)
+        users = contact_list.users
+        serializer = ContactSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            if not request.data['first_name'] and request.data['phone_number']:
+                return Response({'error': 'Empty form submission.'}, status=status.HTTP_400_BAD_REQUEST)
+            serializer.save(contact_list=contact_list, users=users)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        return Response(f'There has been some error: {e}', status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_qr_code(request, id):
+    try:
+        print('YOO')
+        contact_list = ContactList.objects.get(id=id)
+        print(contact_list)
+        qr_code_data = QRCode.objects.get(contact_list=contact_list.id)
+        serializer = QRSerializer(qr_code_data)
+        print(qr_code_data, "QRR")
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Exception as e:
+        print(e)
         return Response(f'There has been some error: {e}', status=status.HTTP_400_BAD_REQUEST)
 
 

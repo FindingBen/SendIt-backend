@@ -1,6 +1,6 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import CustomUser, AnalyticsData, PackagePlan
+from .models import CustomUser, AnalyticsData, PackagePlan, QRCode, ContactList
 from django.utils.timezone import now
 from django_rest_passwordreset.signals import post_password_reset
 
@@ -26,3 +26,29 @@ def update_password_change_timestamp(sender, user, request, **kwargs):
     user.last_password_change = now()
     print('AAA')
     user.save(update_fields=['last_password_change'])
+
+
+@receiver(post_save, sender=ContactList)
+def create_qrcode(sender, instance, created, **kwargs):
+    import qrcode
+    from io import BytesIO
+    from django.core.files.base import ContentFile
+
+    # Generate the QR code
+    qr = qrcode.QRCode(border=2)
+    qr.add_data(f'/register/qrr/{instance.unique_id}')
+    qr.make(fit=True)
+    img_qr = qr.make_image()
+
+    buffer = BytesIO()
+    img_qr.save(buffer, format='PNG')
+    buffer.seek(0)
+
+    # Save the QR code model
+    qr_code_instance = QRCode(
+        contact_list=instance,
+        qr_data=f'https://spplane.app/register/qrr/{instance.unique_id}',
+    )
+    qr_code_instance.qr_image.save(
+        f'{instance.unique_id}.png', ContentFile(buffer.read()))
+    qr_code_instance.save()

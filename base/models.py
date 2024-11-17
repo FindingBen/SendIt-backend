@@ -121,6 +121,7 @@ class Element(models.Model):
 
 
 class ContactList(models.Model):
+    unique_id = models.UUIDField(default=uuid4())
     users = models.ForeignKey(User, on_delete=models.CASCADE)
     list_name = models.CharField(max_length=20)
     contact_lenght = models.IntegerField(null=True, blank=True)
@@ -209,3 +210,9 @@ class AnalyticsData(models.Model):
         self.save()
 
         return self.total_overall_rate
+
+
+class QRCode(models.Model):
+    contact_list = models.ForeignKey('ContactList', on_delete=models.CASCADE)
+    qr_image = models.ImageField(blank=True, null=True)
+    qr_data = models.CharField(default=None)

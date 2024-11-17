@@ -20,6 +20,7 @@ urlpatterns = [
     path('delete_element/<str:id>/', views.delete_element),
     # Contact list and contacts
     path('create_contact/<str:id>/', views.create_contact, name='create_contact'),
+    path('create_contact_qr/<str:id>', views.create_contact_via_qr),
     path('contact_lists/', views.get_contact_lists),
     path('contact_list/<str:id>/', views.get_contacts),
     path('contact_detail/<str:id>', views.contact_detail),
@@ -34,6 +35,8 @@ urlpatterns = [
     path('update_user/<str:id>/', views.update_user),
     # Opt out
     path('optout/<str:id>', views.handle_unsubscribe),
+    # QR
+    path('qr_code/<str:id>', views.get_qr_code),
     # Analytics
     path('get_analytcs/<int:record_id>/', views.get_analytics_data),
     path('get_survey_results/<str:id>', views.get_results),
