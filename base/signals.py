@@ -36,7 +36,7 @@ def create_qrcode(sender, instance, created, **kwargs):
 
     # Generate the QR code
     qr = qrcode.QRCode(border=2)
-    qr.add_data(f'/register/qrr/{instance.unique_id}')
+    qr.add_data(f'https://spplane.app/register/qrr/{instance.unique_id}')
     qr.make(fit=True)
     img_qr = qr.make_image()
 
