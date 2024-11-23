@@ -129,6 +129,10 @@ def update_user(request, id):
     if serializer.is_valid(raise_exception=True):
 
         serializer.update(user, validated_data=request.data)
+        if request.data['is_active'] == False:
+            send_email = send_confirmation_email_account_close(user.email)
+            if send_email:
+                return Response({"message": "Email dispatched"}, status=status.HTTP_200_OK)
         return Response(serializer.data, status=status.HTTP_200_OK)
     else:
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -813,17 +817,3 @@ def export_analytics(request, id):
 @api_view(['GET'])
 def export_analytics_csv(request, id):
     pass
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def account_close_confirmation(request):
-    try:
-        user = request.user
-        print("EMAIL", user.email)
-        send_email = send_confirmation_email_account_close(user.email)
-
-        if send_email:
-            return Response({"message": "Confirmation email sent"}, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response({"message": f"{str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
