@@ -13,7 +13,7 @@ from sms.models import Sms, CampaignStats
 from io import BytesIO
 from django.http import HttpResponse
 from .utils.googleAnalytics import sample_run_report
-from .email.email import send_confirmation_email, send_welcome_email
+from .email.email import send_confirmation_email, send_welcome_email, send_confirmation_email_account_close
 from django.db.models import Sum
 from django.db import transaction
 from sms.models import Sms
@@ -813,3 +813,17 @@ def export_analytics(request, id):
 @api_view(['GET'])
 def export_analytics_csv(request, id):
     pass
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def account_close_confirmation(request):
+    try:
+        user = request.user
+        print("EMAIL", user.email)
+        send_email = send_confirmation_email_account_close(user.email)
+
+        if send_email:
+            return Response({"message": "Confirmation email sent"}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"message": f"{str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

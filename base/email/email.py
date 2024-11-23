@@ -70,3 +70,23 @@ def send_email_notification(user_id):
         send_mail(subject, message, from_email, recipient_list)
     except Exception as e:
         print("Error sending email notification:", str(e))
+
+
+def send_confirmation_email_account_close(email):
+    email_sent = False
+    send_mail(
+        subject=f'[SENDPERPLANE] We were honored to have you with us!',
+        message=f"""
+        Thank you for using our service, we hope to see you back some day, hopefully soon!
+        
+        Your account is now closed and all of the data we had is deleted as per our privacy policy rules which you can
+        check out here: https://spplane.app/privacy-policy .
+
+        Have a good one!
+        """,
+        from_email='benarmys4@gmail.com',
+        recipient_list=[email],
+        fail_silently=True
+    )
+    email_sent = True
+    return email_sent
