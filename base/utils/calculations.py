@@ -123,13 +123,18 @@ def format_number(value):
 
 def clicks_rate(clicks=None, sends=None):
     print(clicks, sends)
-    if clicks > 0 and sends > 0:
-        click_rate = clicks/sends
-        final_click_rate = float('{:.2%}'.format(
-            click_rate).rstrip('%'))
-        return final_click_rate
-    else:
-        return 0
+
+    # Ensure clicks and sends are valid numbers
+    if clicks is None or sends is None or sends <= 0:
+        return 0  # Avoid division errors or invalid cases
+
+    # Calculate the click rate and cap it at 1 (100%)
+    click_rate = clicks / sends
+    capped_click_rate = min(click_rate, 1)  # Ensures it doesn't exceed 100%
+
+    # Format the final result as a percentage
+    final_click_rate = float('{:.2%}'.format(capped_click_rate).rstrip('%'))
+    return final_click_rate
 
 
 def calculate_deliveribility(delivered=None, sends=None):
