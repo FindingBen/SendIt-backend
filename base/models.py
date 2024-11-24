@@ -170,6 +170,7 @@ class AnalyticsData(models.Model):
     last_updated = models.DateField(auto_now_add=True)
     total_delivered = models.IntegerField(default=0)
     total_not_delivered = models.IntegerField(default=0)
+    tota_unsubscribed = models.IntegerField(default=0)
 
     def calculate_performance(self):
         # Ensure we don't divide by zero

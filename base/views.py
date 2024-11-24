@@ -466,8 +466,12 @@ def get_package_limits(request):
 @api_view(['GET'])
 def handle_unsubscribe(request, id):
     try:
-        contact = Contact.objects.get(id=id)
-        contact.delete()
+        with transaction.atomic():
+            contact = Contact.objects.get(id=id)
+            contact.delete()
+            analytics = AnalyticsData.objects.get(custom_user=contact.users)
+            analytics.tota_unsubscribed += 1
+            analytics.save()
         return Response('Contact deleted successfully', status=status.HTTP_200_OK)
     except Exception as e:
         return Response(f'There has been an error: {e}', status=status.HTTP_400_BAD_REQUEST)
