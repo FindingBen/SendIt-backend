@@ -164,6 +164,7 @@ class AnalyticsData(models.Model):
     total_sends = models.IntegerField(default=0)
     total_views = models.IntegerField(default=0)
     total_clicks = models.IntegerField(default=0)
+    total_bounces = models.IntegerField(default=0)
     total_bounce_rate = models.IntegerField(default=0)
     total_overall_rate = models.IntegerField(default=0)
     total_spend = models.IntegerField(default=0)

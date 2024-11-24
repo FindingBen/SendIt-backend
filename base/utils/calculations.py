@@ -22,7 +22,7 @@ def total_sum(data_value: None, recipients: None):
     total_user_engegment = sum(userEng_sum)
     total_avg_session = sum(avgSession_sum)
     total_bounce_rate = sum(bounceRate_sum)
-
+    print("RATEE", total_bounce_rate)
     average_bounce_rate = total_bounce_rate / total_records
     average_engagement_rate = total_engagement_rate / total_records
     average_session = total_avg_session / total_records
@@ -39,6 +39,7 @@ def total_sum(data_value: None, recipients: None):
 def calculate_overall_performance(final_data: None, recipients: None):
 
     try:
+        print("DDD", final_data)
         # Assign weights to each metric
         bounce_rate_weight = 0.3  # Adjust based on importance
         engagement_rate_weight = 0.4  # Adjust based on importance
@@ -87,7 +88,7 @@ def calculate_avg_performance(data_entry: List[Dict[str, any]]) -> Dict[str, flo
     total_user_engagement = 0
     total_scrolled_users = 0
     total_session_duration = 0
-    print("CALCULATION", data_entry)
+
     # Loop through each entry in the data
     for entry in data_entry:
 
