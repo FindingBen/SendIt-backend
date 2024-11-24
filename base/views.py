@@ -660,7 +660,7 @@ def get_total_analytic_values(request, id):
         'total_views': analytics_data.total_views,
         'total_sends': analytics_data.total_sends,
         'total_clicks': analytics_data.total_clicks,
-        'clicks_rate': analytics_data.total_clicks,
+        'clicks_rate': formatted_clicks_rate,
         'total_spend': formatted_total_spend,
         'deliveribility': formated_deliveribility,
         'archived_state': custom_user_id.archived_state
