@@ -264,11 +264,11 @@ def calculate_plan_usage(request):
 
         # Determine the recommended package
         if max(basic_score, silver_score, gold_score) == basic_score:
-            return Response({'recommended_package': "BASIC PLAN"})
+            return Response({'recommended_package': "BASIC PACKAGE"})
         elif max(basic_score, silver_score, gold_score) == silver_score:
-            return Response({'recommended_package': "SILVER PLAN"})
+            return Response({'recommended_package': "SILVER PACKAGE"})
         else:
-            return Response({'recommended_package': "GOLD PLAN"})
+            return Response({'recommended_package': "GOLD PACKAGE"})
 
     except Exception as e:
         return Response({'error': str(e)}, status=400)
