@@ -411,10 +411,14 @@ def create_contact_via_qr(request, id):
         users = contact_list.users
         serializer = ContactSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
-            if not request.data['first_name'] and request.data['phone_number']:
+            if not request.data.get('first_name') or not request.data.get('phone_number'):
                 return Response({'error': 'Empty form submission.'}, status=status.HTTP_400_BAD_REQUEST)
-            serializer.save(contact_list=contact_list, users=users)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+            # Save the contact, linking it to the existing contact_list
+            # Only pass contact_list, no need for users here.
+            serializer.save(contact_list=contact_list)
+
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response(f'There has been some error: {e}', status=status.HTTP_400_BAD_REQUEST)
 

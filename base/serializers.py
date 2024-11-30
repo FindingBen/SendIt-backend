@@ -101,7 +101,13 @@ class ContactListSerializer(ModelSerializer):
 class ContactSerializer(ModelSerializer):
     class Meta:
         model = Contact
-        fields = ['id', 'first_name', 'last_name', 'email', 'phone_number']
+        fields = ['id', 'first_name', 'last_name',
+                  'email', 'phone_number', 'contact_list']
+        extra_kwargs = {
+            # Ensure this field is not created/updated through the serializer.
+            'contact_list': {'read_only': True},
+
+        }
 
 
 class SurveySerializer(ModelSerializer):
