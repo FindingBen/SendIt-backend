@@ -103,7 +103,10 @@ def get_purchases(request, id):
     try:
         user = request.user
         customer = CustomUser.objects.get(id=user.id)
-
+        sort_order = request.GET.get(
+            'sort_order', 'asc')  # Default to ascending
+        search_query = request.GET.get('search', None)
+        reverse = True if sort_order == 'desc' else False  # Reverse for descending order
         transactions = stripe.PaymentIntent.list(
             customer=customer.stripe_custom_id)
         transaction_data = []
@@ -116,6 +119,10 @@ def get_purchases(request, id):
                 "status": transaction.status
             }
             transaction_data.append(transac_dict_obj)
+        if search_query:
+            transaction_data = [transaction for transaction in transaction_data if search_query.lower(
+            ) in transaction['payment_id'].lower()]
+        transaction_data.sort(key=lambda x: x['created_at'], reverse=reverse)
 
     except Exception as e:
         return Response(f'There has been an error: {e}')

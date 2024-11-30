@@ -282,25 +282,23 @@ def get_contact_list(request, pk):
 @permission_classes([IsAuthenticated])
 def get_contacts(request, id):
     try:
-        user = request.user
         contact_list = ContactList.objects.get(id=id)
         cache_key = f"user_contacts:{contact_list.id}"
 
         # Check for sorting query parameters
+        contacts = Contact.objects.filter(contact_list=contact_list)
+
+        # Apply search filtering if the search parameter is provided
+        search_query = request.GET.get('search', '')
+        if search_query:
+            contacts = contacts.filter(first_name__icontains=search_query)
+
+        # Apply sorting if the sort_by parameter is provided
         sort_by = request.GET.get('sort_by', None)
-        if sort_by and sort_by not in ['first_name', '-first_name', 'created_at', '-created_at']:
-            sort_by = None
+        if sort_by and sort_by in ['first_name', '-first_name', 'created_at', '-created_at']:
+            contacts = contacts.order_by(sort_by)
 
-        # Always invalidate the cache if sorting is applied or not.
-        # This ensures you fetch the latest data after any changes like add, delete, or update
-        if sort_by:
-            contact = Contact.objects.filter(
-                contact_list=contact_list).order_by(sort_by)
-        else:
-            # This will be executed when no sorting parameter is provided
-            contact = Contact.objects.filter(contact_list=contact_list)
-
-        serializer = ContactSerializer(contact, many=True)
+        serializer = ContactSerializer(contacts, many=True)
         cache.set(cache_key, {"contacts": serializer.data},
                   timeout=settings.CACHE_TTL)
 
@@ -409,14 +407,15 @@ def create_contact_via_qr(request, id):
     try:
         contact_list = ContactList.objects.get(unique_id=id)
         users = contact_list.users
-        serializer = ContactSerializer(data=request.data)
+        serializer = ContactSerializer(
+            data=request.data, contact_list=contact_list)
         if serializer.is_valid(raise_exception=True):
             if not request.data.get('first_name') or not request.data.get('phone_number'):
                 return Response({'error': 'Empty form submission.'}, status=status.HTTP_400_BAD_REQUEST)
 
             # Save the contact, linking it to the existing contact_list
             # Only pass contact_list, no need for users here.
-            serializer.save(contact_list=contact_list)
+            serializer.save()
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
     except Exception as e:
