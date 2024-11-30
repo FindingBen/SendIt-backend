@@ -302,7 +302,7 @@ def get_contacts(request, id):
         cache.set(cache_key, {"contacts": serializer.data},
                   timeout=settings.CACHE_TTL)
 
-        return Response({"contacts": serializer.data})
+        return Response({"contacts": serializer.data, "contact_list_recipients_nr": contact_list.contact_lenght})
 
     except Exception as e:
         return Response(f'There has been some error: {e}')
