@@ -124,18 +124,22 @@ def get_user(request, id):
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_user(request, id):
-    user = CustomUser.objects.get(id=id)
-    serializer = CustomUserSerializer(user, data=request.data, partial=True)
-    if serializer.is_valid(raise_exception=True):
+    try:
 
-        serializer.update(user, validated_data=request.data)
-        if request.data['is_active'] == False:
-            send_email = send_confirmation_email_account_close(user.email)
-            if send_email:
-                return Response({"message": "Email dispatched"}, status=status.HTTP_200_OK)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    else:
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        user = CustomUser.objects.get(id=id)
+        serializer = CustomUserSerializer(
+            user, data=request.data, partial=True)
+        if serializer.is_valid(raise_exception=True):
+            serializer.update(user, validated_data=request.data)
+            if request.data['is_active'] == False:
+                send_email = send_confirmation_email_account_close(user.email)
+                if send_email:
+                    return Response({"message": "Email dispatched"}, status=status.HTTP_200_OK)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response(f'There has been some error: {e}')
 
 
 @api_view(['GET'])
@@ -176,8 +180,13 @@ def get_notes(request):
         user = request.user
         archive = request.GET.get('archive', None)
         sort_by = request.GET.get('sort_by', None)
+        # search_query = request.GET.get('search', '')
 
         customUser = CustomUser.objects.get(user_ptr_id=user.id)
+
+        # if search_query:
+        #     notes = user.message_set.filter(
+        #         message_name__icontains=search_query)
 
         if customUser.archived_state == True:
             customUser.archived_state = False
