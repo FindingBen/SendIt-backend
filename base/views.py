@@ -216,6 +216,42 @@ def get_notes(request):
         return Response({"error": f"There has been some error: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@permission_classes([IsAuthenticated])
+@api_view(['GET'])
+def get_arvhived(request):
+    try:
+        user = request.user
+        sort_by = request.GET.get('sort_by', None)
+        search_query = request.GET.get('search', '')
+
+        customUser = CustomUser.objects.get(user_ptr_id=user.id)
+
+        notes = user.message_set.filter(status='archived')
+
+        if search_query:
+            notes = user.message_set.filter(
+                message_name__icontains=search_query)
+
+        if customUser.archived_state == True:
+            customUser.archived_state = False
+            customUser.save()
+
+        # Apply sorting if provided
+        if sort_by:
+            print('AA', sort_by)
+            notes = notes.order_by(sort_by)
+
+        # Serialize the notes
+        serializer = MessageSerializer(notes, many=True)
+        serialized_data = serializer.data
+
+        # Count the 'sent' messages for additional information
+        sent_message_count = notes.filter(status='sent').count()
+
+        return Response({"messages": serialized_data, "messages_count": sent_message_count})
+
+    except Exception as e:
+        return Response({"error": f"There has been some error: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 # Contact lists
 
 
@@ -416,15 +452,16 @@ def create_contact_via_qr(request, id):
     try:
         contact_list = ContactList.objects.get(unique_id=id)
         users = contact_list.users
+        print(request.data)
         serializer = ContactSerializer(
-            data=request.data, contact_list=contact_list)
+            data=request.data)
         if serializer.is_valid(raise_exception=True):
             if not request.data.get('first_name') or not request.data.get('phone_number'):
                 return Response({'error': 'Empty form submission.'}, status=status.HTTP_400_BAD_REQUEST)
 
             # Save the contact, linking it to the existing contact_list
             # Only pass contact_list, no need for users here.
-            serializer.save()
+            serializer.save(contact_list=contact_list, users=users)
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
     except Exception as e:

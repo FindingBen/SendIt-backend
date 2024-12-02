@@ -15,6 +15,7 @@ urlpatterns = [
     path('update_element/<str:id>/', views.update_element),
     # Message
     path('view/<str:id>/', views.note_view),
+    path('view_archives/', views.get_arvhived),
     path('message_view_edit/<str:id>/', views.update_message),
     path('delete_message/<str:id>', views.delete_message),
     path('delete_element/<str:id>/', views.delete_element),
