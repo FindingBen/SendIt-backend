@@ -665,6 +665,7 @@ def delete_contact_list(request, id):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_analytics_data(request, record_id):
     sms = Sms.objects.get(message=record_id)
 
@@ -678,6 +679,7 @@ def get_analytics_data(request, record_id):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_results(request, id):
     response = {}
     element = Element.objects.filter(message=id, element_type='Survey')
@@ -692,6 +694,7 @@ def get_results(request, id):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_total_analytic_values(request, id):
     custom_user_id = CustomUser.objects.get(user_ptr_id=id)
     analytics_data = AnalyticsData.objects.get(custom_user=custom_user_id)
@@ -717,6 +720,7 @@ def get_total_analytic_values(request, id):
 
 
 @api_view(['PUT'])
+@permission_classes([IsAuthenticated])
 def handle_survey_response(request, id):
     # Get the element and survey response instance
     element = Element.objects.get(id=id)
@@ -745,6 +749,7 @@ def handle_survey_response(request, id):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def export_analytics(request, id):
 
     try:
@@ -870,3 +875,20 @@ def export_analytics(request, id):
 @api_view(['GET'])
 def export_analytics_csv(request, id):
     pass
+
+
+@api_view(['GET'])
+def check_limit(request, id):
+    try:
+        contact_list = ContactList.objects.get(unique_id=id)
+        users = contact_list.users
+        analytic = AnalyticsData.objects.get(custom_user=users)
+        can_sign_up = False
+        if analytic.contacts_limit_reached is True:
+            can_sign_up = False
+            return Response({"can_sign_up": f"{can_sign_up}"})
+        else:
+            can_sign_up = True
+            return Response({"can_sign_up": f"{can_sign_up}"})
+    except Exception as e:
+        return Response({"message": f"{e}"})

@@ -172,6 +172,8 @@ class AnalyticsData(models.Model):
     total_delivered = models.IntegerField(default=0)
     total_not_delivered = models.IntegerField(default=0)
     tota_unsubscribed = models.IntegerField(default=0)
+    contacts_limit_reached = models.BooleanField(default=False)
+    contact_list_limit_reached = models.BooleanField(default=False)
 
     def calculate_performance(self):
         # Ensure we don't divide by zero

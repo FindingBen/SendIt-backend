@@ -38,6 +38,7 @@ urlpatterns = [
     path('optout/<str:id>', views.handle_unsubscribe),
     # QR
     path('qr_code/<str:id>', views.get_qr_code),
+    path('qr_check_sign/<str:id>', views.check_limit),
     # Analytics
     path('get_analytcs/<int:record_id>/', views.get_analytics_data),
     path('get_survey_results/<str:id>', views.get_results),
