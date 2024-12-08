@@ -452,13 +452,16 @@ def create_contact_via_qr(request, id):
     try:
         contact_list = ContactList.objects.get(unique_id=id)
         users = contact_list.users
+        analytic = AnalyticsData.objects.get(custom_user=users)
         print(request.data)
         serializer = ContactSerializer(
             data=request.data)
         if serializer.is_valid(raise_exception=True):
             if not request.data.get('first_name') or not request.data.get('phone_number'):
                 return Response({'error': 'Empty form submission.'}, status=status.HTTP_400_BAD_REQUEST)
-
+            with transaction.atomic():
+                analytic.tota_subscribed += 1
+                analytic.save()
             # Save the contact, linking it to the existing contact_list
             # Only pass contact_list, no need for users here.
             serializer.save(contact_list=contact_list, users=users)
