@@ -18,7 +18,8 @@ class Sms(models.Model):
     sender = models.CharField(max_length=20, null=False)
     sms_text = models.TextField(max_length=500, null=False)
     content_link = models.URLField(max_length=500, null=True, blank=True)
-    contact_list = models.ForeignKey(ContactList, on_delete=models.CASCADE)
+    contact_list = models.ForeignKey(
+        ContactList, on_delete=models.SET_NULL, null=True, blank=True)
     has_button = models.BooleanField(default=False)
     sms_sends = models.IntegerField(default=0)
     total_bounce_rate = models.DecimalField(
