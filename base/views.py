@@ -708,7 +708,6 @@ def get_total_analytic_values(request, id):
     formated_deliveribility = calculate_deliveribility(
         analytics_data.total_delivered, analytics_data.total_sends)
 
-
     return Response({
 
         'overall_rate': overall_calculated_data,
@@ -725,7 +724,7 @@ def get_total_analytic_values(request, id):
 
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+# @permission_classes([IsAuthenticated])
 def handle_survey_response(request, id):
     # Get the element and survey response instance
     element = Element.objects.get(id=id)
