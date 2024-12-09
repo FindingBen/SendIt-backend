@@ -707,7 +707,7 @@ def get_total_analytic_values(request, id):
         analytics_data.total_clicks, analytics_data.total_sends)
     formated_deliveribility = calculate_deliveribility(
         analytics_data.total_delivered, analytics_data.total_sends)
-    print('HEE', formatted_clicks_rate)
+
 
     return Response({
 
@@ -718,6 +718,8 @@ def get_total_analytic_values(request, id):
         'clicks_rate': formatted_clicks_rate,
         'total_spend': formatted_total_spend,
         'deliveribility': formated_deliveribility,
+        'total_subscribed': analytics_data.tota_subscribed,
+        'total_unsubscribed': analytics_data.tota_unsubscribed,
         'archived_state': custom_user_id.archived_state
     })
 
