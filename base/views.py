@@ -289,7 +289,7 @@ def get_contact_lists(request):
     package_limits = {
         'Gold package': {'contact_lists': 20, 'recipients': 10000},
         'Silver package': {'contact_lists': 8, 'recipients': 5000},
-        'Basic package': {'contact_lists': 5, 'recipients': 1000},
+        'Basic package': {'contact_lists': 5, 'recipients': 2000},
         'Trial Plan': {'contact_lists': 1, 'recipients': 5}
     }
 
