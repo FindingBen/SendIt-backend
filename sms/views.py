@@ -15,6 +15,7 @@ import pytz
 from .tasks import send_scheduled_sms, send_sms, archive_message
 from base.email.email import send_email_notification
 from django.utils import timezone
+from django.utils.timezone import make_aware
 
 
 @api_view(['GET'])
@@ -121,12 +122,22 @@ def schedule_sms(request):
 
             with transaction.atomic():
                 copenhagen_tz = pytz.timezone('Europe/Copenhagen')
-                scheduled_time_local = datetime.fromisoformat(
-                    str(request.data['scheduled_time'])
-                ).replace(tzinfo=copenhagen_tz)
 
-                # Convert scheduled time to UTC for the backend
+                # Parse the scheduled time from the request and assume it's in Copenhagen time
+                scheduled_time_local = make_aware(
+                    datetime.fromisoformat(request.data['scheduled_time']),
+                    timezone=copenhagen_tz
+                )
+
+                # Convert scheduled time to UTC
                 scheduled_time_utc = scheduled_time_local.astimezone(pytz.utc)
+
+                # Get the current UTC time
+                current_datetime_utc = datetime.now(pytz.utc)
+
+                # Debugging print
+                print("Scheduled Time UTC:", scheduled_time_utc)
+                print("Current Time UTC:", current_datetime_utc)
 
                 # Get the current UTC time
                 current_datetime_utc = datetime.now(pytz.utc)
@@ -154,8 +165,8 @@ def schedule_sms(request):
 
                     message.save()
 
-                    send_scheduled_sms.apply_async(
-                        (sms.unique_tracking_id,), eta=scheduled_time_utc)
+                    # send_scheduled_sms.apply_async(
+                    #     (sms.unique_tracking_id,), eta=scheduled_time_utc)
 
                     return Response({
                         "sms": f'{data}'
