@@ -146,7 +146,7 @@ def send_sms(unique_tracking_id: None, user: None):
                     if content_link:
                         responseData = sms.send_message(
                             {
-                                "from": 'spplane',
+                                "from": 'HaflaBurger',
                                 "to": f'+{recipient.phone_number}',
                                 "text": sms_text.replace('#Link', content_link).replace('#FirstName', recipient.first_name) +
                                 "\n\n\n\n\n" +
