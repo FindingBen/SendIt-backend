@@ -100,15 +100,24 @@ def payment_cancelled(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_purchases(request, id):
+    print(request.user)
     try:
+        print(request.user)
+        # Ensure the user is authorized to fetch this data
         user = request.user
+        if user.id != id:
+            return Response({"error": "Unauthorized access"}, status=status.HTTP_403_FORBIDDEN)
+
+        # Get the Stripe customer ID linked to the user
         customer = CustomUser.objects.get(id=user.id)
-        sort_order = request.GET.get(
-            'sort_order', 'asc')  # Default to ascending
-        search_query = request.GET.get('search', None)
-        reverse = True if sort_order == 'desc' else False  # Reverse for descending order
+        if not customer.stripe_custom_id:
+            return Response({"error": "No Stripe customer linked to this user"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Fetch transactions for the specific customer
         transactions = stripe.PaymentIntent.list(
             customer=customer.stripe_custom_id)
+
+        # Parse transactions into response format
         transaction_data = []
         for transaction in transactions['data']:
             transac_dict_obj = {
@@ -119,15 +128,26 @@ def get_purchases(request, id):
                 "status": transaction.status
             }
             transaction_data.append(transac_dict_obj)
+
+        # Apply optional search and sorting
+        search_query = request.GET.get('search', None)
         if search_query:
-            transaction_data = [transaction for transaction in transaction_data if search_query.lower(
-            ) in transaction['payment_id'].lower()]
+            transaction_data = [
+                transaction for transaction in transaction_data
+                if search_query.lower() in transaction['payment_id'].lower()
+            ]
+
+        sort_order = request.GET.get('sort_order', 'asc')  # Default ascending
+        reverse = sort_order == 'desc'
         transaction_data.sort(key=lambda x: x['created_at'], reverse=reverse)
 
-    except Exception as e:
-        return Response(f'There has been an error: {e}')
+        return Response(transaction_data, status=status.HTTP_200_OK)
 
-    return Response(transaction_data, status=status.HTTP_200_OK)
+    except CustomUser.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @require_http_methods(['POST'])
