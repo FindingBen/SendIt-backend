@@ -57,6 +57,9 @@ class CustomUser(User):
             elif self.package_plan.plan_type == settings.GOLD_PLAN:
                 list_limit = 20
                 recipients_limit = 10000
+            elif self.package_plan.plan_type == "Demo package":
+                list_limit = 5
+                recipients_limit = 2000
         return {
             'package_plan': self.package_plan.plan_type,
             'sms_count': self.sms_count,
