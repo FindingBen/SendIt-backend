@@ -120,20 +120,16 @@ def schedule_sms(request):
         if user_obj.sms_count >= recipient_list.contact_lenght:
 
             with transaction.atomic():
-                scheduled_time = datetime.fromisoformat(
-                    str(request.data['scheduled_time']))
+                copenhagen_tz = pytz.timezone('Europe/Copenhagen')
+                scheduled_time_local = datetime.fromisoformat(
+                    str(request.data['scheduled_time'])
+                ).replace(tzinfo=copenhagen_tz)
 
-                scheduled_time_utc = pytz.timezone(
-                    'UTC').localize(scheduled_time)
+                # Convert scheduled time to UTC for the backend
+                scheduled_time_utc = scheduled_time_local.astimezone(pytz.utc)
 
-                # Adjust for the time zone difference to Copenhagen time
-                scheduled_time_local = scheduled_time_utc.astimezone(
-                    pytz.timezone('Europe/Copenhagen'))
-                current_datetime = datetime.fromisoformat(
-                    str(datetime.now()))
-                scheduled_time_local = scheduled_time_local - \
-                    timedelta(hours=2)
-
+                # Get the current UTC time
+                current_datetime_utc = datetime.now(pytz.utc)
                 custom_user = CustomUser.objects.get(id=data['user'])
                 contact_list = ContactList.objects.get(id=data['contact_list'])
 
@@ -152,13 +148,14 @@ def schedule_sms(request):
                 )
 
                 sms.save()
-
-                if scheduled_time > current_datetime:
+                print(scheduled_time_utc, current_datetime_utc)
+                if scheduled_time_utc > current_datetime_utc:
                     message.status = 'Scheduled'
+
                     message.save()
 
                     send_scheduled_sms.apply_async(
-                        (sms.unique_tracking_id,), eta=scheduled_time_local)
+                        (sms.unique_tracking_id,), eta=scheduled_time_utc)
 
                     return Response({
                         "sms": f'{data}'
