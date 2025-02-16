@@ -1,3 +1,0 @@
-[build]
-builder = "nixpacks"
-version = "1.29.1"
