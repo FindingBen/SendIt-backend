@@ -198,7 +198,7 @@ def track_link_click(request, id):
         redirect_url = f"https://spplane.app/view/{message_obj.id}"
         return HttpResponseRedirect(redirect_url)
     except Exception as e:
-        return Response(f'There has been am error:{e}')
+        return HttpResponseRedirect('https://spplane.app/err/spp/')
 
 
 @api_view(['GET'])
