@@ -54,7 +54,7 @@ class StripeCheckoutVIew(APIView):
                 payment_method_types=['card'],
                 mode='payment',
                 customer=customer.stripe_custom_id,
-                success_url=settings.DOMAIN_STRIPE_NAME + \
+                success_url=settings.DOMAIN_STRIPE_NAME +
                 '/?success=true&session_id={CHECKOUT_SESSION_ID}',
                 cancel_url=settings.DOMAIN_STRIPE_NAME_CANCEL + '/?cancel=true',
             )
@@ -105,8 +105,8 @@ def get_purchases(request, id):
         print(request.user)
         # Ensure the user is authorized to fetch this data
         user = request.user
-        if user.id != id:
-            return Response({"error": "Unauthorized access"}, status=status.HTTP_403_FORBIDDEN)
+        # if user.id != id:
+        #     return Response({"error": "Unauthorized access"}, status=status.HTTP_403_FORBIDDEN)
 
         # Get the Stripe customer ID linked to the user
         customer = CustomUser.objects.get(id=user.id)
