@@ -75,19 +75,22 @@ def payment_successful(request, id):
         user_serializer = CustomUserSerializer(user_object)
         user_payment = UserPayment.objects.get(user=user_id)
 
-        purchase_obj = Purchase.objects.get(
-            payment_id=user_payment.purchase_id)
+        purchase_object = stripe.PaymentIntent.retrieve(
+            id=user_payment.purchase_id)
 
-        serializer_purchase = PurchaseSerializer(purchase_obj)
+        # purchase_obj = Purchase.objects.get(
+        #     payment_id=user_payment.purchase_id)
+        # print("PURCHASE")
+        # serializer_purchase = PurchaseSerializer(purchase_obj)
         time.sleep(3)
         if user_payment.payment_bool is True:
             user_payment.stripe_checkout_id = id
             user_payment.save()
-
+            print('FINAL STAGE')
     except Exception as e:
         return Response(f'There has been an error: {e}')
 
-    return Response({'purchase': serializer_purchase.data, 'user': user_serializer.data}, status=status.HTTP_200_OK)
+    return Response({'purchase': purchase_object, 'user': user_serializer.data}, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
@@ -177,18 +180,22 @@ def stripe_webhook(request):
                 session = event['data']['object']
                 customer_email = session["customer_details"]["email"]
                 product_id = session["metadata"]["product_id"]
+                payment_intent = session['payment_intent']
+                print('PRODUCTION', session)
                 ######
                 time.sleep(10)
                 ######
                 user_obj = CustomUser.objects.filter(email=customer_email)[0]
+                print('USER', user_obj)
                 package_obj = PackagePlan.objects.get(id=product_id)
                 user_obj.package_plan = package_obj
                 user_obj.sms_count += package_obj.sms_count_pack
                 user_obj.save()
                 user_payment = UserPayment.objects.get(
                     user_id=user_obj.id)
+                user_payment.purchase_id = payment_intent
                 user_payment.payment_bool = True
-
+                print('STAGE 1', user_payment)
                 user_payment.save()
                 analytics = AnalyticsData.objects.get(custom_user=user_obj.id)
                 analytics.total_spend += package_obj.price
@@ -196,6 +203,7 @@ def stripe_webhook(request):
                 if (user_payment.payment_bool == True):
                     user_payment.payment_bool = False
                     user_payment.save()
+                    print('STAGE 2', user_payment)
                     # if not Purchase.objects.filter(payment_id=event['data']['object']['payment_intent']).exists():
                     #     payment_type_details = event['data']['object'].get(
                     #         'payment_method_types')
