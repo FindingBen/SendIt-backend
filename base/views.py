@@ -74,7 +74,7 @@ class CustomUserViewSet(UserViewSet):
 
 
 class OAuthAuthorization(APIView):
-    def shopify_auth(request):
+    def get(self, request):
         shop = request.GET.get("shop")
         if not shop:
             return JsonResponse({"error": "Missing shop parameter"}, status=400)
