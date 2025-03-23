@@ -3,7 +3,7 @@ from . import views
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
-from .views import MyTokenObtainPairView, OAuthAuthorization
+from .views import MyTokenObtainPairView, OAuthAuthorization, CallbackAuthView
 from .views import RegisterAPI, CreateNote, CreateElement, CustomUserViewSet, SendEmailConfirmationTokenAPIView
 
 
@@ -49,6 +49,7 @@ urlpatterns = [
     path('token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('oAuth-login', OAuthAuthorization.as_view()),
+    path('callback', CallbackAuthView.as_view()),
     # Password
     path('users/set_password/',
          CustomUserViewSet.as_view({'post': 'set_password'}), name='set_password'),
