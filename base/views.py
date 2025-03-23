@@ -89,7 +89,7 @@ class OAuthAuthorization(APIView):
 
 
 class CallbackAuthView(APIView):
-    def get(request):
+    def get(self, request):
         shop = request.GET.get("shop")
         code = request.GET.get("code")
 
