@@ -69,6 +69,11 @@ class CustomUser(User):
         }
 
 
+class ShopifyStore(models.Model):
+    shop_domain = models.CharField(max_length=255, unique=True)
+    access_token = models.CharField(max_length=255)
+
+
 class EmailConfirmationToken(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)

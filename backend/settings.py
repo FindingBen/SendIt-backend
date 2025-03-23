@@ -292,6 +292,12 @@ else:
     raise ValueError('Invalid environment specified in DJANGO_ENV variable.')
 
 
+SHOPIFY_API_KEY = os.environ.get("SHOPIFY_API_KEY")
+SHOPIFY_API_SECRET = os.environ.get("SHOPIFY_API_SECRET")
+SHOPIFY_SCOPES = "read_products,write_orders"
+SHOPIFY_REDIRECT_URI = os.environ.get("SHOPIFY_REDIRECT_URI")
+
+
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]

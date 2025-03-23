@@ -7,10 +7,11 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from .serializers import MessageSerializer, RegisterSerializer, CustomUserSerializer, ContactListSerializer, ContactSerializer, ElementSerializer, PackageSerializer, SurveySerializer, QRSerializer
-from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser, EmailConfirmationToken, SurveyResponse, AnalyticsData, QRCode
+from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser, EmailConfirmationToken, SurveyResponse, AnalyticsData, QRCode, ShopifyStore
 from rest_framework import generics
 from sms.models import Sms, CampaignStats
 from io import BytesIO
+from django.shortcuts import redirect
 from django.http import HttpResponse
 from .utils.googleAnalytics import sample_run_report
 from .email.email import send_confirmation_email, send_welcome_email, send_confirmation_email_account_close
@@ -18,12 +19,12 @@ from django.db.models import Sum
 from django.db import transaction
 from sms.models import Sms
 from datetime import datetime
+from django.http import JsonResponse
 import os
-from reportlab.lib.pagesizes import letter
+import requests
 from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle
 from django.core.cache import cache
-from django.views.decorators.cache import cache_page
 from django.conf import settings
 from django.utils.timezone import now
 from djoser.views import UserViewSet
@@ -70,6 +71,54 @@ class CustomUserViewSet(UserViewSet):
             user.last_password_change = now()
             user.save(update_fields=['last_password_change'])
         return response
+
+
+class OAuthAuthorization(APIView):
+    def shopify_auth(request):
+        shop = request.GET.get("shop")
+        if not shop:
+            return JsonResponse({"error": "Missing shop parameter"}, status=400)
+
+        auth_url = (
+            f"https://{shop}/admin/oauth/authorize?"
+            f"client_id={settings.SHOPIFY_API_KEY}"
+            f"&scope={settings.SHOPIFY_SCOPES}"
+            f"&redirect_uri={settings.SHOPIFY_REDIRECT_URI}"
+        )
+        return redirect(auth_url)
+
+
+class CallbackAuthView(APIView):
+    def shopify_callback(request):
+        shop = request.GET.get("shop")
+        code = request.GET.get("code")
+
+        if not shop or not code:
+            return JsonResponse({"error": "Missing shop or code parameter"}, status=400)
+
+        token_url = f"https://{shop}/admin/oauth/access_token"
+        payload = {
+            "client_id": settings.SHOPIFY_API_KEY,
+            "client_secret": settings.SHOPIFY_API_SECRET,
+            "code": code,
+        }
+
+        response = requests.post(token_url, json=payload)
+        data = response.json()
+
+        if "access_token" in data:
+            # Save the access token to the database (for future API requests)
+            access_token = data["access_token"]
+            # Store it in the session for authenticated API calls
+            request.session["shopify_access_token"] = access_token
+            ShopifyStore.objects.update_or_create(
+                shop_domain=shop,
+                defaults={"access_token": access_token}
+            )
+
+            return redirect(f"https://spplane.app/?shop={shop}")
+        else:
+            return JsonResponse({"error": "OAuth failed", "details": data}, status=400)
 
 
 class SendEmailConfirmationTokenAPIView(APIView):
