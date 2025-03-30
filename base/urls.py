@@ -4,7 +4,7 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 from .views import MyTokenObtainPairView, OAuthAuthorization, CallbackAuthView
-from .views import RegisterAPI, CreateNote, CreateElement, CustomUserViewSet, SendEmailConfirmationTokenAPIView
+from .views import RegisterAPI, CreateNote, CreateElement, CustomUserViewSet, SendEmailConfirmationTokenAPIView, ShopifyAuth
 
 
 urlpatterns = [
@@ -24,6 +24,7 @@ urlpatterns = [
     path('create_contact_qr/<str:id>', views.create_contact_via_qr),
     path('contact_lists/', views.get_contact_lists),
     path('contact_list/<str:id>/', views.get_contacts),
+    path('shopify_customers', views.get_shopify_customers),
     path('contact_detail/<str:id>', views.contact_detail),
     path('create_list/<str:id>', views.create_list, name='create_list'),
     path('delete_recipient/<str:id>/', views.delete_contact_recipient),
@@ -50,6 +51,8 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('oAuth-login', OAuthAuthorization.as_view()),
     path('callback', CallbackAuthView.as_view()),
+    path('shopify-auth/',
+         ShopifyAuth.as_view(), name='token_obtain_pair'),
     # Password
     path('users/set_password/',
          CustomUserViewSet.as_view({'post': 'set_password'}), name='set_password'),

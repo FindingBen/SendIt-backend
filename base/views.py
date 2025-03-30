@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.authentication import BaseAuthentication
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from .serializers import MessageSerializer, RegisterSerializer, CustomUserSerializer, ContactListSerializer, ContactSerializer, ElementSerializer, PackageSerializer, SurveySerializer, QRSerializer
@@ -11,6 +13,7 @@ from .models import Message, ContactList, Contact, Element, PackagePlan, CustomU
 from rest_framework import generics
 from sms.models import Sms, CampaignStats
 from io import BytesIO
+import jwt
 from django.shortcuts import redirect
 from django.http import HttpResponse
 from .utils.googleAnalytics import sample_run_report
@@ -63,6 +66,31 @@ class MyTokenObtainPairView(TokenObtainPairView):
         pass
 
 
+class ShopifyAuthentication(BaseAuthentication):
+    def authenticate(self, request):
+        # Get the Authorization header
+        authorization_header = request.headers.get('Authorization')
+        if not authorization_header or not authorization_header.startswith('Shopify '):
+            return None  # No Shopify token, skip this authentication class
+
+        # Extract the Shopify token
+        shopify_token = authorization_header.split(' ')[1]
+
+        # Validate the Shopify token (optional: verify with Shopify's API)
+        if not shopify_token:
+            raise AuthenticationFailed('Invalid Shopify token')
+
+        # Retrieve the user associated with the Shopify token
+        try:
+            user = CustomUser.objects.get(
+                shopify_token=shopify_token)  # Replace with your logic
+        except CustomUser.DoesNotExist:
+            raise AuthenticationFailed(
+                'No user associated with this Shopify token')
+
+        return (user, shopify_token)
+
+
 class CustomUserViewSet(UserViewSet):
     def set_password(self, request, *args, **kwargs):
         response = super().set_password(request, *args, **kwargs)
@@ -88,6 +116,22 @@ class OAuthAuthorization(APIView):
         return redirect(auth_url)
 
 
+class ShopifyAuth(APIView):
+    def get(self, request):
+        shop = request.GET.get("shop")
+        if not shop:
+            return JsonResponse({"error": "Missing shop parameter"}, status=400)
+        print(shop)
+        user_token = ShopifyStore.objects.get(
+            shop_domain=shop
+        )
+        custom_user_obj = user_token.user
+        custom_user = CustomUser.objects.get(id=custom_user_obj.id)
+        user_serializer = CustomUserSerializer(custom_user)
+
+        return JsonResponse({"user": user_serializer.data, "token": user_token.access_token, "shopifyDomain": user_token.shop_domain}, status=200)
+
+
 class CallbackAuthView(APIView):
     def get(self, request):
         shop = request.GET.get("shop")
@@ -111,10 +155,26 @@ class CallbackAuthView(APIView):
             access_token = data["access_token"]
             # Store it in the session for authenticated API calls
             request.session["shopify_access_token"] = access_token
-            ShopifyStore.objects.update_or_create(
+            shopify_store, created = ShopifyStore.objects.get_or_create(
                 shop_domain=shop,
                 defaults={"access_token": access_token}
             )
+
+            if created:
+                # Create a new CustomUser for the Shopify store
+                user = CustomUser.objects.create(
+                    username=shop,  # Use the shop domain as the username
+                    # Generate a dummy email
+                    custom_email=f"{shop}@shopify.com",
+                    user_type="Business",  # Default user type
+                )
+                shopify_store.user = user
+                shopify_store.save()
+
+            else:
+                # Update the access token if the store already exists
+                shopify_store.access_token = access_token
+                shopify_store.save()
 
             return redirect(f"https://spplane.app/?shop={shop}")
         else:
@@ -226,7 +286,9 @@ def update_element(request, id):
 @api_view(['GET'])
 def get_notes(request):
     try:
+        print(request, 'LAA')
         user = request.user
+        print(user, 'LAA')
         archive = request.GET.get('archive', None)
         sort_by = request.GET.get('sort_by', None)
         # search_query = request.GET.get('search', '')
@@ -370,6 +432,38 @@ def get_contact_list(request, pk):
         return Response(f'There has been some error: {e}')
 
     return Response(serializer.data)
+
+
+@api_view(['GET'])
+# Optional: Use authentication if needed
+@permission_classes([IsAuthenticated])
+def get_shopify_customers(request):
+    try:
+        # Replace with your Shopify store's domain and token
+        shopify_domain = "spplane.myshopify.com"
+        shopify_token = "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"
+
+        # Shopify Admin API endpoint
+        url = f"https://{shopify_domain}/admin/api/2023-01/customers.json"
+
+        # Make the request to Shopify's API
+        headers = {
+            "X-Shopify-Access-Token": shopify_token,
+        }
+        response = requests.get(url, headers=headers)
+
+        # Return the response from Shopify's API
+        if response.status_code == 200:
+            print(response)
+            return Response(response.json(), status=status.HTTP_200_OK)
+        else:
+            return Response(
+                {"error": "Failed to fetch customers from Shopify",
+                    "details": response.json()},
+                status=response.status_code,
+            )
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])

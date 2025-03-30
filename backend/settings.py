@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     "corsheaders",
+    'oauth2_provider',
     'django_rest_passwordreset',
     'djoser',
     # apps
@@ -111,6 +112,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
 
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'base.auth.ShopifyAuthentication',
     )
 
 }
@@ -294,7 +296,7 @@ else:
 
 SHOPIFY_API_KEY = os.environ.get("SHOPIFY_API_KEY")
 SHOPIFY_API_SECRET = os.environ.get("SHOPIFY_API_SECRET")
-SHOPIFY_SCOPES = "read_products,write_orders"
+SHOPIFY_SCOPES = "read_products,write_orders,read_customers"
 SHOPIFY_REDIRECT_URI = os.environ.get("SHOPIFY_REDIRECT_URI")
 
 
