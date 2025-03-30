@@ -155,22 +155,22 @@ class CallbackAuthView(APIView):
             access_token = data["access_token"]
             # Store it in the session for authenticated API calls
             request.session["shopify_access_token"] = access_token
-            shopify_store, created = ShopifyStore.objects.get_or_create(
-                shop_domain=shop,
-                defaults={"access_token": access_token}
-            )
+            shopify_store = ShopifyStore.objects.filter(shop_domain=shop).first()
 
-            if created:
+            if not shopify_store:
                 # Create a new CustomUser for the Shopify store
                 user = CustomUser.objects.create(
                     username=shop,  # Use the shop domain as the username
-                    # Generate a dummy email
-                    custom_email=f"{shop}@shopify.com",
+                    custom_email=f"{shop}@shopify.com",  # Generate a dummy email
                     user_type="Business",  # Default user type
                 )
-                shopify_store.user = user
-                shopify_store.save()
 
+                # Create the ShopifyStore and associate it with the user
+                shopify_store = ShopifyStore.objects.create(
+                    user=user,
+                    shop_domain=shop,
+                    access_token=access_token,
+                )
             else:
                 # Update the access token if the store already exists
                 shopify_store.access_token = access_token
