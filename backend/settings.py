@@ -77,7 +77,8 @@ CORS_ALLOW_HEADERS = ["accept",
                       "user-agent",
                       "x-csrftoken",
                       "options",
-                      "x-requested-with",]
+                      "x-requested-with",
+                      "shopify-domain"]
 
 TEMPLATES = [
     {

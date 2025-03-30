@@ -155,13 +155,15 @@ class CallbackAuthView(APIView):
             access_token = data["access_token"]
             # Store it in the session for authenticated API calls
             request.session["shopify_access_token"] = access_token
-            shopify_store = ShopifyStore.objects.filter(shop_domain=shop).first()
+            shopify_store = ShopifyStore.objects.filter(
+                shop_domain=shop).first()
 
             if not shopify_store:
                 # Create a new CustomUser for the Shopify store
                 user = CustomUser.objects.create(
                     username=shop,  # Use the shop domain as the username
-                    custom_email=f"{shop}@shopify.com",  # Generate a dummy email
+                    # Generate a dummy email
+                    custom_email=f"{shop}@shopify.com",
                     user_type="Business",  # Default user type
                 )
 
@@ -440,17 +442,18 @@ def get_contact_list(request, pk):
 def get_shopify_customers(request):
     try:
         # Replace with your Shopify store's domain and token
-        shopify_domain = "spplane.myshopify.com"
-        shopify_token = "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"
-
+        shopify_domain = request.headers['shopify-domain']
+        query = "Jakub"  # Replace with the name you want to search for
+        params = {"order": "created_at desc"}
         # Shopify Admin API endpoint
-        url = f"https://{shopify_domain}/admin/api/2023-01/customers.json"
-
+        url = f"https://{shopify_domain}/admin/api/2025-01/customers/search.json"
+        shopify_token = request.headers['Authorization'].split(' ')[1]
+        print('TOKEN', shopify_token)
         # Make the request to Shopify's API
         headers = {
             "X-Shopify-Access-Token": shopify_token,
         }
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, params=params)
 
         # Return the response from Shopify's API
         if response.status_code == 200:
@@ -470,27 +473,54 @@ def get_shopify_customers(request):
 @permission_classes([IsAuthenticated])
 def get_contacts(request, id):
     try:
-        contact_list = ContactList.objects.get(id=id)
-        cache_key = f"user_contacts:{contact_list.id}"
+        shopify_domain = request.headers.get('shopify-domain', None)
+        if shopify_domain:
+            shopify_domain = request.headers['shopify-domain']
+            search_query = request.GET.get('search', '')
+            sort_by = request.GET.get('sort_by', None)
+            params = {"order": f"{sort_by}", "query": search_query}
+            # Shopify Admin API endpoint
+            print('AAA', sort_by)
+            url = f"https://{shopify_domain}/admin/api/2025-01/customers/search.json"
+            shopify_token = request.headers['Authorization'].split(' ')[1]
+            # Make the request to Shopify's API
+            headers = {
+                "X-Shopify-Access-Token": shopify_token,
+            }
+            response = requests.get(url, headers=headers, params=params)
 
-        # Check for sorting query parameters
-        contacts = Contact.objects.filter(contact_list=contact_list)
+            # Return the response from Shopify's API
+            if response.status_code == 200:
+                print(response)
+                return Response(response.json(), status=status.HTTP_200_OK)
+            else:
+                return Response(
+                    {"error": "Failed to fetch customers from Shopify",
+                        "details": response.json()},
+                    status=response.status_code,
+                )
+        else:
+            contact_list = ContactList.objects.get(id=id)
+            cache_key = f"user_contacts:{contact_list.id}"
 
-        # Apply search filtering if the search parameter is provided
-        search_query = request.GET.get('search', '')
-        if search_query:
-            contacts = contacts.filter(first_name__icontains=search_query)
+            # Check for sorting query parameters
+            contacts = Contact.objects.filter(contact_list=contact_list)
+            print('MAA')
+            # Apply search filtering if the search parameter is provided
+            search_query = request.GET.get('search', '')
+            if search_query:
+                contacts = contacts.filter(first_name__icontains=search_query)
 
-        # Apply sorting if the sort_by parameter is provided
-        sort_by = request.GET.get('sort_by', None)
-        if sort_by and sort_by in ['first_name', '-first_name', 'created_at', '-created_at']:
-            contacts = contacts.order_by(sort_by)
+            # Apply sorting if the sort_by parameter is provided
+            sort_by = request.GET.get('sort_by', None)
+            if sort_by and sort_by in ['first_name', '-first_name', 'created_at', '-created_at']:
+                contacts = contacts.order_by(sort_by)
 
-        serializer = ContactSerializer(contacts, many=True)
-        cache.set(cache_key, {"contacts": serializer.data},
-                  timeout=settings.CACHE_TTL)
-
-        return Response({"contacts": serializer.data, "contact_list_recipients_nr": contact_list.contact_lenght})
+            serializer = ContactSerializer(contacts, many=True)
+            cache.set(cache_key, {"contacts": serializer.data},
+                      timeout=settings.CACHE_TTL)
+            print(serializer.data)
+            return Response({"customers": serializer.data, "contact_list_recipients_nr": contact_list.contact_lenght})
 
     except Exception as e:
         return Response(f'There has been some error: {e}')
