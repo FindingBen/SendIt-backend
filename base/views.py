@@ -32,7 +32,9 @@ from django.conf import settings
 from django.utils.timezone import now
 from djoser.views import UserViewSet
 from reportlab.pdfgen import canvas
+from .permissions import HasPackageLimit
 import stripe
+from .queries import GET_CUSTOMERS_QUERY, CREATE_CUSTOMER_QUERY
 from base.utils.calculations import calculate_avg_performance, format_number, clicks_rate, calculate_deliveribility
 
 
@@ -402,12 +404,10 @@ def get_contact_lists(request):
     package_limits = {
         'Gold package': {'contact_lists': 20, 'recipients': 10000},
         'Silver package': {'contact_lists': 8, 'recipients': 5000},
-        'Basic package': {'contact_lists': 5, 'recipients': 2000},
+        'Basic package': {'contact_lists': 5, 'recipients': 6},
         'Trial Plan': {'contact_lists': 1, 'recipients': 5}
     }
 
-    # Get the user's package plan
-    # Replace 'package_plan' with the actual attribute name
     user_package = user.package_plan
     print(user_package.plan_type)
     # Get the limits based on the user's package plan
@@ -418,8 +418,7 @@ def get_contact_lists(request):
         limits = package_limits['Trial Plan']
     serializer = ContactListSerializer(contact_list, many=True)
     print(limits)
-    # except Exception as e:
-    #     return Response(f'There has been some error: {e}')
+
     return Response({"data": serializer.data, "limits": limits, "recipients": recipients_serializer.data})
 
 
@@ -437,39 +436,6 @@ def get_contact_list(request, pk):
 
 
 @api_view(['GET'])
-# Optional: Use authentication if needed
-@permission_classes([IsAuthenticated])
-def get_shopify_customers(request):
-    try:
-        # Replace with your Shopify store's domain and token
-        shopify_domain = request.headers['shopify-domain']
-        query = "Jakub"  # Replace with the name you want to search for
-        params = {"order": "created_at desc"}
-        # Shopify Admin API endpoint
-        url = f"https://{shopify_domain}/admin/api/2025-01/customers/search.json"
-        shopify_token = request.headers['Authorization'].split(' ')[1]
-        print('TOKEN', shopify_token)
-        # Make the request to Shopify's API
-        headers = {
-            "X-Shopify-Access-Token": shopify_token,
-        }
-        response = requests.get(url, headers=headers, params=params)
-
-        # Return the response from Shopify's API
-        if response.status_code == 200:
-            print(response)
-            return Response(response.json(), status=status.HTTP_200_OK)
-        else:
-            return Response(
-                {"error": "Failed to fetch customers from Shopify",
-                    "details": response.json()},
-                status=response.status_code,
-            )
-    except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_contacts(request, id):
     try:
@@ -478,21 +444,37 @@ def get_contacts(request, id):
             shopify_domain = request.headers['shopify-domain']
             search_query = request.GET.get('search', '')
             sort_by = request.GET.get('sort_by', None)
-            params = {"order": f"{sort_by}", "query": search_query}
+            reverse = request.GET.get('reverse', 'false').lower() == 'true'
+
             # Shopify Admin API endpoint
             print('AAA', sort_by)
-            url = f"https://{shopify_domain}/admin/api/2025-01/customers/search.json"
+            url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
             shopify_token = request.headers['Authorization'].split(' ')[1]
             # Make the request to Shopify's API
             headers = {
                 "X-Shopify-Access-Token": shopify_token,
             }
-            response = requests.get(url, headers=headers, params=params)
 
+            variables = {
+                "first": 50,  # Number of customers to fetch per request
+                "after": None,  # Cursor for pagination
+                "query": search_query,  # Optional search query
+                "sortKey": sort_by.upper(),  # Sort key (e.g., CREATED_AT, FIRST_NAME)
+                "reverse": reverse,  # Reverse the order if true
+            }
+
+            response = requests.post(
+                url,
+                headers=headers,
+                json={"query": GET_CUSTOMERS_QUERY, "variables": variables},
+            )
             # Return the response from Shopify's API
             if response.status_code == 200:
-                print(response)
-                return Response(response.json(), status=status.HTTP_200_OK)
+                data = response.json()
+
+                customers = data.get("data", {}).get("customers", {})
+                print(customers)
+                return Response(customers, status=status.HTTP_200_OK)
             else:
                 return Response(
                     {"error": "Failed to fetch customers from Shopify",
@@ -571,53 +553,75 @@ def update_message(request, id):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, HasPackageLimit])
 def create_contact(request, id):
-    trial_limit = 10
-    basic_limit = 1000
-    silver_limit = 3000
-    gold_limit = 8000
     try:
+        shopify_domain = request.headers.get('shopify-domain', None)
+        if shopify_domain:
+            custom_user = CustomUser.objects.get(id=request.user.id)
+            url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
+            shopify_token = request.headers['Authorization'].split(' ')[1]
+            headers = {
+                "X-Shopify-Access-Token": shopify_token,
+                "Content-Type": "application/json"
 
-        custom_user = CustomUser.objects.get(id=request.user.id)
-        contacts = Contact.objects.filter(users=request.user.id)
-        package_plan = custom_user.package_plan
-        contact_list = ContactList.objects.get(id=id)
-        print(len(contacts))
-        if package_plan.plan_type == 'Basic package':
-            if len(contacts) < basic_limit:
-                serializer = ContactSerializer(data=request.data)
+            }
+            print(request.data)
+            customer_data = {
+                "firstName": request.data.get("first_name"),
+                "lastName": request.data.get("last_name"),
+                "email": request.data.get("email"),
+                "phone": request.data.get("phone"),
+            }
+
+            # GraphQL variables
+            variables = {
+                "input": customer_data
+            }
+
+            response = requests.post(
+                url,
+                headers=headers,
+                json={"query": CREATE_CUSTOMER_QUERY, "variables": variables},
+            )
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("data", {}).get("customerCreate", {}).get("userErrors"):
+                    return Response(
+                        {"error": "Failed to create customer",
+                            "details": data["data"]["customerCreate"]["userErrors"]},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                customer = data.get("data", {}).get(
+                    "customerCreate", {}).get("customer", {})
+                return Response(customer, status=status.HTTP_201_CREATED)
             else:
-                return Response({"Error, max number of recipients reached! Upgrade your package."}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-        elif package_plan.plan_type == 'Silver package':
-            if len(contacts) < silver_limit:
-                serializer = ContactSerializer(data=request.data)
-            else:
-                return Response({"Error, max number of recipients reached! Upgrade your package."}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-        elif package_plan.plan_type == 'Gold package':
-            if len(contacts) < gold_limit:
-                serializer = ContactSerializer(data=request.data)
-            else:
-                return Response({"Error, max number of recipients reached! Upgrade your package."}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+                return Response(
+                    {"error": "Failed to create customer",
+                        "details": response.json()},
+                    status=response.status_code,
+                )
+
         else:
-            if len(contacts) < trial_limit:
-                serializer = ContactSerializer(data=request.data)
+            custom_user = CustomUser.objects.get(id=request.user.id)
+
+            contact_list = ContactList.objects.get(id=id)
+
+            serializer = ContactSerializer(data=request.data)
+            if serializer.is_valid(raise_exception=True):
+                serializer.save(contact_list=contact_list, users=custom_user)
+                if not request.data['firstName'] and request.data['phone']:
+                    return Response({'detail': 'Empty form submission.'}, status=status.HTTP_400_BAD_REQUEST)
+
+                serializer.save(contact_list=contact_list, users=request.user)
+
+                cache_key = f"user_contacts:{contact_list.id}"
+                cache.delete(cache_key)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
-                return Response({"Error, max number of recipients reached! Upgrade your package."}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-        if serializer.is_valid(raise_exception=True):
-            # print(serializer.validated_data)
-            if not request.data['first_name'] and request.data['phone_number']:
-                return Response({'error': 'Empty form submission.'}, status=status.HTTP_400_BAD_REQUEST)
-
-            serializer.save(contact_list=contact_list, users=request.user)
-
-            cache_key = f"user_contacts:{contact_list.id}"
-            cache.delete(cache_key)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
-        return Response(f'There has been some error: {e}', status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -630,7 +634,7 @@ def create_contact_via_qr(request, id):
         serializer = ContactSerializer(
             data=request.data)
         if serializer.is_valid(raise_exception=True):
-            if not request.data.get('first_name') or not request.data.get('phone_number'):
+            if not request.data.get('firstName') or not request.data.get('phone'):
                 return Response({'error': 'Empty form submission.'}, status=status.HTTP_400_BAD_REQUEST)
             with transaction.atomic():
                 analytic.tota_subscribed += 1

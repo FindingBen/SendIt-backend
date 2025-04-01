@@ -100,10 +100,12 @@ class ContactListSerializer(ModelSerializer):
 
 class ContactSerializer(ModelSerializer):
     phone = serializers.CharField(source='phone_number')
+    firstName = serializers.CharField(source='first_name')
+    lastName = serializers.CharField(source='last_name')
 
     class Meta:
         model = Contact
-        fields = ['id', 'first_name', 'last_name',
+        fields = ['id', 'firstName', 'lastName',
                   'email', 'phone', 'contact_list', 'users']
         extra_kwargs = {
             # Ensure this field is not created/updated through the serializer.

@@ -24,7 +24,6 @@ urlpatterns = [
     path('create_contact_qr/<str:id>', views.create_contact_via_qr),
     path('contact_lists/', views.get_contact_lists),
     path('contact_list/<str:id>/', views.get_contacts),
-    path('shopify_customers', views.get_shopify_customers),
     path('contact_detail/<str:id>', views.contact_detail),
     path('create_list/<str:id>', views.create_list, name='create_list'),
     path('delete_recipient/<str:id>/', views.delete_contact_recipient),
