@@ -1,4 +1,3 @@
-from math import ceil
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -13,7 +12,6 @@ from .models import Message, ContactList, Contact, Element, PackagePlan, CustomU
 from rest_framework import generics
 from sms.models import Sms, CampaignStats
 from io import BytesIO
-import jwt
 from django.shortcuts import redirect
 from django.http import HttpResponse
 from .utils.googleAnalytics import sample_run_report
@@ -26,6 +24,8 @@ from django.http import JsonResponse
 import os
 import requests
 from reportlab.lib import colors
+import requests
+from .queries import GET_SHOPIFY_DATA
 from reportlab.platypus import Table, TableStyle
 from django.core.cache import cache
 from django.conf import settings
@@ -34,7 +34,8 @@ from djoser.views import UserViewSet
 from reportlab.pdfgen import canvas
 from .permissions import HasPackageLimit
 import stripe
-from .queries import GET_CUSTOMERS_QUERY, CREATE_CUSTOMER_QUERY
+from .auth import get_shop_info
+from .queries import GET_CUSTOMERS_QUERY, CREATE_CUSTOMER_QUERY, DELETE_CUSTOMER_QUERY, UPDATE_CUSTOMER_QUERY
 from base.utils.calculations import calculate_avg_performance, format_number, clicks_rate, calculate_deliveribility
 
 
@@ -157,21 +158,16 @@ class CallbackAuthView(APIView):
             access_token = data["access_token"]
             # Store it in the session for authenticated API calls
             request.session["shopify_access_token"] = access_token
+
+            shop_data = get_shop_info(shop, access_token)
+            print('SHOP_DATA', shop_data)
             shopify_store = ShopifyStore.objects.filter(
                 shop_domain=shop).first()
 
             if not shopify_store:
-                # Create a new CustomUser for the Shopify store
-                user = CustomUser.objects.create(
-                    username=shop,  # Use the shop domain as the username
-                    # Generate a dummy email
-                    custom_email=f"{shop}@shopify.com",
-                    user_type="Business",  # Default user type
-                )
-
                 # Create the ShopifyStore and associate it with the user
                 shopify_store = ShopifyStore.objects.create(
-                    user=user,
+                    email=shop_data.get('email'),
                     shop_domain=shop,
                     access_token=access_token,
                 )
@@ -473,7 +469,7 @@ def get_contacts(request, id):
                 data = response.json()
 
                 customers = data.get("data", {}).get("customers", {})
-                print(customers)
+
                 return Response(customers, status=status.HTTP_200_OK)
             else:
                 return Response(
@@ -487,7 +483,7 @@ def get_contacts(request, id):
 
             # Check for sorting query parameters
             contacts = Contact.objects.filter(contact_list=contact_list)
-            print('MAA')
+
             # Apply search filtering if the search parameter is provided
             search_query = request.GET.get('search', '')
             if search_query:
@@ -510,26 +506,61 @@ def get_contacts(request, id):
 
 @api_view(['GET', 'PUT'])
 @permission_classes([IsAuthenticated])
-def contact_detail(request, id):
+def contact_detail(request, id=None):
     try:
-        contact = Contact.objects.get(id=id)
+        shopify_domain = request.headers.get('shopify-domain', None)
 
+        if shopify_domain:
+            shopify_token = request.headers['Authorization'].split(' ')[1]
+            url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
+
+            headers = {
+                "X-Shopify-Access-Token": shopify_token,
+                "Content-Type": "application/json",
+            }
+            shopify_id = request.data.get('id')
+            print('id', shopify_id)
+            customer_data = {
+                "id": shopify_id,
+                "firstName": request.data.get("firstName"),
+                "lastName": request.data.get("lastName"),
+                "email": request.data.get("email"),
+                "phone": request.data.get("phone"),
+            }
+            customer_data = {key: value for key,
+                             value in customer_data.items() if value is not None}
+            print('SSS', customer_data)
+            variables = {
+
+                "input": customer_data
+            }
+            response = requests.post(
+                url,
+                headers=headers,
+                json={"query": UPDATE_CUSTOMER_QUERY, "variables": variables},
+            )
+            data = response.json()
+
+            return Response({"response": data})
+        else:
+            contact = Contact.objects.get(id=id)
+
+        if request.method == 'GET':
+            serializer = ContactSerializer(contact)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        elif request.method == 'PUT' and not shopify_domain:
+            print('YALAA')
+            serializer = ContactSerializer(
+                contact, data=request.data, partial=True)
+            if serializer.is_valid():
+                cache_key = f"user_contacts:{request.user.id}"
+                cache.delete(cache_key)
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except Contact.DoesNotExist:
         return Response({"error": "Contact not found"}, status=status.HTTP_404_NOT_FOUND)
-
-    if request.method == 'GET':
-        serializer = ContactSerializer(contact)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    elif request.method == 'PUT':
-        serializer = ContactSerializer(
-            contact, data=request.data, partial=True)
-        if serializer.is_valid():
-            cache_key = f"user_contacts:{request.user.id}"
-            cache.delete(cache_key)
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['PUT'])
@@ -568,8 +599,8 @@ def create_contact(request, id):
             }
             print(request.data)
             customer_data = {
-                "firstName": request.data.get("first_name"),
-                "lastName": request.data.get("last_name"),
+                "firstName": request.data.get("firstName"),
+                "lastName": request.data.get("lastName"),
                 "email": request.data.get("email"),
                 "phone": request.data.get("phone"),
             }
@@ -819,15 +850,54 @@ def delete_element(request, id):
         return Response(f'There has been an error:{e}')
 
 
-@api_view(['DELETE'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def delete_contact_recipient(request, id):
+def delete_contact_recipient(request):
     try:
-        contact = Contact.objects.get(id=id)
-        contact.delete()
-        cache_key = f"user_contacts:{request.user.id}"
-        cache.delete(cache_key)
-        return Response("Recipient deleted!")
+        shopify_domain = request.headers.get('shopify-domain', None)
+        if shopify_domain:
+            print('ALAA')
+            shopify_token = request.headers['Authorization'].split(' ')[1]
+            # Shopify GraphQL endpoint
+            url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
+
+            headers = {
+                "X-Shopify-Access-Token": shopify_token,
+                "Content-Type": "application/json",
+            }
+
+            shopify_id = request.data.get('id')  # Safely get the value of 'id'
+
+            variables = {
+                "id": shopify_id
+            }
+
+            response = requests.post(
+                url,
+                headers=headers,
+                json={"query": DELETE_CUSTOMER_QUERY, "variables": variables},
+            )
+            data = response.json()
+            print(data)
+            # Handle the response
+
+            data = response.json()
+            if data.get("data", {}).get("customerDelete", {}).get("userErrors"):
+                print('ALAA')
+                return Response(
+                    {"error":  data["data"]["customerDelete"]["userErrors"],
+                     },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            deleted_customer_id = data.get("data", {}).get(
+                "customerDelete", {}).get("deletedCustomerId")
+            return Response({"deleted_customer_id": deleted_customer_id}, status=status.HTTP_200_OK)
+        else:
+            contact = Contact.objects.get(id=id)
+            contact.delete()
+            cache_key = f"user_contacts:{request.user.id}"
+            cache.delete(cache_key)
+            return Response("Recipient deleted!")
     except Exception as e:
         return Response(f'There has been an error:{e}')
 

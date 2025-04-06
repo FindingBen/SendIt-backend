@@ -37,3 +37,52 @@ mutation createCustomer($input: CustomerInput!) {
   }
 }
 """
+
+
+DELETE_CUSTOMER_QUERY = """
+mutation customerDelete($id: ID!) {
+  customerDelete(input: {id: $id}) {
+    deletedCustomerId
+    userErrors {
+      field
+      message
+    }
+  }
+}
+"""
+
+UPDATE_CUSTOMER_QUERY = """
+mutation updateCustomer($input: CustomerInput!) {
+  customerUpdate(input: $input) {
+    customer {
+      id
+      firstName
+      lastName
+      email
+      phone
+      updatedAt
+    }
+    userErrors {
+      field
+      message
+    }
+  }
+}
+"""
+
+GET_SHOPIFY_DATA = """
+query {
+  shop {
+    name
+    email
+    myshopifyDomain
+    plan {
+      displayName
+    }
+    primaryDomain {
+      url
+      host
+    }
+  }
+}
+"""

@@ -70,7 +70,9 @@ class CustomUser(User):
 
 
 class ShopifyStore(models.Model):
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    email = models.EmailField(null=True)
+    first_name = models.CharField(max_length=255, null=True)
+    last_name = models.CharField(max_length=255, null=True)
     shop_domain = models.CharField(max_length=255, unique=True)
     access_token = models.CharField(max_length=255)
 

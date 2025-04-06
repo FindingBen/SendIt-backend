@@ -25,8 +25,10 @@ urlpatterns = [
     path('contact_lists/', views.get_contact_lists),
     path('contact_list/<str:id>/', views.get_contacts),
     path('contact_detail/<str:id>', views.contact_detail),
+    path('contact_detail/', views.contact_detail),
     path('create_list/<str:id>', views.create_list, name='create_list'),
-    path('delete_recipient/<str:id>/', views.delete_contact_recipient),
+    path('delete_recipient/', views.delete_contact_recipient),
+    path('delete_recipient_shopify/', views.delete_contact_recipient),
     path('delete_list/<str:id>', views.delete_contact_list),
     # Package plan
     path('package_plan/', views.get_packages),
@@ -34,6 +36,7 @@ urlpatterns = [
     # User account
     path('user_account/<str:id>/', views.get_user),
     path('update_user/<str:id>/', views.update_user),
+    path('temp-api', views.get_shop_info),
     # Opt out
     path('optout/<str:id>', views.handle_unsubscribe),
     # QR
