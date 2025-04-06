@@ -36,7 +36,6 @@ urlpatterns = [
     # User account
     path('user_account/<str:id>/', views.get_user),
     path('update_user/<str:id>/', views.update_user),
-    path('temp-api', views.get_shop_info),
     # Opt out
     path('optout/<str:id>', views.handle_unsubscribe),
     # QR
