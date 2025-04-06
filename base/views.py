@@ -50,7 +50,10 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         try:
             custom_user = CustomUser.objects.get(username=user.username)
+            shopify_obj = ShopifyStore.objects.filter(
+                email=custom_user.email).first()
             serialized_data = custom_user.serialize_package_plan()
+            token['shopify_token'] = shopify_obj.access_token if shopify_obj else None
             token['sms_count'] = custom_user.sms_count
             token['user_type'] = custom_user.user_type
             token['archived_state'] = custom_user.archived_state
@@ -435,6 +438,7 @@ def get_contact_list(request, pk):
 @permission_classes([IsAuthenticated])
 def get_contacts(request, id):
     try:
+        print(request.headers)
         shopify_domain = request.headers.get('shopify-domain', None)
         if shopify_domain:
             shopify_domain = request.headers['shopify-domain']
@@ -447,6 +451,7 @@ def get_contacts(request, id):
             url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
             shopify_token = request.headers['Authorization'].split(' ')[1]
             # Make the request to Shopify's API
+            print('LOL', shopify_token)
             headers = {
                 "X-Shopify-Access-Token": shopify_token,
             }
