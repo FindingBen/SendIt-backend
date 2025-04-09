@@ -25,7 +25,6 @@ import os
 import requests
 from reportlab.lib import colors
 import requests
-from .queries import GET_SHOPIFY_DATA
 from reportlab.platypus import Table, TableStyle
 from django.core.cache import cache
 from django.conf import settings
@@ -446,12 +445,9 @@ def get_contacts(request, id):
             sort_by = request.GET.get('sort_by', None)
             reverse = request.GET.get('reverse', 'false').lower() == 'true'
 
-            # Shopify Admin API endpoint
-            print('AAA', sort_by)
             url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
             shopify_token = request.headers['Authorization'].split(' ')[1]
-            # Make the request to Shopify's API
-            print('LOL', shopify_token)
+
             headers = {
                 "X-Shopify-Access-Token": shopify_token,
             }
@@ -524,7 +520,7 @@ def contact_detail(request, id=None):
                 "Content-Type": "application/json",
             }
             shopify_id = request.data.get('id')
-            print('id', shopify_id)
+
             customer_data = {
                 "id": shopify_id,
                 "firstName": request.data.get("firstName"),
@@ -534,7 +530,7 @@ def contact_detail(request, id=None):
             }
             customer_data = {key: value for key,
                              value in customer_data.items() if value is not None}
-            print('SSS', customer_data)
+
             variables = {
 
                 "input": customer_data
@@ -555,7 +551,7 @@ def contact_detail(request, id=None):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         elif request.method == 'PUT' and not shopify_domain:
-            print('YALAA')
+
             serializer = ContactSerializer(
                 contact, data=request.data, partial=True)
             if serializer.is_valid():
@@ -803,7 +799,7 @@ def create_list(request, id):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
-        return Response("Field cannot be blank", status=status.HTTP_400_BAD_REQUEST)
+        return Response(f"Field cannot be blank:{e}", status=status.HTTP_400_BAD_REQUEST)
 
 
 class CreateElement(generics.GenericAPIView):
@@ -861,7 +857,6 @@ def delete_contact_recipient(request):
     try:
         shopify_domain = request.headers.get('shopify-domain', None)
         if shopify_domain:
-            print('ALAA')
             shopify_token = request.headers['Authorization'].split(' ')[1]
             # Shopify GraphQL endpoint
             url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
@@ -883,8 +878,6 @@ def delete_contact_recipient(request):
                 json={"query": DELETE_CUSTOMER_QUERY, "variables": variables},
             )
             data = response.json()
-            print(data)
-            # Handle the response
 
             data = response.json()
             if data.get("data", {}).get("customerDelete", {}).get("userErrors"):
