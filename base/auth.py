@@ -22,7 +22,7 @@ class ShopifyAuthentication(BaseAuthentication):
         # Retrieve the user associated with the Shopify token
         try:
             shopify = ShopifyStore.objects.get(access_token=shopify_token)
-
+            
             user = CustomUser.objects.get(
                 custom_email=shopify.email)  # Replace with your logic
         except CustomUser.DoesNotExist:
