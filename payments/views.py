@@ -103,7 +103,6 @@ def payment_cancelled(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_purchases(request, id):
-    print(request.user)
     try:
         print(request.user)
         # Ensure the user is authorized to fetch this data
@@ -119,7 +118,7 @@ def get_purchases(request, id):
         # Fetch transactions for the specific customer
         transactions = stripe.PaymentIntent.list(
             customer=customer.stripe_custom_id)
-
+        print(customer.stripe_custom_id)
         # Parse transactions into response format
         transaction_data = []
         for transaction in transactions['data']:

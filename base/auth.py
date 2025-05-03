@@ -15,7 +15,6 @@ class ShopifyAuthentication(BaseAuthentication):
 
         # Extract the Shopify token
         shopify_token = authorization_header.split(' ')[1]
-        print(shopify_token)
         # Validate the Shopify token (optional: verify with Shopify's API)
         if not shopify_token:
             raise AuthenticationFailed('Invalid Shopify token')
@@ -23,14 +22,17 @@ class ShopifyAuthentication(BaseAuthentication):
         # Retrieve the user associated with the Shopify token
         try:
             shopify = ShopifyStore.objects.get(access_token=shopify_token)
-            print('TOKEN', shopify_token)
+
             user = CustomUser.objects.get(
                 custom_email=shopify.email)  # Replace with your logic
+            return (user, shopify_token)
+        except ShopifyStore.DoesNotExist:
+            print(
+                'No Shopify store associated with this token. Skipping Shopify authentication.')
+            return None  # Skip Shopify authentication for non-Shopify users
         except CustomUser.DoesNotExist:
             raise AuthenticationFailed(
                 'No user associated with this Shopify token')
-
-        return (user, shopify_token)
 
 
 def get_shop_info(shop, access_token):
