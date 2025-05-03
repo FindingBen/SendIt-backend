@@ -166,10 +166,10 @@ class CallbackAuthView(APIView):
 
             shopify_store = ShopifyStore.objects.filter(
                 shop_domain=shop).first()
-            url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
-            shopify_factory = ShopifyFactoryFunction(
-                GET_TOTAL_CUSTOMERS_NR, shop, access_token, url, request)
-            customers = shopify_factory.get_total_customers()
+            # url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
+            # shopify_factory = ShopifyFactoryFunction(
+            #     GET_TOTAL_CUSTOMERS_NR, shop, access_token, url, request)
+            # customers = shopify_factory.get_total_customers()
 
             if not shopify_store:
                 # Create the ShopifyStore and associate it with the user
@@ -177,7 +177,6 @@ class CallbackAuthView(APIView):
                     email=shop_data.get('email'),
                     shop_domain=shop,
                     access_token=access_token,
-                    num_of_customers=customers
                 )
             else:
                 # Update the access token if the store already exists

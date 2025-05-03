@@ -75,7 +75,6 @@ class ShopifyStore(models.Model):
     last_name = models.CharField(max_length=255, null=True)
     shop_domain = models.CharField(max_length=255, unique=True)
     access_token = models.CharField(max_length=255)
-    num_of_customers = models.IntegerField(default=0)
 
 
 class EmailConfirmationToken(models.Model):
