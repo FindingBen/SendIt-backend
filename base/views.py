@@ -47,15 +47,14 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['username'] = user.username
         token['first_name'] = user.first_name
         token['last_name'] = user.last_name
-        print(user.username)
-        print('TOK', token)
+
         try:
             custom_user = CustomUser.objects.get(username=user.username)
             print('CUSS', custom_user)
-            # shopify_obj = ShopifyStore.objects.filter(
-            #     email=custom_user.email).first()
+            shopify_obj = ShopifyStore.objects.filter(
+                email=custom_user.email).first()
             serialized_data = custom_user.serialize_package_plan()
-            # token['shopify_token'] = shopify_obj.access_token if shopify_obj else None
+            token['shopify_token'] = shopify_obj.access_token if shopify_obj else None
             token['sms_count'] = custom_user.sms_count
             token['user_type'] = custom_user.user_type
             token['archived_state'] = custom_user.archived_state
