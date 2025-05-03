@@ -86,3 +86,10 @@ query {
   }
 }
 """
+GET_TOTAL_CUSTOMERS_NR = """
+    query CustomerCount {
+  customersCount {
+    count
+  }
+}
+    """

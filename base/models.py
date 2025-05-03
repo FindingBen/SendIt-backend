@@ -50,13 +50,13 @@ class CustomUser(User):
                 recipients_limit = 5
             elif self.package_plan.plan_type == settings.BASIC_PLAN:
                 list_limit = 5
-                recipients_limit = 2000
+                recipients_limit = 200
             elif self.package_plan.plan_type == settings.SILVER_PLAN:
                 list_limit = 8
-                recipients_limit = 5000
+                recipients_limit = 1000
             elif self.package_plan.plan_type == settings.GOLD_PLAN:
                 list_limit = 20
-                recipients_limit = 10000
+                recipients_limit = 5000
             # elif self.package_plan.plan_type == "Demo package":
             #     list_limit = 5
             #     recipients_limit = 2000
@@ -75,6 +75,7 @@ class ShopifyStore(models.Model):
     last_name = models.CharField(max_length=255, null=True)
     shop_domain = models.CharField(max_length=255, unique=True)
     access_token = models.CharField(max_length=255)
+    num_of_customers = models.IntegerField(default=0)
 
 
 class EmailConfirmationToken(models.Model):

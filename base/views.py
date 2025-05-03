@@ -34,7 +34,8 @@ from reportlab.pdfgen import canvas
 from .permissions import HasPackageLimit
 import stripe
 from .auth import get_shop_info
-from .queries import GET_CUSTOMERS_QUERY, CREATE_CUSTOMER_QUERY, DELETE_CUSTOMER_QUERY, UPDATE_CUSTOMER_QUERY
+from .queries import GET_CUSTOMERS_QUERY, GET_TOTAL_CUSTOMERS_NR, CREATE_CUSTOMER_QUERY, DELETE_CUSTOMER_QUERY, UPDATE_CUSTOMER_QUERY
+from .shopify_functions import ShopifyFactoryFunction
 from base.utils.calculations import calculate_avg_performance, format_number, clicks_rate, calculate_deliveribility
 
 
@@ -162,9 +163,13 @@ class CallbackAuthView(APIView):
             request.session["shopify_access_token"] = access_token
 
             shop_data = get_shop_info(shop, access_token)
-            print('SHOP_DATA', shop_data)
+
             shopify_store = ShopifyStore.objects.filter(
                 shop_domain=shop).first()
+            url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
+            shopify_factory = ShopifyFactoryFunction(
+                GET_TOTAL_CUSTOMERS_NR, shop, access_token, url, request)
+            customers = shopify_factory.get_total_customers()
 
             if not shopify_store:
                 # Create the ShopifyStore and associate it with the user
@@ -172,6 +177,7 @@ class CallbackAuthView(APIView):
                     email=shop_data.get('email'),
                     shop_domain=shop,
                     access_token=access_token,
+                    num_of_customers=customers
                 )
             else:
                 # Update the access token if the store already exists
@@ -351,7 +357,6 @@ def get_arvhived(request):
 
         # Apply sorting if provided
         if sort_by:
-            print('AA', sort_by)
             notes = notes.order_by(sort_by)
 
         # Serialize the notes
@@ -394,30 +399,39 @@ def get_packages(request):
 def get_contact_lists(request):
 
     user = CustomUser.objects.get(id=request.user.id)
+    user_package = user.package_plan
     contact_list = user.contactlist_set.all()
-
-    recipients = Contact.objects.filter(users=user)
-    print(len(recipients))
-    recipients_serializer = ContactSerializer(recipients, many=True)
+    serializer = ContactListSerializer(contact_list, many=True)
+    shopify_domain = request.headers.get('shopify-domain', None)
     package_limits = {
         'Gold package': {'contact_lists': 20, 'recipients': 10000},
         'Silver package': {'contact_lists': 8, 'recipients': 5000},
         'Basic package': {'contact_lists': 5, 'recipients': 6},
         'Trial Plan': {'contact_lists': 1, 'recipients': 5}
     }
-
-    user_package = user.package_plan
-    print(user_package.plan_type)
-    # Get the limits based on the user's package plan
     if user_package.plan_type in package_limits:
         limits = package_limits[user_package.plan_type]
     else:
-        # Default to Trial package if user's package is not recognized
         limits = package_limits['Trial Plan']
-    serializer = ContactListSerializer(contact_list, many=True)
-    print(limits)
 
-    return Response({"data": serializer.data, "limits": limits, "recipients": recipients_serializer.data})
+    if shopify_domain:
+        url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
+        shopify_token = request.headers['Authorization'].split(' ')[1]
+        shopify_factory = ShopifyFactoryFunction(
+            GET_TOTAL_CUSTOMERS_NR, shopify_domain, shopify_token, url, request=request)
+        recipients_count = shopify_factory.get_total_customers()
+        max_recipients_allowed = limits['recipients']
+        capped_recipients_count = min(recipients_count, max_recipients_allowed)
+        return Response({"data": serializer.data, "limits": limits, "recipients": capped_recipients_count})
+    else:
+
+        recipients = Contact.objects.filter(users=user)
+
+        recipients_count = recipients.count()
+
+        # Get the limits based on the user's package plan
+
+        return Response({"data": serializer.data, "limits": limits, "recipients": recipients_count})
 
 
 @api_view(['GET,PUT'])
@@ -437,35 +451,16 @@ def get_contact_list(request, pk):
 @permission_classes([IsAuthenticated])
 def get_contacts(request, id):
     try:
-        print(request.headers)
         shopify_domain = request.headers.get('shopify-domain', None)
         if shopify_domain:
             shopify_domain = request.headers['shopify-domain']
-            search_query = request.GET.get('search', '')
-            sort_by = request.GET.get('sort_by', None)
-            reverse = request.GET.get('reverse', 'false').lower() == 'true'
-
             url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
             shopify_token = request.headers['Authorization'].split(' ')[1]
+            shopify_factory = ShopifyFactoryFunction(
+                GET_CUSTOMERS_QUERY, shopify_domain, shopify_token, url, request=request)
 
-            headers = {
-                "X-Shopify-Access-Token": shopify_token,
-            }
+            response = shopify_factory.get_customers()
 
-            variables = {
-                "first": 50,  # Number of customers to fetch per request
-                "after": None,  # Cursor for pagination
-                "query": search_query,  # Optional search query
-                "sortKey": sort_by.upper(),  # Sort key (e.g., CREATED_AT, FIRST_NAME)
-                "reverse": reverse,  # Reverse the order if true
-            }
-
-            response = requests.post(
-                url,
-                headers=headers,
-                json={"query": GET_CUSTOMERS_QUERY, "variables": variables},
-            )
-            # Return the response from Shopify's API
             if response.status_code == 200:
                 data = response.json()
 
@@ -475,7 +470,7 @@ def get_contacts(request, id):
             else:
                 return Response(
                     {"error": "Failed to fetch customers from Shopify",
-                        "details": response.json()},
+                     "details": response.json()},
                     status=response.status_code,
                 )
         else:
@@ -498,7 +493,7 @@ def get_contacts(request, id):
             serializer = ContactSerializer(contacts, many=True)
             cache.set(cache_key, {"contacts": serializer.data},
                       timeout=settings.CACHE_TTL)
-            print(serializer.data)
+
             return Response({"customers": serializer.data, "contact_list_recipients_nr": contact_list.contact_lenght})
 
     except Exception as e:
@@ -515,34 +510,12 @@ def contact_detail(request, id=None):
             shopify_token = request.headers['Authorization'].split(' ')[1]
             url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
 
-            headers = {
-                "X-Shopify-Access-Token": shopify_token,
-                "Content-Type": "application/json",
-            }
-            shopify_id = request.data.get('id')
+            shopify_factory = ShopifyFactoryFunction(
+                UPDATE_CUSTOMER_QUERY, shopify_domain, shopify_token, url, request=request)
 
-            customer_data = {
-                "id": shopify_id,
-                "firstName": request.data.get("firstName"),
-                "lastName": request.data.get("lastName"),
-                "email": request.data.get("email"),
-                "phone": request.data.get("phone"),
-            }
-            customer_data = {key: value for key,
-                             value in customer_data.items() if value is not None}
+            response = shopify_factory.update_customer()
 
-            variables = {
-
-                "input": customer_data
-            }
-            response = requests.post(
-                url,
-                headers=headers,
-                json={"query": UPDATE_CUSTOMER_QUERY, "variables": variables},
-            )
-            data = response.json()
-
-            return Response({"response": data})
+            return Response({"response": response})
         else:
             contact = Contact.objects.get(id=id)
 
@@ -575,7 +548,7 @@ def update_message(request, id):
         if serializer.is_valid(raise_exception=True):
             serializer.update(message, validated_data=request.data)
             if 'archived' in request.data['status']:
-                print('DDSS')
+
                 Sms.objects.filter(message=message.id).delete()
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
@@ -590,32 +563,15 @@ def create_contact(request, id):
     try:
         shopify_domain = request.headers.get('shopify-domain', None)
         if shopify_domain:
-            custom_user = CustomUser.objects.get(id=request.user.id)
+
             url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
             shopify_token = request.headers['Authorization'].split(' ')[1]
-            headers = {
-                "X-Shopify-Access-Token": shopify_token,
-                "Content-Type": "application/json"
 
-            }
-            print(request.data)
-            customer_data = {
-                "firstName": request.data.get("firstName"),
-                "lastName": request.data.get("lastName"),
-                "email": request.data.get("email"),
-                "phone": request.data.get("phone"),
-            }
+            shopify_factory = ShopifyFactoryFunction(
+                CREATE_CUSTOMER_QUERY, shopify_domain, shopify_token, url, request=request)
 
-            # GraphQL variables
-            variables = {
-                "input": customer_data
-            }
+            response = shopify_factory.create_customers()
 
-            response = requests.post(
-                url,
-                headers=headers,
-                json={"query": CREATE_CUSTOMER_QUERY, "variables": variables},
-            )
             if response.status_code == 200:
                 data = response.json()
                 if data.get("data", {}).get("customerCreate", {}).get("userErrors"):
@@ -628,9 +584,10 @@ def create_contact(request, id):
                     "customerCreate", {}).get("customer", {})
                 return Response(customer, status=status.HTTP_201_CREATED)
             else:
+
                 return Response(
                     {"error": "Failed to create customer",
-                        "details": response.json()},
+                        "details": data['details']},
                     status=response.status_code,
                 )
 
@@ -861,33 +818,18 @@ def delete_contact_recipient(request):
             # Shopify GraphQL endpoint
             url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
 
-            headers = {
-                "X-Shopify-Access-Token": shopify_token,
-                "Content-Type": "application/json",
-            }
+            shopify_factory = ShopifyFactoryFunction(
+                DELETE_CUSTOMER_QUERY, shopify_domain, shopify_token, url, request=request)
+            response = shopify_factory.delete_customer()
 
-            shopify_id = request.data.get('id')  # Safely get the value of 'id'
-
-            variables = {
-                "id": shopify_id
-            }
-
-            response = requests.post(
-                url,
-                headers=headers,
-                json={"query": DELETE_CUSTOMER_QUERY, "variables": variables},
-            )
-            data = response.json()
-
-            data = response.json()
-            if data.get("data", {}).get("customerDelete", {}).get("userErrors"):
+            if response.get("data", {}).get("customerDelete", {}).get("userErrors"):
                 print('ALAA')
                 return Response(
-                    {"error":  data["data"]["customerDelete"]["userErrors"],
+                    {"error":  response["data"]["customerDelete"]["userErrors"],
                      },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            deleted_customer_id = data.get("data", {}).get(
+            deleted_customer_id = response.get("data", {}).get(
                 "customerDelete", {}).get("deletedCustomerId")
             return Response({"deleted_customer_id": deleted_customer_id}, status=status.HTTP_200_OK)
         else:

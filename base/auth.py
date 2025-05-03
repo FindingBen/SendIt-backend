@@ -10,6 +10,7 @@ class ShopifyAuthentication(BaseAuthentication):
         # Get the Authorization header
         authorization_header = request.headers.get('Authorization')
         if not authorization_header or not authorization_header.startswith('Shopify '):
+            print('****SKIPPING SHOPIFY AUTH*****')
             return None  # No Shopify token, skip this authentication class
 
         # Extract the Shopify token
@@ -22,7 +23,7 @@ class ShopifyAuthentication(BaseAuthentication):
         # Retrieve the user associated with the Shopify token
         try:
             shopify = ShopifyStore.objects.get(access_token=shopify_token)
-            
+            print('TOKEN', shopify_token)
             user = CustomUser.objects.get(
                 custom_email=shopify.email)  # Replace with your logic
         except CustomUser.DoesNotExist:
