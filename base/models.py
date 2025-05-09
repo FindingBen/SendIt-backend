@@ -91,7 +91,6 @@ class Message(models.Model):
     status = models.CharField(
         max_length=10, blank=True, null=True, default='Draft')
     total_overall_progress = models.IntegerField(default=0)
-    recipient_list = models.CharField(max_length=400, null=True)
 
 
 class SurveyResponse(models.Model):
