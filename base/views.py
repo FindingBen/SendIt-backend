@@ -622,7 +622,7 @@ def create_contact_via_qr(request, id):
         serializer = ContactSerializer(
             data=request.data)
         if serializer.is_valid(raise_exception=True):
-            if not request.data.get('firstName') or not request.data.get('phone'):
+            if not request.data.get('first_name') or not request.data.get('phone_number'):
                 return Response({'error': 'Empty form submission.'}, status=status.HTTP_400_BAD_REQUEST)
             with transaction.atomic():
                 analytic.tota_subscribed += 1
