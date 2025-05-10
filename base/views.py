@@ -809,7 +809,7 @@ def delete_element(request, id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def delete_contact_recipient(request):
+def delete_contact_recipient(request, id):
     try:
         shopify_domain = request.headers.get('shopify-domain', None)
         if shopify_domain:
