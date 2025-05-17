@@ -61,5 +61,7 @@ urlpatterns = [
     path('confirm_email_verification/',
          SendEmailConfirmationTokenAPIView.as_view()),
     path('confirmation_token/<str:token_id>/<str:user_id>/',
-         views.confirmation_token_view)
+         views.confirmation_token_view),
+    # Shopify products
+    path('shopify_products/', views.get_shopify_products)
 ]

@@ -34,7 +34,7 @@ from reportlab.pdfgen import canvas
 from .permissions import HasPackageLimit
 import stripe
 from .auth import get_shop_info
-from .queries import GET_CUSTOMERS_QUERY, GET_TOTAL_CUSTOMERS_NR, CREATE_CUSTOMER_QUERY, DELETE_CUSTOMER_QUERY, UPDATE_CUSTOMER_QUERY
+from .queries import GET_CUSTOMERS_QUERY, GET_TOTAL_CUSTOMERS_NR, CREATE_CUSTOMER_QUERY, GET_ALL_PRODUCTS, DELETE_CUSTOMER_QUERY, UPDATE_CUSTOMER_QUERY
 from .shopify_functions import ShopifyFactoryFunction
 from base.utils.calculations import calculate_avg_performance, format_number, clicks_rate, calculate_deliveribility
 
@@ -397,7 +397,7 @@ def get_packages(request):
 @permission_classes([IsAuthenticated])
 def get_contact_lists(request):
 
-    user = CustomUser.objects.get(id=request.user.id)
+    user = CustomUser.objects.get(id=request.user .id)
     user_package = user.package_plan
     contact_list = user.contactlist_set.all()
     serializer = ContactListSerializer(contact_list, many=True)
@@ -618,7 +618,7 @@ def create_contact_via_qr(request, id):
         contact_list = ContactList.objects.get(unique_id=id)
         users = contact_list.users
         analytic = AnalyticsData.objects.get(custom_user=users)
-        print(request.data)
+
         serializer = ContactSerializer(
             data=request.data)
         if serializer.is_valid(raise_exception=True):
@@ -640,12 +640,12 @@ def create_contact_via_qr(request, id):
 @permission_classes([IsAuthenticated])
 def get_qr_code(request, id):
     try:
-        print('YOO')
+
         contact_list = ContactList.objects.get(id=id)
-        print(contact_list)
+
         qr_code_data = QRCode.objects.get(contact_list=contact_list.id)
         serializer = QRSerializer(qr_code_data)
-        print(qr_code_data, "QRR")
+
         return Response(serializer.data, status=status.HTTP_200_OK)
     except Exception as e:
         print(e)
@@ -1082,3 +1082,38 @@ def check_limit(request, id):
             return Response({"can_sign_up": f"{can_sign_up}"})
     except Exception as e:
         return Response({"message": f"{e}"})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_shopify_products(request):
+    shopify_domain = request.headers.get('shopify-domain', None)
+    if shopify_domain:
+        shopify_token = request.headers['Authorization'].split(' ')[1]
+        # Shopify GraphQL endpoint
+        url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
+
+        shopify_factory = ShopifyFactoryFunction(
+            GET_ALL_PRODUCTS, shopify_domain, shopify_token, url, request=request)
+        response = shopify_factory.get_products()
+
+        if response.status_code == 200:
+            print('LET MEEEE')
+            data = response.json()
+            if data.get("errors", {}):
+                return Response(
+                    {"error": "Failed to fetch products",
+                        "details": data["errors"]["message"]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            products = data.get("data", {}).get(
+                "products", {}).get("edges", {})
+            print('PPPP', products)
+            return Response(products, status=status.HTTP_200_OK)
+        else:
+
+            return Response(
+                {"error": "Failed to fetch products",
+                    "details": data['details']},
+                status=response.status_code,
+            )

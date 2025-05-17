@@ -84,6 +84,17 @@ class EmailConfirmationToken(models.Model):
 
 
 class Message(models.Model):
+
+    CAMPAIGN_TYPE = [
+        ('Promotional', 'Promotional'),
+        ('Notification', 'Notification')
+    ]
+
+    SMS_SEND = [
+        ('Send', 'Send'),
+        ('Schedule', 'Schedule')
+    ]
+
     users = models.ForeignKey(User, on_delete=models.CASCADE)
     message_name = models.CharField(max_length=40)
     created_at = models.DateField(
@@ -92,6 +103,10 @@ class Message(models.Model):
         max_length=10, blank=True, null=True, default='Draft')
     total_overall_progress = models.IntegerField(default=0)
     recipient_list = models.CharField(max_length=400, null=True)
+    campaign_type = models.CharField(
+        max_length=25, choices=CAMPAIGN_TYPE, null=True)
+    sms_text = models.TextField(max_length=150, null=True)
+    sms_send = models.CharField(max_length=20, choices=SMS_SEND, null=True)
 
 
 class SurveyResponse(models.Model):

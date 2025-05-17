@@ -131,3 +131,23 @@ class ShopifyFactoryFunction:
         data = response.json()
 
         return data
+
+    def get_products(self):
+        url = f"https://{self._domain}/admin/api/2025-01/graphql.json"
+        headers = {
+            "X-Shopify-Access-Token": self._token,
+            "Content-Type": "application/json",
+        }
+
+        variables = {
+            "first": 5,
+
+        }
+
+        response = requests.post(
+            url,
+            headers=headers,
+            json={"query": self._query, "variables": variables},
+        )
+
+        return response

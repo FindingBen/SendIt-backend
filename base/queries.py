@@ -93,3 +93,42 @@ GET_TOTAL_CUSTOMERS_NR = """
   }
 }
     """
+
+
+GET_ALL_PRODUCTS = """
+    query getProducts($first: Int, $after: String) {
+      products(first: $first, after: $after) {
+        edges {
+          node {
+            id
+            title
+            descriptionHtml
+            handle
+            createdAt
+            updatedAt
+            variants(first: 10) {
+              edges {
+                node {
+                  id
+                  title
+                  price
+                  sku
+                }
+              }
+            }
+            images(first: 1) {
+              edges {
+                node {
+                  src
+                }
+              }
+            }
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+    }
+    """
