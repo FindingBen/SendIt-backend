@@ -132,3 +132,47 @@ GET_ALL_PRODUCTS = """
       }
     }
     """
+
+
+GET_PRODUCTS_INVENTORY = """
+query getProductsWithInventory($first: Int = 10) {
+  products(first: $first) {
+    edges {
+      node {
+        id
+        title
+        handle
+        variants(first: 10) {
+          edges {
+            node {
+              id
+              title
+              sku
+              inventoryQuantity
+            }
+          }
+        }
+      }
+    }
+  }
+}"""
+
+
+GET_PRODUCT_INVENTORY = """
+
+query getProductInventory($id: ID!) {
+  product(id: $id) {
+    id
+    title
+    variants(first: 50) {
+      edges {
+        node {
+          id
+          title
+          sku
+          inventoryQuantity
+        }
+      }
+    }
+  }
+}"""

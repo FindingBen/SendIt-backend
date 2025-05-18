@@ -34,7 +34,7 @@ from reportlab.pdfgen import canvas
 from .permissions import HasPackageLimit
 import stripe
 from .auth import get_shop_info
-from .queries import GET_CUSTOMERS_QUERY, GET_TOTAL_CUSTOMERS_NR, CREATE_CUSTOMER_QUERY, GET_ALL_PRODUCTS, DELETE_CUSTOMER_QUERY, UPDATE_CUSTOMER_QUERY
+from .queries import GET_CUSTOMERS_QUERY, GET_TOTAL_CUSTOMERS_NR, GET_PRODUCT_INVENTORY, CREATE_CUSTOMER_QUERY, GET_ALL_PRODUCTS, DELETE_CUSTOMER_QUERY, UPDATE_CUSTOMER_QUERY
 from .shopify_functions import ShopifyFactoryFunction
 from base.utils.calculations import calculate_avg_performance, format_number, clicks_rate, calculate_deliveribility
 
@@ -495,6 +495,27 @@ def get_contacts(request, id):
 
             return Response({"customers": serializer.data, "contact_list_recipients_nr": contact_list.contact_lenght})
 
+    except Exception as e:
+        return Response(f'There has been some error: {e}')
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_insights(request, id=None):
+    try:
+        shopify_domain = request.headers.get('shopify-domain', None)
+        if shopify_domain:
+            url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
+            shopify_token = request.headers['Authorization'].split(' ')[1]
+            shopify_factory = ShopifyFactoryFunction(
+                GET_PRODUCT_INVENTORY, shopify_domain, shopify_token, url, request=request)
+            print(id)
+            response = shopify_factory.get_products_insights()
+            data = response.json()
+            print(data)
+            print('CODE', response)
+
+            return Response(data, status=status.HTTP_200_OK)
     except Exception as e:
         return Response(f'There has been some error: {e}')
 
@@ -1098,7 +1119,7 @@ def get_shopify_products(request):
         response = shopify_factory.get_products()
 
         if response.status_code == 200:
-            print('LET MEEEE')
+
             data = response.json()
             if data.get("errors", {}):
                 return Response(
