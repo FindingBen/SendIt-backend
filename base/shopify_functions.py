@@ -142,7 +142,26 @@ class ShopifyFactoryFunction:
 
         variables = {
             "first": 10,
+        }
 
+        response = requests.post(
+            url,
+            headers=headers,
+            json={"query": self._query, "variables": variables},
+        )
+
+        return response
+
+    def get_single_product(self):
+        url = f"https://{self._domain}/admin/api/2025-01/graphql.json"
+        headers = {
+            "X-Shopify-Access-Token": self._token,
+            "Content-Type": "application/json",
+        }
+
+        variables = {
+            "first": 10,
+            "id": ""
         }
 
         response = requests.post(
@@ -154,21 +173,21 @@ class ShopifyFactoryFunction:
         return response
 
     def get_products_insights(self):
-        url = f"https://{self._domain}/admin/api/2025-01/graphql.json"
         headers = {
             "X-Shopify-Access-Token": self._token,
             "Content-Type": "application/json",
         }
-
-        variables = {
-            "first": 10,
-            "id": 'gid://shopify/Product/14938947518839'
+        shopify_id = self._request.data.get('id')
+        print("IDDD", shopify_id)
+        body_request = {
+            "id": shopify_id,
+            "first": 10
         }
 
         response = requests.post(
             self._url,
             headers=headers,
-            json={"query": self._query, "variables": variables},
+            json={"query": self._query, "variables": body_request},
         )
         # Return the response from Shopify's API
         return response

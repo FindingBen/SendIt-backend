@@ -34,7 +34,7 @@ from reportlab.pdfgen import canvas
 from .permissions import HasPackageLimit
 import stripe
 from .auth import get_shop_info
-from .queries import GET_CUSTOMERS_QUERY, GET_TOTAL_CUSTOMERS_NR, GET_PRODUCT_INVENTORY, CREATE_CUSTOMER_QUERY, GET_ALL_PRODUCTS, DELETE_CUSTOMER_QUERY, UPDATE_CUSTOMER_QUERY
+from .queries import GET_CUSTOMERS_QUERY, GET_TOTAL_CUSTOMERS_NR, GET_PRODUCT_INVENTORY, GET_PRODUCT, CREATE_CUSTOMER_QUERY, GET_ALL_PRODUCTS, DELETE_CUSTOMER_QUERY, UPDATE_CUSTOMER_QUERY
 from .shopify_functions import ShopifyFactoryFunction
 from base.utils.calculations import calculate_avg_performance, format_number, clicks_rate, calculate_deliveribility
 
@@ -499,23 +499,32 @@ def get_contacts(request, id):
         return Response(f'There has been some error: {e}')
 
 
-@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def get_insights(request, id=None):
+def get_insights(request):
     try:
         shopify_domain = request.headers.get('shopify-domain', None)
         if shopify_domain:
             url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
             shopify_token = request.headers['Authorization'].split(' ')[1]
             shopify_factory = ShopifyFactoryFunction(
-                GET_PRODUCT_INVENTORY, shopify_domain, shopify_token, url, request=request)
-            print(id)
-            response = shopify_factory.get_products_insights()
-            data = response.json()
-            print(data)
-            print('CODE', response)
+                GET_PRODUCT, shopify_domain, shopify_token, url, request=request)
 
-            return Response(data, status=status.HTTP_200_OK)
+            response = shopify_factory.get_products_insights()
+
+            if response.status_code == 200:
+                data = response.json()
+                print(data)
+                product = data.get("data", {}).get("product", {})
+
+            return Response(product, status=status.HTTP_200_OK)
+        else:
+            return Response(
+                {"error": "Failed to fetch customers from Shopify",
+                 "details": response.json()},
+                status=response.status_code,
+            )
+
     except Exception as e:
         return Response(f'There has been some error: {e}')
 
@@ -1121,6 +1130,7 @@ def get_shopify_products(request):
         if response.status_code == 200:
 
             data = response.json()
+            print(data)
             if data.get("errors", {}):
                 return Response(
                     {"error": "Failed to fetch products",

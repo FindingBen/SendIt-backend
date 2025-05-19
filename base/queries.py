@@ -106,13 +106,22 @@ GET_ALL_PRODUCTS = """
             handle
             createdAt
             updatedAt
-            variants(first: 10) {
+            hasOutOfStockVariants
+            isGiftCard
+            publishedAt
+            tags
+            totalInventory
+            variantsCount {
+              count
+              precision
+            }
+            variants(first: $first) {
               edges {
                 node {
                   id
                   title
                   price
-                  sku
+                  inventoryQuantity
                 }
               }
             }
@@ -133,6 +142,45 @@ GET_ALL_PRODUCTS = """
     }
     """
 
+GET_PRODUCT = """
+query getProductById($id: ID!) {
+  product(id: $id) {
+    id
+    title
+    descriptionHtml
+    handle
+    createdAt
+    updatedAt
+    hasOutOfStockVariants
+    isGiftCard
+    publishedAt
+    tags
+    totalInventory
+    variantsCount {
+      count
+      precision
+    }
+    variants(first: 50) {
+      edges {
+        node {
+          id
+          title
+          price
+          sku
+          inventoryQuantity
+        }
+      }
+    }
+    images(first: 5) {
+      edges {
+        node {
+          src
+        }
+      }
+    }
+  }
+}
+"""
 
 GET_PRODUCTS_INVENTORY = """
 query getProductsWithInventory($first: Int = 10) {
