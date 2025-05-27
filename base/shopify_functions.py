@@ -2,15 +2,39 @@ import requests
 from rest_framework import status
 from rest_framework.response import Response
 from .models import CustomUser
+from .queries import (
+    GET_CUSTOMERS_QUERY,
+    GET_TOTAL_CUSTOMERS_NR,
+    GET_CUSTOMERS_ORDERS,
+    GET_PRODUCT,
+    CREATE_CUSTOMER_QUERY,
+    GET_ALL_PRODUCTS,
+    DELETE_CUSTOMER_QUERY,
+    UPDATE_CUSTOMER_QUERY,
+    GET_SHOP_ORDERS,
+    GET_SHOP_INFO
+)
 
 
 class ShopifyFactoryFunction:
-    def __init__(self, query, domain, token, url, request=None):
+    def __init__(self,  domain, token, url, request=None, query=None):
         self._query = query
         self._domain = domain
         self._token = token
         self._url = url
         self._request = request
+
+    def run_query(self, query, variables=None):
+        headers = {
+            "X-Shopify-Access-Token": self._token,
+            "Content-Type": "application/json",
+        }
+        response = requests.post(
+            self._url,
+            headers=headers,
+            json={"query": query, "variables": variables or {}},
+        )
+        return response
 
     def get_total_customers(self):
         url = f"https://{self._domain}/admin/api/2025-01/graphql.json"
@@ -133,24 +157,37 @@ class ShopifyFactoryFunction:
 
         return data
 
-    def get_products(self):
-        url = f"https://{self._domain}/admin/api/2025-01/graphql.json"
+    def get_shop_info(self):
         headers = {
             "X-Shopify-Access-Token": self._token,
             "Content-Type": "application/json",
         }
 
-        variables = {
-            "first": 10,
-        }
-
         response = requests.post(
-            url,
+            self._url,
             headers=headers,
-            json={"query": self._query, "variables": variables},
+            json={"query": self._query},
         )
 
         return response
+
+    # def get_products(self):
+    #     headers = {
+    #         "X-Shopify-Access-Token": self._token,
+    #         "Content-Type": "application/json",
+    #     }
+
+    #     variables = {
+    #         "first": 10,
+    #     }
+
+    #     response = requests.post(
+    #         self._url,
+    #         headers=headers,
+    #         json={"query": self._query, "variables": variables},
+    #     )
+
+    #     return response
 
     def get_single_product(self):
         url = f"https://{self._domain}/admin/api/2025-01/graphql.json"
@@ -178,7 +215,7 @@ class ShopifyFactoryFunction:
             "Content-Type": "application/json",
         }
         shopify_id = self._request.data.get('id')
-        print("IDDD", shopify_id)
+
         body_request = {
             "id": shopify_id,
             "first": 10
@@ -191,3 +228,9 @@ class ShopifyFactoryFunction:
         )
         # Return the response from Shopify's API
         return response
+
+    def get_products(self, variable=None):
+        return self.run_query(GET_ALL_PRODUCTS, variable)
+
+    def get_shop_orders(self, variable=None):
+        return self.run_query(GET_SHOP_ORDERS, variable)

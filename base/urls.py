@@ -63,7 +63,10 @@ urlpatterns = [
     path('confirmation_token/<str:token_id>/<str:user_id>/',
          views.confirmation_token_view),
     # Shopify products
-    path('shopify_products/', views.get_shopify_products),
-    path('shopify_product_insight/', views.get_insights),
+    path('shopify_products/', views.get_shopify_products_orders),
+    path('shopify_product/', views.get_product),
+    path('shopify_product_insights/', views.get_insights),
+    # Shopify orders
+    path('shopify_orders/', views.get_shop_orders),
 
 ]

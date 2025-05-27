@@ -224,3 +224,94 @@ query getProductInventory($id: ID!) {
     }
   }
 }"""
+
+
+GET_CUSTOMERS_ORDERS = """
+query getCustomerOrders($customerId: ID!, $first: Int = 10) {
+  customer(id: $customerId) {
+    id
+    firstName
+    lastName
+    orders(first: $first) {
+      edges {
+        node {
+          id
+          name
+          createdAt
+          lineItems(first: $first) {
+            edges {
+              node {
+                title
+                product {
+                  id
+                  title
+                }
+                quantity
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+"""
+
+
+GET_SHOP_INFO = """
+query {
+  shop {
+    id
+    name
+    email
+    myshopifyDomain
+    primaryDomain {
+      url
+      host
+    }
+  }
+}
+"""
+
+
+GET_SHOP_ORDERS = """
+query getOrders($first: Int = 10, $after: String) {
+  orders(first: $first, after: $after) {
+    edges {
+      node {
+        id
+        name
+        createdAt
+        totalPriceSet {
+          shopMoney {
+            amount
+            currencyCode
+          }
+        }
+        customer {
+          id
+          firstName
+          lastName
+          email
+        }
+        lineItems(first: 10) {
+          edges {
+            node {
+              quantity
+              restockable
+              product {
+                id
+                title
+              }
+            }
+          }
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
+"""

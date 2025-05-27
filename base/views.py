@@ -31,10 +31,22 @@ from django.conf import settings
 from django.utils.timezone import now
 from djoser.views import UserViewSet
 from reportlab.pdfgen import canvas
+from .utils import helpers
 from .permissions import HasPackageLimit
 import stripe
 from .auth import get_shop_info
-from .queries import GET_CUSTOMERS_QUERY, GET_TOTAL_CUSTOMERS_NR, GET_PRODUCT_INVENTORY, GET_PRODUCT, CREATE_CUSTOMER_QUERY, GET_ALL_PRODUCTS, DELETE_CUSTOMER_QUERY, UPDATE_CUSTOMER_QUERY
+from .queries import (
+    GET_CUSTOMERS_QUERY,
+    GET_TOTAL_CUSTOMERS_NR,
+    GET_CUSTOMERS_ORDERS,
+    GET_PRODUCT,
+    CREATE_CUSTOMER_QUERY,
+    GET_ALL_PRODUCTS,
+    DELETE_CUSTOMER_QUERY,
+    UPDATE_CUSTOMER_QUERY,
+    GET_SHOP_ORDERS,
+    GET_SHOP_INFO
+)
 from .shopify_functions import ShopifyFactoryFunction
 from base.utils.calculations import calculate_avg_performance, format_number, clicks_rate, calculate_deliveribility
 
@@ -50,11 +62,21 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         try:
             custom_user = CustomUser.objects.get(username=user.username)
-            print('CUSS', custom_user)
+            shop_id = None
             shopify_obj = ShopifyStore.objects.filter(
                 email=custom_user.email).first()
+            if shopify_obj:
+                url = f"https://{shopify_obj.shop_domain}/admin/api/2025-01/graphql.json"
+                shopify_factory = ShopifyFactoryFunction(
+                    shopify_obj.shop_domain, shopify_obj.access_token, url, request=None, query=GET_SHOP_INFO)
+                response = shopify_factory.get_shop_info()
+                if response.status_code == 200:
+                    data = response.json()
+                    shop_id = data.get('data', {}).get('shop', {})['id']
+                print('SHOPID', shop_id)
             serialized_data = custom_user.serialize_package_plan()
             token['shopify_token'] = shopify_obj.access_token if shopify_obj else None
+            token['shopify_id'] = shop_id if shopify_obj else None
             token['sms_count'] = custom_user.sms_count
             token['user_type'] = custom_user.user_type
             token['archived_state'] = custom_user.archived_state
@@ -417,7 +439,7 @@ def get_contact_lists(request):
         url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
         shopify_token = request.headers['Authorization'].split(' ')[1]
         shopify_factory = ShopifyFactoryFunction(
-            GET_TOTAL_CUSTOMERS_NR, shopify_domain, shopify_token, url, request=request)
+            shopify_domain, shopify_token, url, request=request, query=GET_TOTAL_CUSTOMERS_NR)
         recipients_count = shopify_factory.get_total_customers()
         max_recipients_allowed = limits['recipients']
         capped_recipients_count = min(recipients_count, max_recipients_allowed)
@@ -456,7 +478,7 @@ def get_contacts(request, id):
             url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
             shopify_token = request.headers['Authorization'].split(' ')[1]
             shopify_factory = ShopifyFactoryFunction(
-                GET_CUSTOMERS_QUERY, shopify_domain, shopify_token, url, request=request)
+                shopify_domain, shopify_token, url, request=request, query=GET_CUSTOMERS_QUERY)
 
             response = shopify_factory.get_customers()
 
@@ -501,23 +523,30 @@ def get_contacts(request, id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def get_insights(request):
+def get_product(request):
     try:
         shopify_domain = request.headers.get('shopify-domain', None)
         if shopify_domain:
             url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
             shopify_token = request.headers['Authorization'].split(' ')[1]
             shopify_factory = ShopifyFactoryFunction(
-                GET_PRODUCT, shopify_domain, shopify_token, url, request=request)
+                shopify_domain, shopify_token, url, request=request, query=GET_PRODUCT)
 
-            response = shopify_factory.get_products_insights()
+            product = shopify_factory.get_products_insights()
+            orders = shopify_factory.get_shop_orders()
+            if product.status_code == 200 and orders.status_code == 200:
 
-            if response.status_code == 200:
-                data = response.json()
-                print(data)
-                product = data.get("data", {}).get("product", {})
+                product_data = product.json()
+                product = product_data.get("data", {}).get("product", {})
+                orders_data = orders.json()
+                data_map = helpers.map_single_product_with_orders(
+                    product, orders_data)
+                print("REDIS", product)
+                cache_key = f"shopify_product_id:{shopify_domain}:{product['id']}"
+                cache.set(cache_key, {"shopify_product": data_map},
+                          timeout=settings.CACHE_TTL)
 
-            return Response(product, status=status.HTTP_200_OK)
+                return Response(data_map, status=status.HTTP_200_OK)
         else:
             return Response(
                 {"error": "Failed to fetch customers from Shopify",
@@ -525,6 +554,22 @@ def get_insights(request):
                 status=response.status_code,
             )
 
+    except Exception as e:
+        return Response(f'There has been some error: {e}')
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def get_insights(request):
+    try:
+        print(request.data)
+        shopify_domain = request.headers.get('shopify-domain', None)
+        if shopify_domain:
+            cache_key = f"shopify_product_id:{shopify_domain}:{request.data['product_id']}"
+            product_data = cache.get(cache_key)
+            print('THIS IS FROM REDIS:', product_data)
+           # insights = generate_insights(product_data)
+            return Response({"insights": product_data})
     except Exception as e:
         return Response(f'There has been some error: {e}')
 
@@ -540,7 +585,7 @@ def contact_detail(request, id=None):
             url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
 
             shopify_factory = ShopifyFactoryFunction(
-                UPDATE_CUSTOMER_QUERY, shopify_domain, shopify_token, url, request=request)
+                shopify_domain, shopify_token, url, request=request, query=UPDATE_CUSTOMER_QUERY)
 
             response = shopify_factory.update_customer()
 
@@ -597,7 +642,7 @@ def create_contact(request, id):
             shopify_token = request.headers['Authorization'].split(' ')[1]
 
             shopify_factory = ShopifyFactoryFunction(
-                CREATE_CUSTOMER_QUERY, shopify_domain, shopify_token, url, request=request)
+                shopify_domain, shopify_token, url, request=request, query=CREATE_CUSTOMER_QUERY)
 
             response = shopify_factory.create_customers()
 
@@ -848,7 +893,7 @@ def delete_contact_recipient(request, id):
             url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
 
             shopify_factory = ShopifyFactoryFunction(
-                DELETE_CUSTOMER_QUERY, shopify_domain, shopify_token, url, request=request)
+                shopify_domain, shopify_token, url, request=request, query=DELETE_CUSTOMER_QUERY)
             response = shopify_factory.delete_customer()
 
             if response.get("data", {}).get("customerDelete", {}).get("userErrors"):
@@ -1116,7 +1161,7 @@ def check_limit(request, id):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def get_shopify_products(request):
+def get_shopify_products_orders(request):
     shopify_domain = request.headers.get('shopify-domain', None)
     if shopify_domain:
         shopify_token = request.headers['Authorization'].split(' ')[1]
@@ -1124,23 +1169,59 @@ def get_shopify_products(request):
         url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
 
         shopify_factory = ShopifyFactoryFunction(
-            GET_ALL_PRODUCTS, shopify_domain, shopify_token, url, request=request)
-        response = shopify_factory.get_products()
+            shopify_domain, shopify_token, url, request=request, query=None)
+        products_response = shopify_factory.get_products({"first": 10})
+        orders_response = shopify_factory.get_shop_orders({"first": 10})
+
+        if products_response.status_code == 200 and orders_response.status_code == 200:
+
+            product_data = products_response.json()
+            orders_data = orders_response.json()
+            data_map = helpers.map_products_n_orders(product_data, orders_data)
+            print("FINALL", data_map)
+            if product_data.get("errors", {}) or orders_data.get("errors", {}):
+                return Response(
+                    {"error": "Failed to fetch products",
+                        "details": orders_data},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            products = product_data.get("data", {}).get(
+                "products", {}).get("edges", {})
+            return Response(data_map, status=status.HTTP_200_OK)
+        else:
+
+            return Response(
+                {"error": "Failed to fetch products",
+                    "details": data['details']},
+                status=products_response.status_code,
+            )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_shop_orders(request):
+    shopify_domain = request.headers.get('shopify-domain', None)
+    if shopify_domain:
+        shopify_token = request.headers['Authorization'].split(' ')[1]
+        # Shopify GraphQL endpoint
+        url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
+        shopify_factory = ShopifyFactoryFunction(
+            GET_SHOP_ORDERS, shopify_domain, shopify_token, url, request=request)
+        response = shopify_factory.get_shop_orders()
 
         if response.status_code == 200:
 
             data = response.json()
-            print(data)
             if data.get("errors", {}):
                 return Response(
                     {"error": "Failed to fetch products",
                         "details": data["errors"]["message"]},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            products = data.get("data", {}).get(
-                "products", {}).get("edges", {})
-            print('PPPP', products)
-            return Response(products, status=status.HTTP_200_OK)
+            orders = data.get("data", {}).get(
+                "orders", {}).get("edges", {})
+            print("BLIMEE", orders)
+            return Response(orders, status=status.HTTP_200_OK)
         else:
 
             return Response(
