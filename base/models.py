@@ -130,6 +130,7 @@ class Element(models.Model):
     alignment = models.CharField(max_length=20, null=True)
     text = models.TextField(blank=True)
     survey = models.CharField(max_length=50, null=True)
+    carousel_images = models.JSONField(default=list, null=True)
     question_type = models.CharField(
         max_length=20, choices=SURVEY_CHOICES, null=True)
     button_title = models.CharField(max_length=20, null=True)

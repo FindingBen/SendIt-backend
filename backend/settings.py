@@ -192,6 +192,7 @@ VONAGE_TOKEN = os.environ.get('VONAGE_TOKEN')
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 CACHE_TTL = 60 * 15
+SMART_INSIGHTS_CACHE = 60 * 10
 
 
 CACHES = {

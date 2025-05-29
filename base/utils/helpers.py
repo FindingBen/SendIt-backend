@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 
 
 def map_products_n_orders(products=None, orders=None):
@@ -195,3 +196,86 @@ def map_single_product_with_orders(product=None, orders=None):
         mapped_product["orders"] = []
         mapped_product["variants_purchased"] = []
     return mapped_product
+
+
+def get_insights(product):
+
+    TIME_SCORE = 0
+    STOCK_SCORE = 0
+    TAGS_SCORE = 0
+    VARIANTS_SCORE = 0
+    SALES_SCORE = 0
+    insights = []
+    if "shopify_product" in product:
+        product = product["shopify_product"]
+    created_at = product.get('createdAt', None)
+   
+    if created_at:
+        created_dt = datetime.strptime(
+            created_at, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        days_on_store = (datetime.now(timezone.utc) - created_dt).days
+        if days_on_store > 180:
+            insights.append(
+                f"This product has been in your store for over {days_on_store//30} months. Consider a promotion or content refresh.")
+        elif days_on_store > 30:
+            insights.append(
+                f"This product has been in your store for {days_on_store} days.")
+
+    total_inventory = product.get('totalInventory', 0)
+    
+    if total_inventory == 0:
+        insights.append(
+            "This product is currently out of stock. Restocking could boost sales.")
+    elif total_inventory < 5:
+        insights.append("Inventory is running low. Consider restocking soon.")
+
+    # 3. Out of Stock Variants
+    if product.get('hasOutOfStockVariants', 0):
+        insights.append(
+            "Some variants are out of stock. Promote available variants or restock popular ones.")
+
+    variants_count = product.get('variantsCount', 0)
+    variants_purchased = product.get('variants_purchased', [])
+    
+    unique_variants_purchased = set(v["variant_id"]
+                                    for v in variants_purchased)
+    if variants_count > 1:
+        if len(unique_variants_purchased) == variants_count:
+            insights.append(
+                "All variants of this product have been purchased. Highlight its versatility in your marketing!")
+        elif len(unique_variants_purchased) == 1:
+            insights.append(
+                "Only one variant has been purchased. Consider promoting other variants to diversify sales.")
+        else:
+            insights.append(
+                f"{len(unique_variants_purchased)} out of {variants_count} variants have sales. Promote the less popular variants.")
+
+    total_orders = product.get('total_orders', 0)
+    if total_orders == 0:
+        insights.append(
+            "This product hasn't been ordered yet. Try featuring it in a campaign or bundle.")
+    elif total_orders < 5:
+        insights.append(
+            "This product has a few sales. Consider a special offer to boost interest.")
+    else:
+        insights.append(
+            f"This product has {total_orders} orders. Highlight its popularity in your content!")
+
+    # 6. Tags
+    tags = product.get('tags', [])
+    if not tags:
+        insights.append(
+            "This product has no tags. Adding relevant tags can improve discoverability.")
+    else:
+        insights.append(
+            f"Tags: {', '.join(tags)}. Use these in your content and ads.")
+
+    if product.get("isGiftCard"):
+        insights.append(
+            "This product is a gift card. Promote it during holidays or special occasions.")
+
+    if not product.get("images"):
+        insights.append(
+            "This product has no images. Adding high-quality images can increase conversions.")
+
+    return insights

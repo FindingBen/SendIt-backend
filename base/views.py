@@ -541,10 +541,10 @@ def get_product(request):
                 orders_data = orders.json()
                 data_map = helpers.map_single_product_with_orders(
                     product, orders_data)
-                print("REDIS", product)
+
                 cache_key = f"shopify_product_id:{shopify_domain}:{product['id']}"
                 cache.set(cache_key, {"shopify_product": data_map},
-                          timeout=settings.CACHE_TTL)
+                          timeout=settings.SMART_INSIGHTS_CACHE)
 
                 return Response(data_map, status=status.HTTP_200_OK)
         else:
@@ -562,14 +562,15 @@ def get_product(request):
 @permission_classes([IsAuthenticated])
 def get_insights(request):
     try:
-        print(request.data)
+
         shopify_domain = request.headers.get('shopify-domain', None)
         if shopify_domain:
             cache_key = f"shopify_product_id:{shopify_domain}:{request.data['product_id']}"
             product_data = cache.get(cache_key)
-            print('THIS IS FROM REDIS:', product_data)
-           # insights = generate_insights(product_data)
-            return Response({"insights": product_data})
+
+            insights = helpers.get_insights(product_data)
+            print(insights)
+            return Response({"data": insights}, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response(f'There has been some error: {e}')
 
