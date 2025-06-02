@@ -64,7 +64,6 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             print('SHOPID', user.email)
             custom_user = CustomUser.objects.get(custom_email=user.email)
             shop_id = None
-            print("AA", custom_user.email)
             shopify_obj = ShopifyStore.objects.filter(
                 email=custom_user.email).first()
             print(shopify_obj)
