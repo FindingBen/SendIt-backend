@@ -60,13 +60,21 @@ class CustomUser(User):
             # elif self.package_plan.plan_type == "Demo package":
             #     list_limit = 5
             #     recipients_limit = 2000
-        return {
-            'package_plan': self.package_plan.plan_type,
-            'sms_count': self.sms_count,
-            'list_limit': list_limit,
-            'recipients_limit': recipients_limit,
-            # Add other relevant data if needed
-        }
+            return {
+                'package_plan': self.package_plan.plan_type,
+                'sms_count': self.sms_count,
+                'list_limit': list_limit,
+                'recipients_limit': recipients_limit,
+                # Add other relevant data if needed
+            }
+        else:
+            # Return default values if no package is set
+            return {
+                'package_plan': 'No package',
+                'sms_count': self.sms_count,
+                'list_limit': 0,
+                'recipients_limit': 0,
+            }
 
 
 class ShopifyStore(models.Model):
