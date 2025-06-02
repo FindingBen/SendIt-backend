@@ -61,10 +61,13 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['last_name'] = user.last_name
 
         try:
-            custom_user = CustomUser.objects.get(username=user.username)
+            print('SHOPID', user.email)
+            custom_user = CustomUser.objects.get(custom_email=user.email)
             shop_id = None
+            print("AA", custom_user.email)
             shopify_obj = ShopifyStore.objects.filter(
                 email=custom_user.email).first()
+            print(shopify_obj)
             if shopify_obj:
                 url = f"https://{shopify_obj.shop_domain}/admin/api/2025-01/graphql.json"
                 shopify_factory = ShopifyFactoryFunction(
@@ -74,6 +77,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                     data = response.json()
                     shop_id = data.get('data', {}).get('shop', {})['id']
                 print('SHOPID', shop_id)
+            print(custom_user)
             serialized_data = custom_user.serialize_package_plan()
             token['shopify_token'] = shopify_obj.access_token if shopify_obj else None
             token['shopify_id'] = shop_id if shopify_obj else None
