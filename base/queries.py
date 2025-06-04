@@ -265,6 +265,7 @@ query {
     name
     email
     myshopifyDomain
+    shopOwnerName
     primaryDomain {
       url
       host

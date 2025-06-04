@@ -203,6 +203,7 @@ class CallbackAuthView(APIView):
                     email=shop_data.get('email'),
                     shop_domain=shop,
                     access_token=access_token,
+                    first_name=shop_data.get('shopOwnerName')
                 )
             else:
                 # Update the access token if the store already exists
