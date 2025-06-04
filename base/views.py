@@ -582,7 +582,7 @@ def get_insights(request):
 
 
 @api_view(['GET'])
-def get_shop_info(request):
+def get_shop_shopify(request):
     try:
         shop = request.GET.get("shop")  # Get the 'shop' param from the URL
         if not shop:
