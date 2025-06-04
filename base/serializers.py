@@ -2,7 +2,7 @@ from rest_framework.serializers import ModelSerializer
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
-from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser, SurveyResponse, QRCode
+from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser, SurveyResponse, QRCode, ShopifyStore
 
 
 class ElementSerializer(ModelSerializer):
@@ -133,4 +133,10 @@ class ChangePasswordSerializer(serializers.Serializer):
 class QRSerializer(ModelSerializer):
     class Meta:
         model = QRCode
+        fields = '__all__'
+
+
+class ShopifyShopSerializer(ModelSerializer):
+    class Meta:
+        model = ShopifyStore
         fields = '__all__'

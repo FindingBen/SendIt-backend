@@ -21,8 +21,10 @@ from django.db import transaction
 from sms.models import Sms
 from datetime import datetime
 from django.http import JsonResponse
+from . import serializers
 import os
 import requests
+
 from reportlab.lib import colors
 import requests
 from reportlab.platypus import Table, TableStyle
@@ -210,7 +212,7 @@ class CallbackAuthView(APIView):
                 shopify_store.access_token = access_token
                 shopify_store.save()
 
-            return redirect(f"https://spplane.app/?shop={shop}")
+            return redirect(f"https://spplane.app/register?shop={shop}")
         else:
             return JsonResponse({"error": "OAuth failed", "details": data}, status=400)
 
@@ -577,6 +579,20 @@ def get_insights(request):
             return Response({"data": insights}, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response(f'There has been some error: {e}')
+
+
+@api_view(['GET'])
+def get_shop_info(request):
+    try:
+        shop = request.GET.get("shop")  # Get the 'shop' param from the URL
+        if not shop:
+            return Response({"error": "Missing shop parameter"}, status=status.HTTP_400_BAD_REQUEST)
+        shopify_factory = ShopifyStore.objects.get(shop_domain=shop)
+        serializer = serializers.ShopifyShopSerializer(shopify_factory)
+        print(serializer.data)
+        return Response({"shop": serializer.data}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": f'There has been some error: {e}'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET', 'PUT'])

@@ -66,6 +66,7 @@ urlpatterns = [
     path('shopify_products/', views.get_shopify_products_orders),
     path('shopify_product/', views.get_product),
     path('shopify_product_insights/', views.get_insights),
+    path('shop_info/', views.get_shop_info),
     # Shopify orders
     path('shopify_orders/', views.get_shop_orders),
 
