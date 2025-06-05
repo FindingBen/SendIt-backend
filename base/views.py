@@ -1192,6 +1192,8 @@ def check_limit(request, id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_shopify_products_orders(request):
+    logger.info(f"Request headers: {dict(request.headers)}")
+    print(f"Request headers: {dict(request.headers)}")
     try:
         shopify_domain = request.headers.get('shopify-domain', None)
         logger.info('---Shopify Products---')
