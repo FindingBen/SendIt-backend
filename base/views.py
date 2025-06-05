@@ -1192,38 +1192,42 @@ def check_limit(request, id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_shopify_products_orders(request):
-    shopify_domain = request.headers.get('shopify-domain', None)
-    logger.info('---Shopify Products---')
-    logger.info(shopify_domain)
-    if shopify_domain:
-        shopify_token = request.headers['Authorization'].split(' ')[1]
-        # Shopify GraphQL endpoint
-        url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
+    try:
+        shopify_domain = request.headers.get('shopify-domain', None)
+        logger.info('---Shopify Products---')
+        logger.info(shopify_domain)
+        if shopify_domain:
+            shopify_token = request.headers['Authorization'].split(' ')[1]
+            # Shopify GraphQL endpoint
+            url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
 
-        shopify_factory = ShopifyFactoryFunction(
-            shopify_domain, shopify_token, url, request=request, query=None)
-        products_response = shopify_factory.get_products({"first": 10})
-        orders_response = shopify_factory.get_shop_orders({"first": 10})
-        logger.info('---Shopify Products Response---')
-        logger.info(products_response)
-        product_data = products_response.json()
-        orders_data = orders_response.json()
-        if products_response.status_code == 200 and orders_response.status_code == 200:
+            shopify_factory = ShopifyFactoryFunction(
+                shopify_domain, shopify_token, url, request=request, query=None)
+            products_response = shopify_factory.get_products({"first": 10})
+            orders_response = shopify_factory.get_shop_orders({"first": 10})
+            logger.info('---Shopify Products Response---')
+            logger.info(products_response)
+            product_data = products_response.json()
+            orders_data = orders_response.json()
+            if products_response.status_code == 200 and orders_response.status_code == 200:
 
-            data_map = utils.map_products_n_orders(product_data, orders_data)
-            logger.info('---Shopify Products Dictionary---')
-            logger.info(data_map)
-            return Response(data_map, status=status.HTTP_200_OK)
-        else:
+                data_map = utils.map_products_n_orders(
+                    product_data, orders_data)
+                logger.info('---Shopify Products Dictionary---')
+                logger.info(data_map)
+                return Response(data_map, status=status.HTTP_200_OK)
+            else:
 
-            return Response(
-                {"error": "Failed to fetch products",
-                 "details": product_data},
-                status=products_response.status_code,
-            )
-    else:
+                return Response(
+                    {"error": "Failed to fetch products",
+                     "details": product_data},
+                    status=products_response.status_code,
+                )
+    except Exception as e:
+
+        logger.error('---Shopify Products Dictionary---')
         return Response(
-            {"error": "Missing shopify-domain header"},
+            {"error": f"{e}"},
             status=status.HTTP_400_BAD_REQUEST
         )
 
