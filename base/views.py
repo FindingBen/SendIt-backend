@@ -436,16 +436,7 @@ class ContactListsView(APIView):
             contact_list = user.contactlist_set.all()
             serializer = ContactListSerializer(contact_list, many=True)
             shopify_domain = request.headers.get('shopify-domain', None)
-            package_limits = {
-                'Gold package': {'contact_lists': 20, 'recipients': 10000},
-                'Silver package': {'contact_lists': 8, 'recipients': 5000},
-                'Basic package': {'contact_lists': 5, 'recipients': 6},
-                'Trial Plan': {'contact_lists': 1, 'recipients': 20}
-            }
-            if user_package.plan_type in package_limits:
-                limits = package_limits[user_package.plan_type]
-            else:
-                limits = package_limits['Trial Plan']
+            limits = utils.get_package_limits(user_package)
 
             if shopify_domain and user.shopify_connect:
                 logger.info('---Shopify List----')
@@ -472,16 +463,24 @@ class ContactListsView(APIView):
 
     def post(self, request):
         try:
+            user = CustomUser.objects.get(id=request.data['user_id'])
             shopify_domain = request.headers.get('shopify-domain', None)
-
-            user_id = request.data['user_id']
-
-            user = CustomUser.objects.get(id=user_id)
+            user_package = user.package_plan
+            shopify_token = request.headers['Authorization'].split(' ')[1]
+            package_limits = utils.get_package_limits(user_package)
+            url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
             if transaction.atomic():
                 if shopify_domain:
                     user.shopify_connect = True
                     user.save()
-                request_data = {"list_name": request.data['list_name']}
+                    shopify_factory = ShopifyFactoryFunction(
+                        shopify_domain, shopify_token, url, request=request, query=GET_TOTAL_CUSTOMERS_NR)
+                    recipients_count = shopify_factory.get_total_customers()
+                    max_recipients_allowed = package_limits['recipients']
+                    capped_recipients_count = min(
+                        recipients_count, max_recipients_allowed)
+                request_data = {
+                    "list_name": request.data['list_name'], "contact_lenght": capped_recipients_count}
                 serializer = ContactListSerializer(data=request_data)
                 if serializer.is_valid(raise_exception=True):
                     serializer.save(users=user)

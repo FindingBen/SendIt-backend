@@ -283,5 +283,15 @@ class Utils:
 
         return insights
 
-
-    
+    def get_package_limits(self, user_package):
+        package_limits = {
+            'Gold package': {'contact_lists': 20, 'recipients': 10000},
+            'Silver package': {'contact_lists': 8, 'recipients': 5000},
+            'Basic package': {'contact_lists': 5, 'recipients': 6},
+            'Trial Plan': {'contact_lists': 1, 'recipients': 20}
+        }
+        if user_package.plan_type in package_limits:
+            limits = package_limits[user_package.plan_type]
+        else:
+            limits = package_limits['Trial Plan']
+        return limits
