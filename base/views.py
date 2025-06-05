@@ -435,8 +435,7 @@ class ContactListsView(APIView):
             user_package = user.package_plan
             contact_list = user.contactlist_set.all()
             serializer = ContactListSerializer(contact_list, many=True)
-            shopify_domain = request.headers.get('ShopifyDomain', None)
-            print('DOMAIN',shopify_domain)
+            shopify_domain = request.headers.get('shopify-domain', None)
             limits = utils.get_package_limits(user_package)
 
             if shopify_domain and user.shopify_connect:
@@ -465,7 +464,7 @@ class ContactListsView(APIView):
     def post(self, request):
         try:
             user = CustomUser.objects.get(id=request.data['user_id'])
-            shopify_domain = request.headers.get('ShopifyDomain', None)
+            shopify_domain = request.headers.get('shopify-domain', None)
             user_package = user.package_plan
             shopify_token = request.headers['Authorization'].split(' ')[1]
             package_limits = utils.get_package_limits(user_package)
