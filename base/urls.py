@@ -28,7 +28,6 @@ urlpatterns = [
     path('contact_detail/', views.contact_detail),
     path('delete_recipient/<int:id>', views.delete_contact_recipient),
     path('delete_recipient_shopify/', views.delete_contact_recipient),
-    path('delete_list/<str:id>', views.delete_contact_list),
     # Package plan
     path('package_plan/', views.get_packages),
     path('package_purchase/<str:id>/', views.purchase_package),

@@ -487,6 +487,26 @@ class ContactListsView(APIView):
         except Exception as e:
             return Response(f"Field cannot be blank:{e}", status=status.HTTP_400_BAD_REQUEST)
 
+    def delete(self, request):
+        try:
+            shopify_domain = request.headers.get('shopify-domain', None)
+            print(request.data)
+            user_id = request.data['user_id']
+            user = CustomUser.objects.get(id=user_id)
+            if transaction.atomic():
+                if shopify_domain:
+                    user.shopify_connect = False
+                    user.save()
+                contact_list = ContactList.objects.get(
+                    id=request.data['list_id'])
+                Contact.objects.filter(contact_list=contact_list).delete()
+                contact_list.delete()
+                return Response("List deleted successfully!", status=status.HTTP_200_OK)
+        except ContactList.DoesNotExist as e:
+            return Response(f"error:{e}", status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response(f"error:{e}", status=status.HTTP_400_NOT_FOUND)
+
 
 @api_view(['GET,PUT'])
 @permission_classes([IsAuthenticated])
@@ -946,18 +966,6 @@ def delete_contact_recipient(request, id):
             return Response("Recipient deleted!")
     except Exception as e:
         return Response(f'There has been an error:{e}')
-
-
-@api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
-def delete_contact_list(request, id):
-    try:
-        contact_list = ContactList.objects.get(id=id)
-        Contact.objects.filter(contact_list=contact_list).delete()
-        contact_list.delete()
-        return Response("List deleted successfully!")
-    except ContactList.DoesNotExist:
-        return Response("List not found", status=status.HTTP_404_NOT_FOUND)
 
 
 @api_view(['GET'])
