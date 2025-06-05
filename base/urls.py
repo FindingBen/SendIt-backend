@@ -4,7 +4,7 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 from .views import MyTokenObtainPairView, OAuthAuthorization, CallbackAuthView
-from .views import RegisterAPI, CreateNote, CreateElement, CustomUserViewSet, SendEmailConfirmationTokenAPIView, ShopifyAuth
+from .views import RegisterAPI, CreateNote, CreateElement, CustomUserViewSet, SendEmailConfirmationTokenAPIView, ShopifyAuth, ContactListsView
 
 
 urlpatterns = [
@@ -22,7 +22,7 @@ urlpatterns = [
     # Contact list and contacts
     path('create_contact/<str:id>/', views.create_contact, name='create_contact'),
     path('create_contact_qr/<str:id>', views.create_contact_via_qr),
-    path('contact_lists/', views.get_contact_lists),
+    path('contact_lists/', ContactListsView.as_view()),
     path('contact_list/<str:id>/', views.get_contacts),
     path('contact_detail/<str:id>', views.contact_detail),
     path('contact_detail/', views.contact_detail),

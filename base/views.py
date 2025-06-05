@@ -53,6 +53,9 @@ from .shopify_functions import ShopifyFactoryFunction
 from base.utils.calculations import calculate_avg_performance, format_number, clicks_rate, calculate_deliveribility
 
 
+utils = helpers.Utils()
+
+
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
@@ -421,44 +424,53 @@ def get_packages(request):
     return Response(data)
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_contact_lists(request):
+class ContactListsView(APIView):
 
-    user = CustomUser.objects.get(id=request.user .id)
-    user_package = user.package_plan
-    contact_list = user.contactlist_set.all()
-    serializer = ContactListSerializer(contact_list, many=True)
-    shopify_domain = request.headers.get('shopify-domain', None)
-    package_limits = {
-        'Gold package': {'contact_lists': 20, 'recipients': 10000},
-        'Silver package': {'contact_lists': 8, 'recipients': 5000},
-        'Basic package': {'contact_lists': 5, 'recipients': 6},
-        'Trial Plan': {'contact_lists': 1, 'recipients': 20}
-    }
-    if user_package.plan_type in package_limits:
-        limits = package_limits[user_package.plan_type]
-    else:
-        limits = package_limits['Trial Plan']
+    permission_classes = [IsAuthenticated]
 
-    if shopify_domain:
-        url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
-        shopify_token = request.headers['Authorization'].split(' ')[1]
-        shopify_factory = ShopifyFactoryFunction(
-            shopify_domain, shopify_token, url, request=request, query=GET_TOTAL_CUSTOMERS_NR)
-        recipients_count = shopify_factory.get_total_customers()
-        max_recipients_allowed = limits['recipients']
-        capped_recipients_count = min(recipients_count, max_recipients_allowed)
-        return Response({"data": serializer.data, "limits": limits, "recipients": capped_recipients_count})
-    else:
+    def get(self, request, format=None):
+        try:
+            user = CustomUser.objects.get(id=request.user.id)
+            user_package = user.package_plan
+            contact_list = user.contactlist_set.all()
+            serializer = ContactListSerializer(contact_list, many=True)
+            shopify_domain = request.headers.get('shopify-domain', None)
+            package_limits = {
+                'Gold package': {'contact_lists': 20, 'recipients': 10000},
+                'Silver package': {'contact_lists': 8, 'recipients': 5000},
+                'Basic package': {'contact_lists': 5, 'recipients': 6},
+                'Trial Plan': {'contact_lists': 1, 'recipients': 20}
+            }
+            if user_package.plan_type in package_limits:
+                limits = package_limits[user_package.plan_type]
+            else:
+                limits = package_limits['Trial Plan']
 
-        recipients = Contact.objects.filter(users=user)
+            if shopify_domain:
+                url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
+                shopify_token = request.headers['Authorization'].split(' ')[1]
+                shopify_factory = ShopifyFactoryFunction(
+                    shopify_domain, shopify_token, url, request=request, query=GET_TOTAL_CUSTOMERS_NR)
+                recipients_count = shopify_factory.get_total_customers()
+                max_recipients_allowed = limits['recipients']
+                capped_recipients_count = min(
+                    recipients_count, max_recipients_allowed)
+                return Response({"data": serializer.data, "limits": limits, "recipients": capped_recipients_count}, status=status.HTTP_200_OK)
+            else:
 
-        recipients_count = recipients.count()
+                recipients = Contact.objects.filter(users=user)
 
-        # Get the limits based on the user's package plan
+                recipients_count = recipients.count()
 
-        return Response({"data": serializer.data, "limits": limits, "recipients": recipients_count})
+                return Response({"data": serializer.data, "limits": limits, "recipients": recipients_count}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def post(self, request):
+        try:
+            pass
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET,PUT'])
@@ -545,7 +557,7 @@ def get_product(request):
                 product_data = product.json()
                 product = product_data.get("data", {}).get("product", {})
                 orders_data = orders.json()
-                data_map = helpers.map_single_product_with_orders(
+                data_map = utils.map_single_product_with_orders(
                     product, orders_data)
 
                 cache_key = f"shopify_product_id:{shopify_domain}:{product['id']}"
@@ -568,13 +580,13 @@ def get_product(request):
 @permission_classes([IsAuthenticated])
 def get_insights(request):
     try:
-
+        print('AAAA')
         shopify_domain = request.headers.get('shopify-domain', None)
         if shopify_domain:
             cache_key = f"shopify_product_id:{shopify_domain}:{request.data['product_id']}"
             product_data = cache.get(cache_key)
 
-            insights = helpers.get_insights(product_data)
+            insights = utils.get_insights(product_data)
             print(insights)
             return Response({"data": insights}, status=status.HTTP_201_CREATED)
     except Exception as e:
@@ -1194,26 +1206,18 @@ def get_shopify_products_orders(request):
         products_response = shopify_factory.get_products({"first": 10})
         orders_response = shopify_factory.get_shop_orders({"first": 10})
 
+        product_data = products_response.json()
+        orders_data = orders_response.json()
         if products_response.status_code == 200 and orders_response.status_code == 200:
 
-            product_data = products_response.json()
-            orders_data = orders_response.json()
-            data_map = helpers.map_products_n_orders(product_data, orders_data)
-            print("FINALL", data_map)
-            if product_data.get("errors", {}) or orders_data.get("errors", {}):
-                return Response(
-                    {"error": "Failed to fetch products",
-                        "details": orders_data},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            products = product_data.get("data", {}).get(
-                "products", {}).get("edges", {})
+            data_map = utils.map_products_n_orders(product_data, orders_data)
+
             return Response(data_map, status=status.HTTP_200_OK)
         else:
 
             return Response(
                 {"error": "Failed to fetch products",
-                    "details": data['details']},
+                 "details": product_data},
                 status=products_response.status_code,
             )
 

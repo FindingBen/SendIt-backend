@@ -41,6 +41,7 @@ class CustomUser(User):
     archived_state = models.BooleanField(default=False)
     welcome_mail_sent = models.BooleanField(default=False)
     stripe_custom_id = models.CharField(default=None, null=True)
+    shopify_connect = models.BooleanField(default=False)
 
     def serialize_package_plan(self):
         # Implement custom serialization logic here
