@@ -24,6 +24,7 @@ from django.http import JsonResponse
 from . import serializers
 import os
 import requests
+import logging
 
 from reportlab.lib import colors
 import requests
@@ -54,6 +55,7 @@ from base.utils.calculations import calculate_avg_performance, format_number, cl
 
 
 utils = helpers.Utils()
+logger = logging.getLogger(__name__)
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -66,12 +68,13 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['last_name'] = user.last_name
 
         try:
-            print('SHOPID', user.email)
+            logger.info("----Authentication started----")
             custom_user = CustomUser.objects.get(custom_email=user.email)
             shop_id = None
             shopify_obj = ShopifyStore.objects.filter(
                 email=custom_user.email).first()
-            print(shopify_obj)
+            logger.info("----ShopifyObject----")
+            logger.info(shopify_obj)
             if shopify_obj:
                 url = f"https://{shopify_obj.shop_domain}/admin/api/2025-01/graphql.json"
                 shopify_factory = ShopifyFactoryFunction(
@@ -80,8 +83,6 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                 if response.status_code == 200:
                     data = response.json()
                     shop_id = data.get('data', {}).get('shop', {})['id']
-                print('SHOPID', shop_id)
-            print(custom_user)
             serialized_data = custom_user.serialize_package_plan()
             token['shopify_token'] = shopify_obj.access_token if shopify_obj else None
             token['shopify_id'] = shop_id if shopify_obj else None
@@ -447,6 +448,8 @@ class ContactListsView(APIView):
                 limits = package_limits['Trial Plan']
 
             if shopify_domain and user.shopify_connect:
+                logger.info('---Shopify List----')
+                logger.info(shopify_domain, user.shopify_connect)
                 url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
                 shopify_token = request.headers['Authorization'].split(' ')[1]
                 shopify_factory = ShopifyFactoryFunction(
@@ -457,6 +460,7 @@ class ContactListsView(APIView):
                     recipients_count, max_recipients_allowed)
                 return Response({"data": serializer.data, "limits": limits, "recipients": capped_recipients_count}, status=status.HTTP_200_OK)
             else:
+                logger.info('---Custom List----')
 
                 recipients = Contact.objects.filter(users=user)
 
@@ -490,7 +494,6 @@ class ContactListsView(APIView):
     def delete(self, request):
         try:
             shopify_domain = request.headers.get('shopify-domain', None)
-            print(request.data)
             user_id = request.data['user_id']
             user = CustomUser.objects.get(id=user_id)
             if transaction.atomic():
@@ -506,19 +509,6 @@ class ContactListsView(APIView):
             return Response(f"error:{e}", status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response(f"error:{e}", status=status.HTTP_400_NOT_FOUND)
-
-
-@api_view(['GET,PUT'])
-@permission_classes([IsAuthenticated])
-def get_contact_list(request, pk):
-    try:
-        contact_list = ContactList.objects.get(id=pk)
-
-        serializer = ContactListSerializer(contact_list)
-    except Exception as e:
-        return Response(f'There has been some error: {e}')
-
-    return Response(serializer.data)
 
 
 @api_view(['GET'])
@@ -615,14 +605,14 @@ def get_product(request):
 @permission_classes([IsAuthenticated])
 def get_insights(request):
     try:
-        print('AAAA')
+        logger.info('---Getting insights---')
         shopify_domain = request.headers.get('shopify-domain', None)
         if shopify_domain:
             cache_key = f"shopify_product_id:{shopify_domain}:{request.data['product_id']}"
             product_data = cache.get(cache_key)
-
+            logger.info('---cached insights---')
             insights = utils.get_insights(product_data)
-            print(insights)
+            logger.info(insights)
             return Response({"data": insights}, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response(f'There has been some error: {e}')
@@ -1203,6 +1193,8 @@ def check_limit(request, id):
 @permission_classes([IsAuthenticated])
 def get_shopify_products_orders(request):
     shopify_domain = request.headers.get('shopify-domain', None)
+    logger.info('---Shopify Products---')
+    logger.info(shopify_domain)
     if shopify_domain:
         shopify_token = request.headers['Authorization'].split(' ')[1]
         # Shopify GraphQL endpoint
@@ -1212,13 +1204,15 @@ def get_shopify_products_orders(request):
             shopify_domain, shopify_token, url, request=request, query=None)
         products_response = shopify_factory.get_products({"first": 10})
         orders_response = shopify_factory.get_shop_orders({"first": 10})
-
+        logger.info('---Shopify Products Response---')
+        logger.info(products_response)
         product_data = products_response.json()
         orders_data = orders_response.json()
         if products_response.status_code == 200 and orders_response.status_code == 200:
 
             data_map = utils.map_products_n_orders(product_data, orders_data)
-
+            logger.info('---Shopify Products Dictionary---')
+            logger.info(data_map)
             return Response(data_map, status=status.HTTP_200_OK)
         else:
 
