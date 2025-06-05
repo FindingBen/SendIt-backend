@@ -1224,10 +1224,11 @@ def get_shopify_products_orders(request):
                     status=products_response.status_code,
                 )
         else:
+            logger.info('---Shopify Products Dictionary---')
             return Response({"error": "No shopify domain"}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
 
-        logger.error('---Shopify Products Dictionary---')
+        logger.info('---Shopify Products Dictionary---')
         return Response(
             {"error": f"{e}"},
             status=status.HTTP_400_BAD_REQUEST
