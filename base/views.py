@@ -1192,12 +1192,9 @@ def check_limit(request, id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_shopify_products_orders(request):
-    logger.info(f"Request headers: {dict(request.headers)}")
-    print(f"Request headers: {dict(request.headers)}")
     try:
         shopify_domain = request.headers.get('shopify-domain', None)
-        logger.info('---Shopify Products---')
-        logger.info(shopify_domain)
+        search_query = request.GET.get('search', None)
         if shopify_domain:
             shopify_token = request.headers['Authorization'].split(' ')[1]
             # Shopify GraphQL endpoint
@@ -1205,11 +1202,13 @@ def get_shopify_products_orders(request):
 
             shopify_factory = ShopifyFactoryFunction(
                 shopify_domain, shopify_token, url, request=request, query=None)
-            products_response = shopify_factory.get_products({"first": 10})
+            products_response = shopify_factory.get_products(
+                {"first": 10, "query": search_query})
             orders_response = shopify_factory.get_shop_orders({"first": 10})
             logger.info('---Shopify Products Response---')
-            logger.info(products_response)
+
             product_data = products_response.json()
+            print(product_data)
             orders_data = orders_response.json()
             if products_response.status_code == 200 and orders_response.status_code == 200:
 

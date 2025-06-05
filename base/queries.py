@@ -96,8 +96,8 @@ GET_TOTAL_CUSTOMERS_NR = """
 
 
 GET_ALL_PRODUCTS = """
-    query getProducts($first: Int, $after: String) {
-      products(first: $first, after: $after) {
+    query getProducts($first: Int, $after: String, $query:String) {
+      products(first: $first, after: $after,query:$query) {
         edges {
           node {
             id

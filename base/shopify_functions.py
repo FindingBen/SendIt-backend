@@ -229,7 +229,7 @@ class ShopifyFactoryFunction:
         # Return the response from Shopify's API
         return response
 
-    def get_products(self, variable=None):
+    def get_products(self, variable):
         return self.run_query(GET_ALL_PRODUCTS, variable)
 
     def get_shop_orders(self, variable=None):
