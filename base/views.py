@@ -1227,6 +1227,11 @@ def get_shopify_products_orders(request):
                  "details": product_data},
                 status=products_response.status_code,
             )
+    else:
+        return Response(
+            {"error": "Missing shopify-domain header"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
 
 @api_view(['GET'])
