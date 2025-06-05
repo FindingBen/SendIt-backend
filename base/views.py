@@ -1208,7 +1208,7 @@ def get_shopify_products_orders(request):
             logger.info('---Shopify Products Response---')
 
             product_data = products_response.json()
-            print(product_data)
+
             orders_data = orders_response.json()
             if products_response.status_code == 200 and orders_response.status_code == 200:
 
