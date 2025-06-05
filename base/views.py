@@ -446,7 +446,7 @@ class ContactListsView(APIView):
             else:
                 limits = package_limits['Trial Plan']
 
-            if shopify_domain:
+            if shopify_domain and user.shopify_connect:
                 url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
                 shopify_token = request.headers['Authorization'].split(' ')[1]
                 shopify_factory = ShopifyFactoryFunction(
@@ -468,9 +468,24 @@ class ContactListsView(APIView):
 
     def post(self, request):
         try:
-            pass
+            shopify_domain = request.headers.get('shopify-domain', None)
+
+            user_id = request.data['user_id']
+
+            user = CustomUser.objects.get(id=user_id)
+            if transaction.atomic():
+                if shopify_domain:
+                    user.shopify_connect = True
+                    user.save()
+                request_data = {"list_name": request.data['list_name']}
+                serializer = ContactListSerializer(data=request_data)
+                if serializer.is_valid(raise_exception=True):
+                    serializer.save(users=user)
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                else:
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(f"Field cannot be blank:{e}", status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET,PUT'])
@@ -848,22 +863,6 @@ class CreateNote(generics.GenericAPIView):
             })
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def create_list(request, id):
-
-    try:
-        user = CustomUser.objects.get(id=id)
-        serializer = ContactListSerializer(data=request.data)
-        if serializer.is_valid(raise_exception=True):
-            serializer.save(users=user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    except Exception as e:
-        return Response(f"Field cannot be blank:{e}", status=status.HTTP_400_BAD_REQUEST)
 
 
 class CreateElement(generics.GenericAPIView):
