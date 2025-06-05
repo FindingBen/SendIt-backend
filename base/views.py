@@ -86,6 +86,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             serialized_data = custom_user.serialize_package_plan()
             token['shopify_token'] = shopify_obj.access_token if shopify_obj else None
             token['shopify_id'] = shop_id if shopify_obj else None
+            token['shopify_domain'] = shopify_obj.shop_domain if shop
             token['sms_count'] = custom_user.sms_count
             token['user_type'] = custom_user.user_type
             token['archived_state'] = custom_user.archived_state
