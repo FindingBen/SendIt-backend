@@ -1,6 +1,7 @@
 import os
 from datetime import timedelta
 from pathlib import Path
+from corsheaders.defaults import default_headers
 import dotenv
 import json
 
@@ -67,18 +68,18 @@ CORS_ALLOWED_ORIGINS = os.environ.get('ORIGINS', '').split(',')
 
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOW_HEADERS = ["accept",
-                      "accept-encoding",
-                      "authorization",
-                      "content-type",
-                      "dnt",
-                      "users",
-                      "origin",
-                      "user-agent",
-                      "x-csrftoken",
-                      "options",
-                      "x-requested-with",
-                      "shopify-domain"]
+CORS_ALLOW_HEADERS = list(default_headers) + ["accept",
+                                              "accept-encoding",
+                                              "authorization",
+                                              "content-type",
+                                              "dnt",
+                                              "users",
+                                              "origin",
+                                              "user-agent",
+                                              "x-csrftoken",
+                                              "options",
+                                              "x-requested-with",
+                                              "shopify-domain"]
 
 TEMPLATES = [
     {
