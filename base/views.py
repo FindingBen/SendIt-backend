@@ -1223,6 +1223,8 @@ def get_shopify_products_orders(request):
                      "details": product_data},
                     status=products_response.status_code,
                 )
+        else:
+            return Response({"error": "No shopify domain"}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
 
         logger.error('---Shopify Products Dictionary---')
