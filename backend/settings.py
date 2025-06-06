@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "corsheaders",
     'django_rest_passwordreset',
     'djoser',
+    'storages',
     # apps
     'base',
     'sms',
@@ -62,7 +63,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 ROOT_URLCONF = 'backend.urls'
 
 CORS_ALLOW_ALL_ORIGINS = False
-
+ENVIRONMENT = os.environ.get('DJANGO_ENV', 'development')
 
 CORS_ALLOWED_ORIGINS = os.environ.get('ORIGINS', '').split(',')
 
@@ -205,6 +206,22 @@ CACHES = {
 
 }
 
+if ENVIRONMENT == 'development':
+    # Local media files
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+else:
+    # AWS S3 settings
+    AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = 'spp-images-production'
+    AWS_S3_REGION_NAME = os.environ.get('AWS_REGION')
+    AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
+
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 4000
 
 DATABASES = {
@@ -267,8 +284,8 @@ DEFAULT_FROM_EMAIL = 'benarmys4@gmail.com'
 
 DATE_INPUT_FORMATS = ('%d-%m-%Y', '%Y-%m-%d')
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# MEDIA_URL = '/media/'
+# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
@@ -285,7 +302,6 @@ TEST_PRODUCTS = (('Basic package', 'price_1NSzPTAD7NIuijyS69UOcr4w', 2), ('Silve
 PROD_PRODUCTS = (('Basic package', 'price_1O7DtsAD7NIuijySWVToVtvB', 2), ('Silver package',
                                                                           'price_1NyXK2AD7NIuijySgslBZ5hd', 3), ('Gold package', 'price_1O7DuLAD7NIuijySn76jns9f', 4))
 
-ENVIRONMENT = os.environ.get('DJANGO_ENV', 'development')
 
 # Set ACTIVE_PRODUCTS based on the environment
 if ENVIRONMENT == 'development':
