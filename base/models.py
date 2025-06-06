@@ -161,6 +161,7 @@ class ContactList(models.Model):
     unique_id = models.UUIDField(default=uuid4, unique=True, editable=False)
     users = models.ForeignKey(User, on_delete=models.CASCADE)
     list_name = models.CharField(max_length=50)
+    shopify_list = models.BooleanField(default=False)
     contact_lenght = models.IntegerField(null=True, blank=True)
     created_at = models.DateField(
         auto_now_add=True)

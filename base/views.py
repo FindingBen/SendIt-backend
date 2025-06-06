@@ -470,6 +470,7 @@ class ContactListsView(APIView):
             shopify_token = request.headers['Authorization'].split(' ')[1]
             package_limits = utils.get_package_limits(user_package)
             url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
+            request_data = request.data
             if transaction.atomic():
                 if shopify_domain:
                     user.shopify_connect = True
@@ -480,8 +481,9 @@ class ContactListsView(APIView):
                     max_recipients_allowed = package_limits['recipients']
                     capped_recipients_count = min(
                         recipients_count, max_recipients_allowed)
-                request_data = {
-                    "list_name": request.data['list_name'], "contact_lenght": capped_recipients_count}
+                    request_data = {
+                        "list_name": request.data['list_name'], "contact_lenght": capped_recipients_count, "shopify_list": True}
+                print(request_data)
                 serializer = ContactListSerializer(data=request_data)
                 if serializer.is_valid(raise_exception=True):
                     serializer.save(users=user)
@@ -750,21 +752,49 @@ def create_contact_via_qr(request, id):
     try:
         contact_list = ContactList.objects.get(unique_id=id)
         users = contact_list.users
+
         analytic = AnalyticsData.objects.get(custom_user=users)
+        if contact_list.shopify_list:
+            shopify_obj = utils.get_shopify_token(users)
 
-        serializer = ContactSerializer(
-            data=request.data)
-        if serializer.is_valid(raise_exception=True):
-            if not request.data.get('firstName') or not request.data.get('phone'):
-                return Response({'error': 'Empty form submission.'}, status=status.HTTP_400_BAD_REQUEST)
-            with transaction.atomic():
-                analytic.tota_subscribed += 1
-                analytic.save()
-            # Save the contact, linking it to the existing contact_list
-            # Only pass contact_list, no need for users here.
-            serializer.save(contact_list=contact_list, users=users)
+            url = f"https://{shopify_obj.shop_domain}/admin/api/2025-01/graphql.json"
+            shopify_factory = ShopifyFactoryFunction(
+                shopify_obj.shop_domain, shopify_obj.access_token, url, request=request, query=CREATE_CUSTOMER_QUERY)
 
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            response = shopify_factory.create_customers()
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("data", {}).get("customerCreate", {}).get("userErrors"):
+                    return Response(
+                        {"error": "Failed to create customer",
+                            "details": data["data"]["customerCreate"]["userErrors"]},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                customer = data.get("data", {}).get(
+                    "customerCreate", {}).get("customer", {})
+                return Response(customer, status=status.HTTP_201_CREATED)
+            else:
+
+                return Response(
+                    {"error": "Failed to create customer",
+                        "details": data['details']},
+                    status=response.status_code,
+                )
+
+        else:
+            serializer = ContactSerializer(
+                data=request.data)
+            if serializer.is_valid(raise_exception=True):
+                if not request.data.get('firstName') or not request.data.get('phone'):
+                    return Response({'error': 'Empty form submission.'}, status=status.HTTP_400_BAD_REQUEST)
+                with transaction.atomic():
+                    analytic.tota_subscribed += 1
+                    analytic.save()
+                # Save the contact, linking it to the existing contact_list
+                # Only pass contact_list, no need for users here.
+                serializer.save(contact_list=contact_list, users=users)
+
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response(f'There has been some error: {e}', status=status.HTTP_400_BAD_REQUEST)
 

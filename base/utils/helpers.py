@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from base.models import ShopifyStore
 
 
 class Utils:
@@ -295,3 +296,8 @@ class Utils:
         else:
             limits = package_limits['Trial Plan']
         return limits
+
+    def get_shopify_token(self, user):
+
+        shopify_object = ShopifyStore.objects.get(email=user.email)
+        return shopify_object

@@ -95,7 +95,8 @@ class RegisterSerializer(serializers.ModelSerializer):
 class ContactListSerializer(ModelSerializer):
     class Meta:
         model = ContactList
-        fields = ['id', 'list_name', 'contact_lenght', 'created_at']
+        fields = ['id', 'list_name', 'contact_lenght',
+                  'created_at', 'shopify_list']
 
 
 class ContactSerializer(ModelSerializer):
