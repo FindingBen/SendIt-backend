@@ -772,6 +772,9 @@ def create_contact_via_qr(request, id):
                     )
                 customer = data.get("data", {}).get(
                     "customerCreate", {}).get("customer", {})
+                with transaction.atomic():
+                    analytic.tota_subscribed += 1
+                    analytic.save()
                 return Response(customer, status=status.HTTP_201_CREATED)
             else:
 
