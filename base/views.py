@@ -934,7 +934,7 @@ class CreateElement(generics.GenericAPIView):
                 if environment == 'development':
                     img['image_src'] = f'http://localhost:8000/media/{files[file_key]}'
                 elif environment == 'production':
-                    img['image_src'] = f'{settings.MEDIA_URL}/{files[file_key]}'
+                    img['image_src'] = f'{settings.MEDIA_URL}{files[file_key]}'
             if not img:
                 break
             carousel_images.append(img)
