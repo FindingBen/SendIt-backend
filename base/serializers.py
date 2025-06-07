@@ -9,6 +9,7 @@ class CarouselImageSerializer(ModelSerializer):
     class Meta:
         model = CarouselImage
         fields = '__all__'
+        extra_kwargs = {'element': {'required': False}}
 
 
 class ElementSerializer(serializers.ModelSerializer):
@@ -20,6 +21,7 @@ class ElementSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         carousel_images_data = validated_data.pop('carousel_images', [])
+
         element = Element.objects.create(**validated_data)
         for img_data in carousel_images_data:
             CarouselImage.objects.create(element=element, **img_data)

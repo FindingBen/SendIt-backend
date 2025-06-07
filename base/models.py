@@ -139,7 +139,6 @@ class Element(models.Model):
     alignment = models.CharField(max_length=20, null=True)
     text = models.TextField(blank=True)
     survey = models.CharField(max_length=50, null=True)
-    carousel_images = models.JSONField(default=list, null=True)
     question_type = models.CharField(
         max_length=20, choices=SURVEY_CHOICES, null=True)
     button_title = models.CharField(max_length=20, null=True)
@@ -157,11 +156,11 @@ class Element(models.Model):
             survey_response.save()
 
 
-class CarouselImage:
+class CarouselImage(models.Model):
     element = models.ForeignKey(
         'Element', related_name='carousel_images', on_delete=models.CASCADE)
     image = models.ImageField(blank=True, null=True)
-    image_src = models.URLField(max_length=100, null=True)
+    image_src = models.URLField(max_length=300, null=True, blank=True)
     external_url = models.URLField(blank=True, null=True)
 
 

@@ -70,8 +70,7 @@ class Utils:
         for product in product_list:
             node = product.get("node", {})
             images = node.get("images", {}).get("edges", [])
-            print(images)
-            print('SSS')
+
             image_url = images[0]["node"]["src"] if images else None
             mapped_product = {
                 "id": node.get("id"),
@@ -119,11 +118,11 @@ class Utils:
             return {}
         node = product.get("node", {})
         product_id = product['id']
-        print(product)
+
         # Prepare product fields
         images = product['images'].get("edges", [])
         # image_url = images[0]["node"]["src"] if images else None
-        print(images)
+
         mapped_product = {
             "id": product['id'],
             "title": product['title'],

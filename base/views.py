@@ -57,6 +57,8 @@ from base.utils.calculations import calculate_avg_performance, format_number, cl
 utils = helpers.Utils()
 logger = logging.getLogger(__name__)
 
+environment = settings.ENVIRONMENT
+
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
@@ -912,8 +914,38 @@ class CreateElement(generics.GenericAPIView):
     serializer_class = ElementSerializer
 
     def post(self, request):
-        serializer = self.get_serializer(data=request.data)
+       # serializer = self.get_serializer(data=request.data)
+        data = request.data
+        files = request.FILES
+        carousel_images = []
+        idx = 0
+        while True:
+            img = {}
+            url_key = f'carousel_images[{idx}][external_url]'
+            file_key = f'carousel_images[{idx}][image]'
+            # Add external_url if present
+            if url_key in data:
+                img['external_url'] = data[url_key]
+                img['image_src'] = data[url_key]
+            # Add image file if present
+            if file_key in files:
+
+                img['image'] = files[file_key]
+                if environment == 'development':
+                    img['image_src'] = f'http://localhost:8000/media/{files[file_key]}'
+                elif environment == 'production':
+                    img['image_src'] = f'{settings.AWS_S3_CUSTOM_DOMAIN}/{files[file_key]}'
+            if not img:
+                break
+            carousel_images.append(img)
+            idx += 1
+        plain_data = {k: v[0] if isinstance(
+            v, list) else v for k, v in data.lists()}
+        plain_data['carousel_images'] = carousel_images
+
+        serializer = self.get_serializer(data=plain_data)
         if serializer.is_valid(raise_exception=True):
+            print('KURAC')
             element = serializer.save()
             if element.element_type == 'Text' and not element.text:
                 # Check if the element type is 'Text' and the value is empty
@@ -972,7 +1004,7 @@ def delete_contact_recipient(request):
             response = shopify_factory.delete_customer()
 
             if response.get("data", {}).get("customerDelete", {}).get("userErrors"):
-                print('ALAA')
+
                 return Response(
                     {"error":  response["data"]["customerDelete"]["userErrors"],
                      },
