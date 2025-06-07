@@ -157,6 +157,14 @@ class Element(models.Model):
             survey_response.save()
 
 
+class CarouselImage:
+    element = models.ForeignKey(
+        'Element', related_name='carousel_images', on_delete=models.CASCADE)
+    image = models.ImageField(blank=True, null=True)
+    image_src = models.URLField(max_length=100, null=True)
+    external_url = models.URLField(blank=True, null=True)
+
+
 class ContactList(models.Model):
     unique_id = models.UUIDField(default=uuid4, unique=True, editable=False)
     users = models.ForeignKey(User, on_delete=models.CASCADE)

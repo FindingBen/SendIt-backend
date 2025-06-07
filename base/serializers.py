@@ -2,13 +2,28 @@ from rest_framework.serializers import ModelSerializer
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
-from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser, SurveyResponse, QRCode, ShopifyStore
+from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser, SurveyResponse, QRCode, ShopifyStore, CarouselImage
 
 
-class ElementSerializer(ModelSerializer):
+class CarouselImageSerializer(ModelSerializer):
+    class Meta:
+        model = CarouselImage
+        fields = '__all__'
+
+
+class ElementSerializer(serializers.ModelSerializer):
+    carousel_images = CarouselImageSerializer(many=True, required=False)
+
     class Meta:
         model = Element
         fields = '__all__'
+
+    def create(self, validated_data):
+        carousel_images_data = validated_data.pop('carousel_images', [])
+        element = Element.objects.create(**validated_data)
+        for img_data in carousel_images_data:
+            CarouselImage.objects.create(element=element, **img_data)
+        return element
 
 
 class PackageSerializer(ModelSerializer):
