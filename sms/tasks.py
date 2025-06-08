@@ -75,15 +75,21 @@ def send_scheduled_sms(unique_tracking_id: None):
                     analytics_data.save()
                     cache_key = f"messages:{smsObj.user.id}"
                     cache.delete(cache_key)
+
                     if responseData["messages"][0]["status"] != "0":
+                        message.status = 'error'
+                        message.save()
+                        send_email_notification(user.id)
                         logger.error(
                             f"Message failed: {responseData['messages'][0].get('error-text', 'Unknown error')}")
                     from .views import schedule_archive_task
                     schedule_archive_task(smsObj.id, smsObj.scheduled_time)
                     print(
-                        f"Message failed with error: {responseData['messages'][0]['error-text']}")
+                        f"Sms successfully sent: {responseData['messages'][0]}")
 
                 except Exception as e:
+                    message.status = 'error'
+                    message.save()
                     logger.exception("Error sending SMS")
                     send_email_notification(user.id)
                     raise
