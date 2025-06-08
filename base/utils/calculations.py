@@ -36,48 +36,48 @@ def total_sum(data_value: None, recipients: None):
     return total_sum_object
 
 
-def calculate_overall_performance(final_data: None, recipients: None):
-
+def calculate_overall_performance(final_data: dict, recipients: int) -> float:
     try:
-        print("DDD", final_data)
-        # Assign weights to each metric
-        bounce_rate_weight = 0.3  # Adjust based on importance
-        engagement_rate_weight = 0.4  # Adjust based on importance
-        total_views_weight = 0.3
-        scrolled_users_weight = 0.2
-        user_engagement_weight = 0.3
-        total_views_weight = 0.5
+        if recipients == 0:
+            return 0.0  # avoid division by zero
 
-        # Normalize values to be between 0 and 1
-        max_possible_scrolled_users = 100
-        max_possible_user_engagement = 100
-        max_possible_total_views = 100
+        # Define weights — make sure they sum to 1.0
+        bounce_rate_weight = 0.3
+        engagement_rate_weight = 0.4
+        scrolled_users_weight = 0.15
+        user_engagement_weight = 0.1
+        total_views_weight = 0.05
 
-        normalized_bounce_rate = final_data['bounceRate'] / 100
-        normalized_engagement_rate = final_data['engegment_rate_total'] / 100
-        normalized_scrolled_users = final_data['scrolled_user_total'] / \
-            max_possible_scrolled_users
-        normalized_user_engagement = final_data['user_engegment_total'] / \
-            max_possible_user_engagement
-        normalized_total_views = final_data['screen_views_total'] / \
-            max_possible_total_views
+        # Normalize values (assumed to be percentages or counts)
+        normalized_bounce_rate = final_data.get('bounceRate', 0) / 100.0
+        normalized_engagement_rate = final_data.get(
+            'engegment_rate_total', 0) / 100.0
 
-        # Calculate the weighted average
-        overall_performance = (
-            bounce_rate_weight * normalized_bounce_rate +
+        normalized_scrolled_users = min(final_data.get(
+            'scrolled_user_total', 0) / recipients, 1)
+        normalized_user_engagement = min(final_data.get(
+            'user_engegment_total', 0) / recipients, 1)
+        normalized_total_views = min(final_data.get(
+            'screen_views_total', 0) / recipients, 1)
+
+        # Invert bounce rate because higher = worse
+        delivery_score = 1 - normalized_bounce_rate
+
+        # Weighted average
+        overall_score = (
+            bounce_rate_weight * delivery_score +
             engagement_rate_weight * normalized_engagement_rate +
             scrolled_users_weight * normalized_scrolled_users +
             user_engagement_weight * normalized_user_engagement +
             total_views_weight * normalized_total_views
+        )
 
-        ) / recipients
+        # Convert to percentage
+        overall_performance_percentage = round(overall_score * 100, 2)
 
-        # Convert the result to a percentage
-
-        overall_performance_percentage = float('{:.2%}'.format(
-            overall_performance).rstrip('%'))
-        print('CALCULATE:', overall_performance_percentage, overall_performance)
+        print('CALCULATE:', overall_performance_percentage)
         return overall_performance_percentage
+
     except Exception as e:
         return str(e)
 
