@@ -165,8 +165,8 @@ def schedule_sms(request):
 
                     message.save()
 
-                    # send_scheduled_sms.apply_async(
-                    #     (sms.unique_tracking_id,), eta=scheduled_time_utc)
+                    send_scheduled_sms.apply_async(
+                        (sms.unique_tracking_id,), eta=scheduled_time_utc)
 
                     return Response({
                         "sms": f'{data}'
@@ -310,6 +310,6 @@ def vonage_webhook_message(request):
 def schedule_archive_task(sms_id, scheduled_time):
     # Calculate the scheduled time for archiving the message (5 days after scheduled time)
 
-    archive_time = scheduled_time + timedelta(days=1)
+    archive_time = scheduled_time + timedelta(days=5)
     archive_message.apply_async((sms_id,), eta=archive_time)
     print("scheduled for archive")

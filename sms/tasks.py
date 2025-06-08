@@ -6,6 +6,7 @@ from celery import shared_task
 import vonage
 from django.conf import settings
 from django.utils import timezone
+import logging
 import uuid
 from django.db import transaction
 import hashlib
@@ -15,7 +16,7 @@ from base.email.email import send_email_notification
 
 @shared_task
 def send_scheduled_sms(unique_tracking_id: None):
-
+    logger = logging.getLogger(__name__)
     try:
         from .models import Sms
         from base.models import CustomUser, ContactList, Message, Contact
@@ -36,8 +37,7 @@ def send_scheduled_sms(unique_tracking_id: None):
                 setattr(
                     smsObj, f'button_{button_count}_name', element.button_title)
                 smsObj.has_button = True
-                smsObj.save()
-        button_count = 0
+        smsObj.save()
 
         with transaction.atomic():
             if not smsObj.is_sent:
@@ -51,28 +51,20 @@ def send_scheduled_sms(unique_tracking_id: None):
                     contact_list=contact_list)
                 try:
                     for recipient in contact_obj:
+                        sms_kwargs = {
+                            "from": '+12012550867',
+                            "to": f'+{recipient.phone_number}',
+                            "client-ref": unique_tracking_id
+                        }
                         if content_link:
-                            responseData = sms.send_message(
-                                {
-                                    "from": '+12012550867',
-                                    "to": f'+{recipient.phone_number}',
-                                    "text": sms_text.replace('#Link', content_link).replace('#FirstName', recipient.first_name) +
-                                    "\n\n\n\n\n" +
-                                    f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.id}',
-                                    "client-ref": unique_tracking_id
-                                }
-                            )
+                            sms_kwargs["text"] = sms_text.replace('#Link', content_link).replace('#FirstName', recipient.first_name) + \
+                                "\n\n\n\n\n" + \
+                                f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.id}'
                         else:
-                            responseData = sms.send_message(
-                                {
-                                    "from": "+12012550867",
-                                    "to": f'+{recipient.phone_number}' +
-                                    "\n\n\n\n\n" +
-                                    f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.id}',
-                                    "text": sms_text.replace('#FirstName', recipient.first_name),
-                                    "client-ref": unique_tracking_id
-                                }
-                            )
+                            sms_kwargs["text"] = sms_text.replace('#FirstName', recipient.first_name) + \
+                                "\n\n\n\n\n" + \
+                                f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.id}'
+                        responseData = sms.send_message(sms_kwargs)
 
                     smsObj.sms_sends = contact_list.contact_lenght
                     smsObj.save()
@@ -83,37 +75,39 @@ def send_scheduled_sms(unique_tracking_id: None):
                     analytics_data.save()
                     cache_key = f"messages:{smsObj.user.id}"
                     cache.delete(cache_key)
-                    if responseData["messages"][0]["status"] == "0":
-                        pass  # Moved this line inside the if block
-                    else:
-                        pass
+                    if responseData["messages"][0]["status"] != "0":
+                        logger.error(
+                            f"Message failed: {responseData['messages'][0].get('error-text', 'Unknown error')}")
                     from .views import schedule_archive_task
                     schedule_archive_task(smsObj.id, smsObj.scheduled_time)
                     print(
                         f"Message failed with error: {responseData['messages'][0]['error-text']}")
 
                 except Exception as e:
-                    print("Error sending SMS:", str(e))
+                    logger.exception("Error sending SMS")
                     send_email_notification(user.id)
+                    raise
 
             else:
-                pass
+                logger.info(f"SMS {smsObj.id} already sent, skipping.")
     except Sms.DoesNotExist:
-        pass
+        logger.error(
+            f"Sms with tracking id {unique_tracking_id} does not exist.")
+    except Exception as e:
+        logger.exception(f"Unhandled error in send_scheduled_sms: {str(e)}")
 
 
 @shared_task
 def send_sms(unique_tracking_id: None, user: None):
+    logger = logging.getLogger(__name__)
     try:
         from .models import Sms
         from base.models import ContactList, Message, Contact, CustomUser
-        print(unique_tracking_id)
         smsObj = Sms.objects.get(unique_tracking_id=unique_tracking_id)
-        print("SMS", smsObj)
-        user = CustomUser.objects.get(id=smsObj.user.id)
-        analytics_data = AnalyticsData.objects.get(custom_user=smsObj.user.id)
-        contact_list = ContactList.objects.get(id=smsObj.contact_list.id)
-        message = Message.objects.get(id=smsObj.message.id)
+        user = smsObj.user
+        analytics_data = AnalyticsData.objects.get(custom_user=user.id)
+        contact_list = smsObj.contact_list
+        message = smsObj.message
         content_link = smsObj.content_link
         sms_text = smsObj.sms_text
         elements = Element.objects.filter(message=message.id)
@@ -126,47 +120,33 @@ def send_sms(unique_tracking_id: None, user: None):
                 setattr(
                     smsObj, f'button_{button_count}_name', element.button_title)
                 smsObj.has_button = True
-                smsObj.save()
-        button_count = 0
+        smsObj.save()
 
         with transaction.atomic():
             if not smsObj.is_sent:
                 client = vonage.Client(
                     key=settings.VONAGE_ID, secret=settings.VONAGE_TOKEN)
                 sms = vonage.Sms(client)
-
-                # Use self.contact_list to get the related ContactList instance
-
                 contact_obj = Contact.objects.filter(
                     contact_list=contact_list)
                 # Get value for total sms sends based on contact list length
 
                 for recipient in contact_obj:
-
+                    sms_kwargs = {
+                        "from": 'Nordiq Labs',  # Use a consistent sender name
+                        "to": f'+{recipient.phone_number}',
+                        "client-ref": unique_tracking_id
+                    }
                     if content_link:
-                        responseData = sms.send_message(
-                            {
-                                "from": 'Nordiq Labs',
-                                "to": f'+{recipient.phone_number}',
-                                "text": sms_text.replace('#Link', content_link).replace('#FirstName', recipient.first_name) +
-                                "\n\n\n\n\n" +
-                                f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.id}',
-                                "client-ref": unique_tracking_id
-                            }
-                        )
-
+                        sms_kwargs["text"] = sms_text.replace('#Link', content_link).replace('#FirstName', recipient.first_name) + \
+                            "\n\n\n\n\n" + \
+                            f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.id}'
                     else:
-
-                        responseData = sms.send_message(
-                            {
-                                "from": "+Nordiq Labs",
-                                "to": f'+{recipient.phone_number}',
-                                "text": sms_text.replace('#FirstName', recipient.first_name) +
-                                "\n\n\n\n\n" +
-                                f'\nClick to Opt-out:{smsObj.unsubscribe_path}/{recipient.phone_number}',
-                                "client-ref": unique_tracking_id
-                            }
-                        )
+                        sms_kwargs["text"] = sms_text.replace('#FirstName', recipient.first_name) + \
+                            "\n\n\n\n\n" + \
+                            f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.phone_number}'
+                    responseData = sms.send_message(sms_kwargs)
+                logger.info("VONAGE RESPONSE", responseData)
                 smsObj.sms_sends = contact_list.contact_lenght
                 smsObj.is_sent = True
 
@@ -177,11 +157,19 @@ def send_sms(unique_tracking_id: None, user: None):
                 analytics_data.save()
                 cache_key = f"messages:{smsObj.user.id}"
                 cache.delete(cache_key)
+                logger.info(
+                    f"SMS {smsObj.id} sent successfully to {contact_list.contact_lenght} recipients.")
             else:
-                pass  # If is_sent is True, save the instance
+                logger.info(f"SMS {smsObj.id} already sent, skipping.")
+    except Sms.DoesNotExist:
+        logger.error(
+            f"Sms with tracking id {unique_tracking_id} does not exist.")
     except Exception as e:
-        send_email_notification(user.id)
-        print(f'There has been an error {str(e)}')
+        logger.exception(f"Unhandled error in send_sms: {str(e)}")
+        try:
+            send_email_notification(user.id)
+        except Exception:
+            logger.error("Failed to send error notification email.")
 
 
 def generate_hash(phone_number):
@@ -198,11 +186,12 @@ def generate_hash(phone_number):
 
 @shared_task
 def archive_message(sms_id):
+    logger = logging.getLogger(__name__)
     try:
         with transaction.atomic():
             sms = Sms.objects.get(id=sms_id)
             message = sms.message  # Assuming Sms has a ForeignKey to Message
-
+            logger.info(f"Archiving SMS {sms_id} and message {message.id}")
             message.status = 'archived'
             message.save()
 
@@ -216,21 +205,20 @@ def archive_message(sms_id):
             )
             audience = sms.sms_sends
             total_views = sms.total_views
-            unsub_users = 1
+            unsub_users = 0
             # Weights for performance calculation
             w1 = 0.4  # Weight for total views
             w2 = 0.6  # Weight for total clicks
             w3 = 0.1  # Weight for unsubscribes
 
             # Performance calculation based on the provided formula
-            if audience > 0 and total_views > 0:
+            if audience > 0:
                 overall_performance = (
                     (total_views / audience) * w1 +
                     (total_clicks / audience) * w2 -
                     (unsub_users / audience) * w3
                 )
             else:
-                # Set to 0 if audience or views are zero to avoid division by zero
                 overall_performance = 0
 
             # Convert performance to a percentage (out of 100)
@@ -251,11 +239,14 @@ def archive_message(sms_id):
 
             campaign_stats.save()
 
-            return 'Message archived and SMS deleted successfully'
+            return 'Message archived successfully'
     except Sms.DoesNotExist:
+        logger.error(f'SMS with id {sms_id} does not exist')
         return f'SMS with id {sms_id} does not exist'
     except Message.DoesNotExist:
+        logger.error(f'Message related to SMS id {sms_id} does not exist')
         return f'Message related to SMS id {sms_id} does not exist'
     except Exception as e:
-        # Log the exception details for debugging purposes
+        logger.exception(
+            f'An error occurred while archiving SMS {sms_id}: {str(e)}')
         return f'An error occurred: {str(e)}'
