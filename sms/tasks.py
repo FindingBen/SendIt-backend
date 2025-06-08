@@ -52,7 +52,7 @@ def send_scheduled_sms(unique_tracking_id: None):
                 try:
                     for recipient in contact_obj:
                         sms_kwargs = {
-                            "from": 'Nordiq Labs',
+                            "from": '+12312345',
                             "to": f'+{recipient.phone_number}',
                             "client-ref": unique_tracking_id
                         }
@@ -133,7 +133,7 @@ def send_sms(unique_tracking_id: None, user: None):
 
                 for recipient in contact_obj:
                     sms_kwargs = {
-                        "from": 'Nordiq Labs',  # Use a consistent sender name
+                        "from": '+12312345',  # Use a consistent sender name
                         "to": f'+{recipient.phone_number}',
                         "client-ref": unique_tracking_id
                     }
