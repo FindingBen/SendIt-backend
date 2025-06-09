@@ -5,7 +5,7 @@ from datetime import datetime
 from django.core.cache import cache
 from django.conf import settings
 from rest_framework.views import APIView
-from .models import UserPayment, Purchase
+from .models import UserPayment, StripeEvent
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes, api_view
 from rest_framework.response import Response
@@ -173,6 +173,10 @@ def stripe_webhook(request):
     except stripe.error.SignatureVerificationError as e:
         return HttpResponse(status=400)
 
+    event_id = event['id']
+    if StripeEvent.objects.filter(event_id=event_id).exists():
+        return HttpResponse(status=200)
+
     if event['type'] == 'checkout.session.completed':
 
         with transaction.atomic():
@@ -202,13 +206,14 @@ def stripe_webhook(request):
                 analytics.save()
                 if (user_payment.payment_bool == True):
                     user_payment.payment_bool = False
+
                     user_payment.save()
                     Notification.objects.create(
                         user=user_obj,
                         notif_type='purchase',
                         message=f"Your purchase of {package_obj.plan_type} was successful!"
                     )
-
+                    StripeEvent.objects.create(event_id=event_id)
                     send_mail(
                         subject=f'Receipt for sendperplane product {package_obj.plan_type}',
                         message='Thank you for purchasing the package from us! We hope that you will enjoy our sending service.' +

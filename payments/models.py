@@ -21,6 +21,11 @@ class Purchase(models.Model):
     created_at = models.DateField(auto_now_add=True)
 
 
+class StripeEvent(models.Model):
+    event_id = models.CharField(max_length=255, unique=True)
+    processed_at = models.DateTimeField(auto_now_add=True)
+
+
 @receiver(post_save, sender=CustomUser)
 def create_user_payment(sender, instance, created, **kwargs):
     if created:
