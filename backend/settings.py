@@ -43,7 +43,8 @@ INSTALLED_APPS = [
     # apps
     'base',
     'sms',
-    'payments'
+    'payments',
+    'notification'
 ]
 
 MIDDLEWARE = [

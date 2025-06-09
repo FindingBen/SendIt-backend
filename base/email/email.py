@@ -64,7 +64,7 @@ def send_email_notification(user_id):
         # Retrieve user email from request
         user_obj = CustomUser.objects.get(id=user_id)
         subject = "Scheduled SMS Failed"
-        message = f"Sorry, one of your recent messages has failed."
+        message = f"IMPORTANT NOTIFICATION! One of your recent messages has failed. Go to the spplane platform to investigate."
         from_email = settings.DEFAULT_FROM_EMAIL
         recipient_list = [user_obj.email]
         send_mail(subject, message, from_email, recipient_list)

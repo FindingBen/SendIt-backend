@@ -16,6 +16,7 @@ from .tasks import send_scheduled_sms, send_sms, archive_message
 from base.email.email import send_email_notification
 from django.utils import timezone
 from django.utils.timezone import make_aware
+from notification.models import Notification
 
 
 @api_view(['GET'])
@@ -68,8 +69,11 @@ class createSms(generics.GenericAPIView):
                     try:
                         # If you need to handle different statuses, you can check them here
                         if sms_result_task.successful():
-                            print("Task succeeded.")
-                            print('step6')
+                            Notification.objects.create(
+                                user=user_obj,
+                                notif_type='Sms sending',
+                                message=f"You just executed successfully a sms transaction!"
+                            )
 
                         else:
                             return Response({'error': 'There has been a system error. Contact support for more help.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)

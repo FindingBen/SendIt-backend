@@ -11,6 +11,7 @@ import uuid
 from django.db import transaction
 import hashlib
 from django.core.cache import cache
+from notification.models import Notification
 from base.email.email import send_email_notification
 
 
@@ -79,9 +80,15 @@ def send_scheduled_sms(unique_tracking_id: None):
                     if responseData["messages"][0]["status"] != "0":
                         message.status = 'error'
                         message.save()
+                        Notification.objects.create(
+                            user=user,
+                            notif_type='Sms sending error',
+                            message=f"There has been an error while sending your sms!"
+                        )
                         send_email_notification(user.id)
                         logger.error(
                             f"Message failed: {responseData['messages'][0].get('error-text', 'Unknown error')}")
+                        return
                     from .views import schedule_archive_task
                     schedule_archive_task(smsObj.id, smsObj.scheduled_time)
                     print(
@@ -91,6 +98,7 @@ def send_scheduled_sms(unique_tracking_id: None):
                     message.status = 'error'
                     message.save()
                     logger.exception("Error sending SMS")
+
                     send_email_notification(user.id)
                     raise
 

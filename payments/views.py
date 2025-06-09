@@ -18,6 +18,7 @@ from base.serializers import CustomUserSerializer
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.core.mail import send_mail
+from notification.models import Notification
 import vonage
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -185,7 +186,7 @@ def stripe_webhook(request):
                 time.sleep(10)
                 ######
                 user_obj = CustomUser.objects.filter(email=customer_email)[0]
-                print('USER', user_obj)
+
                 package_obj = PackagePlan.objects.get(id=product_id)
                 user_obj.package_plan = package_obj
                 user_obj.sms_count += package_obj.sms_count_pack
@@ -194,7 +195,7 @@ def stripe_webhook(request):
                     user_id=user_obj.id)
                 user_payment.purchase_id = payment_intent
                 user_payment.payment_bool = True
-                print('STAGE 1', user_payment)
+
                 user_payment.save()
                 analytics = AnalyticsData.objects.get(custom_user=user_obj.id)
                 analytics.total_spend += package_obj.price
@@ -202,21 +203,11 @@ def stripe_webhook(request):
                 if (user_payment.payment_bool == True):
                     user_payment.payment_bool = False
                     user_payment.save()
-                    print('STAGE 2', user_payment)
-                    # if not Purchase.objects.filter(payment_id=event['data']['object']['payment_intent']).exists():
-                    #     payment_type_details = event['data']['object'].get(
-                    #         'payment_method_types')
-
-                    #     create_purchase = Purchase(userPayment=user_payment,
-                    #                                package_name=package_obj.plan_type,
-                    #                                price=package_obj.price,
-                    #                                payment_id=event['data']['object']['payment_intent'],
-                    #                                payment_method=payment_type_details)
-
-                    #     create_purchase.save()
-                    #     user_payment.purchase_id = event['data']['object']['payment_intent']
-
-                    # vonage_account_topup(package=package_obj.plan_typ)
+                    Notification.objects.create(
+                        user=user_obj,
+                        notif_type='purchase',
+                        message=f"Your purchase of {package_obj.plan_type} was successful!"
+                    )
 
                     send_mail(
                         subject=f'Receipt for sendperplane product {package_obj.plan_type}',

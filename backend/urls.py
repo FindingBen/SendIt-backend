@@ -9,7 +9,8 @@ urlpatterns = [
     path('sms/', include('sms.urls')),
     path('auth/', include('djoser.urls')),
     path('auth/', include('djoser.urls.jwt')),
-    path('stripe/', include('payments.urls'))
+    path('stripe/', include('payments.urls')),
+    path('notifications/', include('notification.urls')),
 ]
 
 
