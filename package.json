@@ -1,0 +1,9 @@
+{
+  "name": "sendperplane-backend",
+  "version": "1.0.0",
+  "description": "Shopify app backend with Django",
+  "main": "index.js",
+  "scripts": {},
+  "author": "",
+  "license": "ISC"
+}

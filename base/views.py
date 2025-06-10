@@ -1343,21 +1343,77 @@ def get_shop_orders(request):
 
 @require_http_methods(['POST'])
 @csrf_exempt
-def customer_data_reqeust_webhook(request):
+def customer_data_request_webhook(request):
 
     shopify_hmac = request.META.get('HTTP_X_SHOPIFY_HMAC_SHA256')
     if shopify_hmac:
+
         body = request.body
-        hash = hmac.new(settings.SHOPIFY_API_KEY.encode(
+        hashit = hmac.new(settings.SHOPIFY_API_SECRET.encode(
             'utf-8'), body, hashlib.sha256)
-        calculated_hmac = base64.b64encode(hash.digest()).decode()
+        calculated_hmac = base64.b64encode(hashit.digest()).decode()
 
         if not hmac.compare_digest(calculated_hmac, shopify_hmac):
             return HttpResponse(status=401)  # Unauthorized
 
         data = json.loads(body)
+
+        print("Webhook triggered")
+
+        return HttpResponse(status=200)
+    return Response({"error": "Missing shopify signature!"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@require_http_methods(['POST'])
+@csrf_exempt
+def customer_redact_request_webhook(request):
+
+    shopify_hmac = request.META.get('HTTP_X_SHOPIFY_HMAC_SHA256')
+    if shopify_hmac:
+
+        body = request.body
+        hashit = hmac.new(settings.SHOPIFY_API_SECRET.encode(
+            'utf-8'), body, hashlib.sha256)
+        calculated_hmac = base64.b64encode(hashit.digest()).decode()
+
+        if not hmac.compare_digest(calculated_hmac, shopify_hmac):
+            return HttpResponse(status=401)  # Unauthorized
+
+        data = json.loads(body)
+
+        print("Webhook triggered, we are not storing customers data from shopify")
+
+        return HttpResponse(status=200)
+    return Response({"error": "Missing shopify signature!"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@require_http_methods(['POST'])
+@csrf_exempt
+def customer_shop_redact_request_webhook(request):
+
+    shopify_hmac = request.META.get('HTTP_X_SHOPIFY_HMAC_SHA256')
+    if shopify_hmac:
+
+        body = request.body
+        hashit = hmac.new(settings.SHOPIFY_API_SECRET.encode(
+            'utf-8'), body, hashlib.sha256)
+        calculated_hmac = base64.b64encode(hashit.digest()).decode()
+
+        if not hmac.compare_digest(calculated_hmac, shopify_hmac):
+            return HttpResponse(status=401)  # Unauthorized
+
+        data = json.loads(body)
+        print(data)
+        shop_domain = data.get('shop_domain', None)
+        if shop_domain is not None:
+            get_obj = ShopifyStore.objects.get(shop_domain=shop_domain)
+            get_obj.delete()
+            print(get_obj)
+            logger.info("***Shop object deleted!***")
         # Do something with the data, e.g., log or process
-        print("Webhook triggered", data)
+        else:
+            return logger.error("Shop domain not present!")
+        print("Webhook triggered")
 
         return HttpResponse(status=200)
     return Response({"error": "Missing shopify signature!"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

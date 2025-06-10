@@ -4,5 +4,6 @@ credentials.json
 
 media
 
+shopify.app.toml
 
 payments/testing.py
