@@ -24,7 +24,13 @@ from django.http import JsonResponse
 from . import serializers
 import os
 import requests
+import hmac
+import hashlib
+import base64
+import json
 import logging
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 
 from reportlab.lib import colors
 import requests
@@ -1333,3 +1339,25 @@ def get_shop_orders(request):
                     "details": data['details']},
                 status=response.status_code,
             )
+
+
+@require_http_methods(['POST'])
+@csrf_exempt
+def customer_data_reqeust_webhook(request):
+
+    shopify_hmac = request.META.get('HTTP_X_SHOPIFY_HMAC_SHA256')
+    if shopify_hmac:
+        body = request.body
+        hash = hmac.new(settings.SHOPIFY_API_KEY.encode(
+            'utf-8'), body, hashlib.sha256)
+        calculated_hmac = base64.b64encode(hash.digest()).decode()
+
+        if not hmac.compare_digest(calculated_hmac, shopify_hmac):
+            return HttpResponse(status=401)  # Unauthorized
+
+        data = json.loads(body)
+        # Do something with the data, e.g., log or process
+        print("Webhook triggered", data)
+
+        return HttpResponse(status=200)
+    return Response({"error": "Missing shopify signature!"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
