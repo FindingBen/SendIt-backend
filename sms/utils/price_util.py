@@ -57,6 +57,7 @@ def get_price_per_segment(contacts, message_text, query_params, fallback_country
     return {
         "total_cost": round(total_cost, 6),
         "recipients": len(contacts),
+        "estimated_credits": int(round(total_cost * 100)),
         "details": segments_per_contact
     }
 

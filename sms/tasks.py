@@ -53,21 +53,43 @@ def send_scheduled_sms(unique_tracking_id: None):
                 # Use self.contact_list to get the related ContactList instance
                 contact_obj = Contact.objects.filter(
                     contact_list=contact_list)
+                # Get value for total sms sends based on contact list length
+                query_params = {
+                    "api_key": settings.VONAGE_ID,
+                    "api_secret": settings.VONAGE_TOKEN
+                }
+                country_prices = price_util.vonage_api_pricing(query_params)
                 try:
                     for recipient in contact_obj:
-                        sms_kwargs = {
-                            "from": '+12312345',
-                            "to": f'+{recipient.phone_number}',
-                            "client-ref": unique_tracking_id
-                        }
+                        phone_number = str(recipient.phone_number)
+                        if not phone_number.startswith('+'):
+                            phone_number = '+' + phone_number
+                        parsed = phonenumbers.parse(phone_number)
+                        country_code = geocoder.region_code_for_number(parsed)
+                        price = country_prices.get(
+                            country_code, country_prices.get("US", 0))
+                        print('PRICE:', price)
                         if content_link:
-                            sms_kwargs["text"] = sms_text.replace('#Link', content_link).replace('#FirstName', recipient.first_name) + \
+                            message_text = sms_text.replace('#Link', content_link).replace('#FirstName', recipient.first_name) + \
                                 "\n\n\n\n\n" + \
                                 f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.id}'
                         else:
-                            sms_kwargs["text"] = sms_text.replace('#FirstName', recipient.first_name) + \
+                            message_text = sms_text.replace('#FirstName', recipient.first_name) + \
                                 "\n\n\n\n\n" + \
-                                f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.id}'
+                                f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.phone_number}'
+
+                        segments = price_util.calculate_sms_segments(
+                            message_text)
+                        total_cost = price * segments
+                        encoded_price = int(total_cost * 10000)
+                        client_ref = f"{country_code}-{encoded_price:04}-{unique_tracking_id}"
+                        sms_kwargs = {
+                            "from": '+12312345',
+                            "to": phone_number,
+                            "text": message_text,
+                            "client-ref": client_ref  # includes price + country
+                        }
+
                         responseData = sms.send_message(sms_kwargs)
 
                     smsObj.sms_sends = contact_list.contact_lenght
@@ -147,32 +169,43 @@ def send_sms(unique_tracking_id: None, user: None):
                 contact_obj = Contact.objects.filter(
                     contact_list=contact_list)
                 # Get value for total sms sends based on contact list length
-
+                query_params = {
+                    "api_key": settings.VONAGE_ID,
+                    "api_secret": settings.VONAGE_TOKEN
+                }
+                country_prices = price_util.vonage_api_pricing(query_params)
                 for recipient in contact_obj:
-                    sms_kwargs = {
-                        "from": '+12312345',  # Use a consistent sender name
-                        "to": f'+{recipient.phone_number}',
-                        "client-ref": unique_tracking_id
-                    }
-                    parse = phonenumbers.parse(
-                        f'+{recipient.phone_number}',)
-                    region = geocoder.region_code_for_number(parse)
+                    phone_number = str(recipient.phone_number)
+                    if not phone_number.startswith('+'):
+                        phone_number = '+' + phone_number
+                    parsed = phonenumbers.parse(phone_number)
+                    country_code = geocoder.region_code_for_number(parsed)
+                    price = country_prices.get(
+                        country_code, country_prices.get("US", 0))
+                    print('PRICE:', price)
                     if content_link:
-                        sms_kwargs["text"] = sms_text.replace('#Link', content_link).replace('#FirstName', recipient.first_name) + \
+                        message_text = sms_text.replace('#Link', content_link).replace('#FirstName', recipient.first_name) + \
                             "\n\n\n\n\n" + \
                             f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.id}'
                     else:
-                        sms_kwargs["text"] = sms_text.replace('#FirstName', recipient.first_name) + \
+                        message_text = sms_text.replace('#FirstName', recipient.first_name) + \
                             "\n\n\n\n\n" + \
                             f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.phone_number}'
 
-                    credits_needed = price_util.estimate_credits_required(
-                        sms_kwargs["text"], region)
-                    print('CREDITS NEEDED:', credits_needed)
-                    user.sms_count -= credits_needed
-                    user.save()
-                #     responseData = sms.send_message(sms_kwargs)
-                # logger.info("VONAGE RESPONSE", responseData)
+                    segments = price_util.calculate_sms_segments(
+                        message_text)
+                    total_cost = price * segments
+                    encoded_price = int(total_cost * 10000)
+                    client_ref = f"{country_code}-{encoded_price:04}-{unique_tracking_id}"
+                    sms_kwargs = {
+                        "from": '+12312345',
+                        "to": phone_number,
+                        "text": message_text,
+                        "client-ref": client_ref  # includes price + country
+                    }
+
+                    responseData = sms.send_message(sms_kwargs)
+                logger.info("VONAGE RESPONSE", responseData)
                 smsObj.sms_sends = contact_list.contact_lenght
                 smsObj.is_sent = True
 

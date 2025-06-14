@@ -56,21 +56,31 @@ class createSms(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
 
         user_obj = CustomUser.objects.get(id=request.data['user'])
-        recipient_list = ContactList.objects.get(
+        contact_list = ContactList.objects.get(
             id=request.data['contact_list'])
+        contact_obj = Contact.objects.filter(
+            contact_list=contact_list)
+        query_params = {
+            "api_key": settings.VONAGE_ID,
+            "api_secret": settings.VONAGE_TOKEN,
 
-        if user_obj.sms_count >= recipient_list.contact_lenght:
+        }
+        pricing_info = price_util.get_price_per_segment(
+            contact_obj, request.data['sms_text'], query_params)
+
+        if user_obj.sms_count >= pricing_info.get('estimated_credits', None):
 
             if serializer.is_valid():
 
                 sms = serializer.save()
+
                 sms_result_task = send_sms.delay(
                     sms.unique_tracking_id, user_obj.id)
                 time.sleep(2)
                 archive_message.apply_async(
                     (sms.id,), countdown=432000)
 
-                if sms_result_task.ready():
+                if sms_result_task:
                     try:
                         # If you need to handle different statuses, you can check them here
                         if sms_result_task.successful():
@@ -90,7 +100,7 @@ class createSms(generics.GenericAPIView):
                 else:
                     return Response({'error': 'Its taking longer then excpected..Contact support for more information'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
                 return Response({
-                    "sms": SmsSerializer(sms, context=self.get_serializer_context()).data
+                    "sms": "SmsSerializer(sms_result_task, context=self.get_serializer_context()).data"
                 })
         elif user_obj.sms_count < 0:
             return Response({'error': 'You have insufficient credit amount to cover this send. Top up your credit'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
@@ -127,7 +137,16 @@ def schedule_sms(request):
         user_obj = CustomUser.objects.get(id=request.data['user'])
         recipient_list = ContactList.objects.get(
             id=request.data['contact_list'])
-        if user_obj.sms_count >= recipient_list.contact_lenght:
+        contact_obj = Contact.objects.filter(
+            contact_list=recipient_list)
+        query_params = {
+            "api_key": settings.VONAGE_ID,
+            "api_secret": settings.VONAGE_TOKEN,
+
+        }
+        pricing_info = price_util.get_price_per_segment(
+            contact_obj, request.data['sms_text'], query_params)
+        if user_obj.sms_count >= pricing_info.get('estimated_credits', None):
 
             with transaction.atomic():
                 copenhagen_tz = pytz.timezone('Europe/Copenhagen')
@@ -251,17 +270,22 @@ def vonage_webhook(request):
     try:
         # Parse the JSON data from the request body
         data = request.data
-        sms_object = Sms.objects.get(unique_tracking_id=data['client-ref'])
-        contact_list = sms_object.contact_list
-        contact_obj = Contact.objects.filter(
-            contact_list=contact_list)
+        ref = data.get('client-ref', '')
+        country_code, encoded_price, short_tracking_id = ref.split("-")
+        price = int(encoded_price) / 10000.0
+        credits_to_deduct = int(round(price * 100))
+        unique_tracking_id = short_tracking_id
+        sms_object = Sms.objects.get(unique_tracking_id=unique_tracking_id)
+        if not ref or '-' not in ref:
+            return JsonResponse({'error': 'Invalid client-ref'}, status=400)
+
         with transaction.atomic():
             user = sms_object.user
             analytics = AnalyticsData.objects.get(custom_user=user.id)
+            user.sms_count -= credits_to_deduct
             # Do some other condition which checks weather the same number already passed
             if data['status'] == 'delivered':
                 sms_object.delivered += 1
-                user.sms_count -= 1
                 analytics.total_delivered += 1
 
             elif data['status'] == 'failed':
