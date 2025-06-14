@@ -1,22 +1,27 @@
+import time
+import pytz
+import requests
+import phonenumbers
+from phonenumbers import geocoder
+from django.conf import settings
 from rest_framework import status, generics
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from .models import Sms, CampaignStats
-import time
 from django.views.decorators.csrf import csrf_exempt
-from base.models import Message, ContactList, CustomUser, Element, AnalyticsData
+from base.models import Message, ContactList, Contact, CustomUser, Element, AnalyticsData
 from base.serializers import MessageSerializer
 from .serializers import SmsSerializer, CampaignStatsSerializer
 from django.http import HttpResponseRedirect, JsonResponse
 from django.db import transaction
 from datetime import datetime, timedelta
-import pytz
 from .tasks import send_scheduled_sms, send_sms, archive_message
 from base.email.email import send_email_notification
 from django.utils import timezone
 from django.utils.timezone import make_aware
 from notification.models import Notification
+from .utils import price_util
 
 
 @api_view(['GET'])
@@ -163,7 +168,7 @@ def schedule_sms(request):
                 )
 
                 sms.save()
-                print(scheduled_time_utc, current_datetime_utc)
+
                 if scheduled_time_utc > current_datetime_utc:
                     message.status = 'Scheduled'
 
@@ -247,6 +252,9 @@ def vonage_webhook(request):
         # Parse the JSON data from the request body
         data = request.data
         sms_object = Sms.objects.get(unique_tracking_id=data['client-ref'])
+        contact_list = sms_object.contact_list
+        contact_obj = Contact.objects.filter(
+            contact_list=contact_list)
         with transaction.atomic():
             user = sms_object.user
             analytics = AnalyticsData.objects.get(custom_user=user.id)
@@ -309,6 +317,28 @@ def vonage_webhook_message(request):
         print('Error handling Vonage delivery receipt:', str(e))
 
         return JsonResponse({'error': 'Error processing delivery receipt'}, status=200)
+
+
+@api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+def get_outbound_pricing(request):
+    try:
+        list_id = request.data['id']
+        sms_text = request.data['sms_text']
+        contact_obj = Contact.objects.filter(
+            contact_list=list_id)
+
+        query_params = {
+            "api_key": settings.VONAGE_ID,
+            "api_secret": settings.VONAGE_TOKEN,
+
+        }
+        pricing_info = price_util.get_price_per_segment(
+            contact_obj, sms_text, query_params)
+
+        return Response(pricing_info, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": f"There has been am error {e}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 def schedule_archive_task(sms_id, scheduled_time):

@@ -12,6 +12,7 @@ urlpatterns = [
     path('sms/button/<str:id>', views.track_button_click),
     path('campaign-stats/', views.get_campaign_stats),
     path('webhooks_delivery', views.vonage_webhook),
-    path('message_delivery', views.vonage_webhook_message)
+    path('message_delivery', views.vonage_webhook_message),
+    path('vonage_pricing', views.get_outbound_pricing)
 
 ]

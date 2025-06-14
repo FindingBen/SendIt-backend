@@ -13,6 +13,9 @@ import hashlib
 from django.core.cache import cache
 from notification.models import Notification
 from base.email.email import send_email_notification
+from .utils import price_util
+import phonenumbers
+from phonenumbers import geocoder
 
 
 @shared_task
@@ -151,6 +154,9 @@ def send_sms(unique_tracking_id: None, user: None):
                         "to": f'+{recipient.phone_number}',
                         "client-ref": unique_tracking_id
                     }
+                    parse = phonenumbers.parse(
+                        f'+{recipient.phone_number}',)
+                    region = geocoder.region_code_for_number(parse)
                     if content_link:
                         sms_kwargs["text"] = sms_text.replace('#Link', content_link).replace('#FirstName', recipient.first_name) + \
                             "\n\n\n\n\n" + \
@@ -159,8 +165,14 @@ def send_sms(unique_tracking_id: None, user: None):
                         sms_kwargs["text"] = sms_text.replace('#FirstName', recipient.first_name) + \
                             "\n\n\n\n\n" + \
                             f'\nClick to Opt-out: {smsObj.unsubscribe_path}/{recipient.phone_number}'
-                    responseData = sms.send_message(sms_kwargs)
-                logger.info("VONAGE RESPONSE", responseData)
+
+                    credits_needed = price_util.estimate_credits_required(
+                        sms_kwargs["text"], region)
+                    print('CREDITS NEEDED:', credits_needed)
+                    user.sms_count -= credits_needed
+                    user.save()
+                #     responseData = sms.send_message(sms_kwargs)
+                # logger.info("VONAGE RESPONSE", responseData)
                 smsObj.sms_sends = contact_list.contact_lenght
                 smsObj.is_sent = True
 
