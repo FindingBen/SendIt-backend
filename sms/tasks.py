@@ -251,6 +251,10 @@ def archive_message(sms_id):
             sms = Sms.objects.get(id=sms_id)
             message = sms.message  # Assuming Sms has a ForeignKey to Message
             logger.info(f"Archiving SMS {sms_id} and message {message.id}")
+            if CampaignStats.objects.filter(message=message, user=sms.user).exists():
+                logger.warning(
+                    f"CampaignStats for SMS {sms_id} and message {message.id} already archived.")
+                return 'Campaign already archived'
             message.status = 'archived'
             message.save()
 
