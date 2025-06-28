@@ -116,12 +116,11 @@ def get_campaign_stats(request):
         user = request.user
         show_all = request.query_params.get('all', 'false').lower() == 'true'
         if show_all:
-            campaigns = CampaignStats.objects.filter(
-                user=user)
+            campaigns = CampaignStats.objects.filter(user=user)
         else:
             campaigns = CampaignStats.objects.filter(
                 user=user, campaign_end__lte=today
-            ).order_by('-campaign_end')[:3]
+            ).order_by('-overall_perfromance')[:5]
         serializer = CampaignStatsSerializer(campaigns, many=True)
     except Exception as e:
         return Response(f'There has been an error: {e}')
