@@ -200,6 +200,7 @@ class Contact(models.Model):
     first_name = models.CharField(max_length=20, blank=True, null=True)
     last_name = models.CharField(max_length=20, blank=True, null=True)
     phone_number = models.BigIntegerField(blank=True, null=True)
+    is_shopify_contact = models.BooleanField(default=False)
     email = models.EmailField(blank=True, null=True)
     created_at = models.DateField(
         auto_now_add=True)
