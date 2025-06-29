@@ -123,7 +123,7 @@ class ContactSerializer(ModelSerializer):
 
     class Meta:
         model = Contact
-        fields = ['id', 'firstName', 'lastName',
+        fields = ['id', 'custom_id', 'firstName', 'lastName',
                   'email', 'phone', 'contact_list', 'users']
         extra_kwargs = {
             # Ensure this field is not created/updated through the serializer.

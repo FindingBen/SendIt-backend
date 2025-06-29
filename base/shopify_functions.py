@@ -2,6 +2,7 @@ import requests
 from rest_framework import status
 from rest_framework.response import Response
 from .models import CustomUser
+import phonenumbers
 from .queries import (
     GET_CUSTOMERS_QUERY,
     GET_TOTAL_CUSTOMERS_NR,
@@ -69,7 +70,7 @@ class ShopifyFactoryFunction:
             "first": user_package['recipients_limit'],
             "after": None,  # Cursor for pagination
             "query": search_query,  # Optional search query
-            "sortKey": sort_by.upper(),  # Sort key (e.g., CREATED_AT, FIRST_NAME)
+            # "sortKey": sort_by.upper(),  # Sort key (e.g., CREATED_AT, FIRST_NAME)
             "reverse": reverse,  # Reverse the order if true
         }
 
@@ -121,8 +122,13 @@ class ShopifyFactoryFunction:
             "email": self._request.data.get("email"),
             "phone": self._request.data.get("phone"),
         }
+        phone = customer_data.get("phone")
+
+        customer_data['phone'] = f'+{phone}'
         customer_data = {key: value for key,
                          value in customer_data.items() if value is not None}
+
+        print(customer_data)
         variables = {
 
             "input": customer_data

@@ -348,6 +348,9 @@ def get_outbound_pricing(request):
     try:
         list_id = request.data['id']
         sms_text = request.data['sms_text']
+
+        # Check shopify documentation regarding contact lists and recipients
+
         contact_obj = Contact.objects.filter(
             contact_list=list_id)
 
