@@ -675,15 +675,14 @@ def contact_detail(request, id=None):
                 serializer.save()
 
             return Response({"response": response})
-        else:
-            contact = Contact.objects.get(id=id)
 
-        if request.method == 'GET':
-            serializer = ContactSerializer(contact)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        # if request.method == 'GET':
+        #     serializer = ContactSerializer(contact)
+        #     return Response(serializer.data, status=status.HTTP_200_OK)
 
         elif request.method == 'PUT' and not shopify_domain:
             print('SSSSSSSS')
+            contact = Contact.objects.get(custom_id=id)
             serializer = ContactSerializer(
                 contact, data=request.data, partial=True)
             if serializer.is_valid():
