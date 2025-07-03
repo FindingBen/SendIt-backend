@@ -495,14 +495,16 @@ class ContactListsView(APIView):
             user = CustomUser.objects.get(id=user_id)
             contact_list = ContactList.objects.get(
                 id=request.data['list_id'])
+            was_shopify_list = False
             if transaction.atomic():
                 if shopify_domain and contact_list.shopify_list:
                     user.shopify_connect = False
                     user.save()
+                    was_shopify_list = True
 
                 Contact.objects.filter(contact_list=contact_list).delete()
                 contact_list.delete()
-                return Response("List deleted successfully!", status=status.HTTP_200_OK)
+                return Response({"message": "List deleted successfully!", "data": was_shopify_list}, status=status.HTTP_200_OK)
         except ContactList.DoesNotExist as e:
             return Response(f"error:{e}", status=status.HTTP_404_NOT_FOUND)
         except Exception as e:

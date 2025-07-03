@@ -47,7 +47,7 @@ class CustomUser(User):
         # Implement custom serialization logic here
         if self.package_plan:
             if self.package_plan.plan_type == settings.TRIAL_PLAN:
-                list_limit = 1
+                list_limit = 2
                 recipients_limit = 20
             elif self.package_plan.plan_type == settings.BASIC_PLAN:
                 list_limit = 5
