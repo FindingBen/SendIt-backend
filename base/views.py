@@ -75,7 +75,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['username'] = user.username
         token['first_name'] = user.first_name
         token['last_name'] = user.last_name
-        print('SSSSSSS')
+
         try:
             logger.info("----Authentication started----")
             custom_user = CustomUser.objects.get(custom_email=user.email)
@@ -93,10 +93,11 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                     data = response.json()
                     shop_id = data.get('data', {}).get('shop', {})['id']
             serialized_data = custom_user.serialize_package_plan()
-            print("AAAAAAAAAA", serialized_data)
+
             token['shopify_token'] = shopify_obj.access_token if shopify_obj else None
             token['shopify_id'] = shop_id if shopify_obj else None
             token['shopify_domain'] = shopify_obj.shop_domain if shopify_obj else None
+            token['shopify_connect'] = custom_user.shopify_connect if custom_user else None
             token['sms_count'] = custom_user.sms_count
             token['user_type'] = custom_user.user_type
             token['archived_state'] = custom_user.archived_state
@@ -449,57 +450,41 @@ class ContactListsView(APIView):
             shopify_domain = request.headers.get('shopify-domain', None)
             limits = utils.get_package_limits(user_package)
 
-            if shopify_domain and user.shopify_connect:
-                logger.info('---Shopify List----')
-                logger.info(shopify_domain, user.shopify_connect)
-                url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
-                shopify_token = request.headers['Authorization'].split(' ')[1]
-                shopify_factory = ShopifyFactoryFunction(
-                    shopify_domain, shopify_token, url, request=request, query=GET_TOTAL_CUSTOMERS_NR)
-                recipients_count = shopify_factory.get_total_customers()
-                max_recipients_allowed = limits['recipients']
-                capped_recipients_count = min(
-                    recipients_count, max_recipients_allowed)
-                return Response({"data": serializer.data, "limits": limits, "recipients": capped_recipients_count}, status=status.HTTP_200_OK)
-            else:
-                logger.info('---Custom List----')
+            # if shopify_domain and contact_list.shopify_list:
+            #     logger.info('---Shopify List----')
+            #     logger.info(shopify_domain, user.shopify_connect)
+            #     url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
+            #     shopify_token = request.headers['Authorization'].split(' ')[1]
+            #     shopify_factory = ShopifyFactoryFunction(
+            #         shopify_domain, shopify_token, url, request=request, query=GET_TOTAL_CUSTOMERS_NR)
+            #     recipients_count = shopify_factory.get_total_customers()
+            #     max_recipients_allowed = limits['recipients']
+            #     capped_recipients_count = min(
+            #         recipients_count, max_recipients_allowed)
+            #     return Response({"data": serializer.data, "limits": limits, "recipients": capped_recipients_count}, status=status.HTTP_200_OK)
+            # else:
+            logger.info('---Custom List----')
 
-                recipients = Contact.objects.filter(users=user)
+            recipients = Contact.objects.filter(users=user)
 
-                recipients_count = recipients.count()
+            recipients_count = recipients.count()
 
-                return Response({"data": serializer.data, "limits": limits, "recipients": recipients_count}, status=status.HTTP_200_OK)
+            return Response({"data": serializer.data, "limits": limits, "recipients": recipients_count}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     def post(self, request):
         try:
             user = CustomUser.objects.get(id=request.data['user_id'])
-            shopify_domain = request.headers.get('shopify-domain', None)
-            user_package = user.package_plan
-            shopify_token = request.headers['Authorization'].split(' ')[1]
-            package_limits = utils.get_package_limits(user_package)
-            url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
+
             request_data = request.data
-            if transaction.atomic():
-                if shopify_domain:
-                    user.shopify_connect = True
-                    user.save()
-                    shopify_factory = ShopifyFactoryFunction(
-                        shopify_domain, shopify_token, url, request=request, query=GET_TOTAL_CUSTOMERS_NR)
-                    recipients_count = shopify_factory.get_total_customers()
-                    max_recipients_allowed = package_limits['recipients']
-                    capped_recipients_count = min(
-                        recipients_count, max_recipients_allowed)
-                    request_data = {
-                        "list_name": request.data['list_name'], "contact_lenght": capped_recipients_count, "shopify_list": True}
-                print(request_data)
-                serializer = ContactListSerializer(data=request_data)
-                if serializer.is_valid(raise_exception=True):
-                    serializer.save(users=user)
-                    return Response(serializer.data, status=status.HTTP_201_CREATED)
-                else:
-                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            serializer = ContactListSerializer(data=request_data)
+            if serializer.is_valid(raise_exception=True):
+                serializer.save(users=user)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response(f"Field cannot be blank:{e}", status=status.HTTP_400_BAD_REQUEST)
 
@@ -508,12 +493,13 @@ class ContactListsView(APIView):
             shopify_domain = request.headers.get('shopify-domain', None)
             user_id = request.data['user_id']
             user = CustomUser.objects.get(id=user_id)
+            contact_list = ContactList.objects.get(
+                id=request.data['list_id'])
             if transaction.atomic():
-                if shopify_domain:
+                if shopify_domain and contact_list.shopify_list:
                     user.shopify_connect = False
                     user.save()
-                contact_list = ContactList.objects.get(
-                    id=request.data['list_id'])
+
                 Contact.objects.filter(contact_list=contact_list).delete()
                 contact_list.delete()
                 return Response("List deleted successfully!", status=status.HTTP_200_OK)
@@ -716,11 +702,14 @@ def update_message(request, id):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated, HasPackageLimit])
+@permission_classes([IsAuthenticated])
 def create_contact(request, id):
     try:
         shopify_domain = request.headers.get('shopify-domain', None)
-        if shopify_domain:
+
+        contact_list = ContactList.objects.get(id=id)
+
+        if shopify_domain and contact_list.shopify_list:
 
             url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
             shopify_token = request.headers['Authorization'].split(' ')[1]
@@ -748,13 +737,14 @@ def create_contact(request, id):
                         "details": data['details']},
                     status=response.status_code,
                 )
-
         else:
             custom_user = CustomUser.objects.get(id=request.user.id)
             random_custom_id = str(uuid.uuid4())
+
             contact_list = ContactList.objects.get(id=id)
             data = request.data.copy()
             data['custom_id'] = random_custom_id
+
             serializer = ContactSerializer(data=data)
             if serializer.is_valid(raise_exception=True):
                 serializer.save(contact_list=contact_list, users=custom_user)
@@ -775,7 +765,7 @@ def create_contact(request, id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def bulk_create_contacts(request):
-    print('SSS', request.data)
+
     try:
         shopify_domain = request.headers.get('shopify-domain', None)
         if shopify_domain:
@@ -792,36 +782,38 @@ def bulk_create_contacts(request):
                 print('RESPONSE', response)
                 customers = data.get("data", {}).get(
                     "customers", {}).get("edges", [])
-                custom_user = CustomUser.objects.get(id=request.user.id)
-                allowed_limit = utils.get_package_limits(
-                    custom_user.package_plan)['recipients']
-                contact_list = ContactList.objects.get(
-                    id=request.data['list_id'])
-                print('LIMIT', allowed_limit)
-                customers_to_import = customers[:allowed_limit]
-                for customer in customers:
-                    node = customer.get('node', {})
+                with transaction.atomic():
+                    custom_user = CustomUser.objects.get(id=request.user.id)
+                    custom_user.shopify_connect = True
+                    contact_list = ContactList.objects.get(
+                        id=request.data['list_id'])
+                    contact_list.shopify_list = True
+                    contact_list.save()
+                    contacts_response = []
+                    for customer in customers:
+                        node = customer.get('node', {})
 
-                    if not node.get("phone") or not node.get("firstName"):
-                        continue
-                    contact_data = {
-                        "custom_id": node.get("id"),
-                        "firstName": node.get("firstName"),
-                        "lastName": node.get("lastName"),
-                        "email": node.get("email"),
-                        "phone": node.get("phone"),
-                        # YYYY-MM-DD
-                        "created_at": node.get("createdAt", None)[:10] if node.get("createdAt") else None,
-                    }
-                    serializer = ContactSerializer(
-                        data=contact_data)
-                    print('NOT?')
-                    if serializer.is_valid(raise_exception=True):
-                        print('VALID???')
-                        serializer.save(contact_list=contact_list,
-                                        users=custom_user)
+                        if not node.get("phone") or not node.get("firstName"):
+                            continue
+                        contact_data = {
+                            "custom_id": node.get("id"),
+                            "firstName": node.get("firstName"),
+                            "lastName": node.get("lastName"),
+                            "email": node.get("email"),
+                            "phone": node.get("phone"),
+                            # YYYY-MM-DD
+                            "created_at": node.get("createdAt", None)[:10] if node.get("createdAt") else None,
+                        }
+                        serializer = ContactSerializer(
+                            data=contact_data)
 
-        return Response("All contacts created", status=status.HTTP_201_CREATED)
+                        if serializer.is_valid(raise_exception=True):
+
+                            serializer.save(contact_list=contact_list,
+                                            users=custom_user)
+                            contacts_response.append(serializer.data)
+
+        return Response({"data": contacts_response}, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
