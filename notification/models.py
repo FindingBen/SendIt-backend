@@ -6,9 +6,10 @@ from base.models import User
 
 class Notification(models.Model):
     NOTIF_TYPES = [
-        ('password_change', 'Password Change'),
-        ('purchase', 'Purchase'),
-        ('send_error', 'Send Error'),
+        ('success', 'password_change'),
+        ('success', 'purchase'),
+        ('error', 'purchase_error'),
+        ('error', 'send_error'),
     ]
 
     user = models.ForeignKey(

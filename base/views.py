@@ -339,10 +339,8 @@ def update_element(request, id):
 def get_notes(request):
     try:
         user = request.user
-        print(user)
         archive = request.GET.get('archive', None)
         sort_by = request.GET.get('sort_by', None)
-        # search_query = request.GET.get('search', '')
 
         customUser = CustomUser.objects.get(user_ptr_id=user.id)
 
@@ -360,7 +358,6 @@ def get_notes(request):
         else:
             # Fetch only non-archived messages
             notes = user.message_set.exclude(status='archived')
-
         # Apply sorting if provided
         if sort_by:
             notes = notes.order_by(sort_by)
@@ -374,6 +371,20 @@ def get_notes(request):
 
         return Response({"messages": serialized_data, "messages_count": sent_message_count})
 
+    except Exception as e:
+        return Response({"error": f"There has been some error: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_active_campaigns(request):
+    try:
+        user = request.user
+        customUser = CustomUser.objects.get(user_ptr_id=user.id)
+        campaigns = user.message_set.filter(status='sent')
+        serializer = MessageSerializer(campaigns, many=True)
+        serialized_data = serializer.data
+        return Response({"messages": serialized_data}, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({"error": f"There has been some error: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -1148,6 +1159,8 @@ def get_total_analytic_values(request, id):
         'clicks_rate': formatted_clicks_rate,
         'total_spend': formatted_total_spend,
         'deliveribility': formated_deliveribility,
+        'total_delivered': analytics_data.total_delivered,
+        'total_undelivered': analytics_data.total_not_delivered,
         'total_subscribed': analytics_data.tota_subscribed,
         'total_unsubscribed': analytics_data.tota_unsubscribed,
         'archived_state': custom_user_id.archived_state
