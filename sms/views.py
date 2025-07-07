@@ -83,25 +83,19 @@ class createSms(generics.GenericAPIView):
                 if sms_result_task:
                     try:
                         # If you need to handle different statuses, you can check them here
-                        if sms_result_task.successful():
-                            Notification.objects.create(
-                                user=user_obj,
-                                notif_type='Sms sending',
-                                message=f"You just executed successfully a sms transaction!"
-                            )
-
-                        else:
-                            return Response({'error': 'There has been a system error. Contact support for more help.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-
+                        Notification.objects.create(
+                            user=user_obj,
+                            notif_type='Sms sending',
+                            message=f"You just executed successfully a sms transaction!"
+                        )
+                        return Response({
+                            "sms": "Successfully sent!"}, status=status.HTTP_200_OK)
                     except ValueError as ve:
                         return Response({'error': 'There has been a system error. Contact support for more help.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
                     except Exception as e:
                         return Response({'error': 'There has been a system error. Contact support for more help.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
                 else:
                     return Response({'error': 'Its taking longer then excpected..Contact support for more information'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-                return Response({
-                    "sms": "SmsSerializer(sms_result_task, context=self.get_serializer_context()).data"
-                })
         elif user_obj.sms_count < 0:
             return Response({'error': 'You have insufficient credit amount to cover this send. Top up your credit'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
         else:
