@@ -78,7 +78,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         print('AAAAAAAAA')
         try:
             logger.info("----Authentication started----")
-            custom_user = CustomUser.objects.get(custom_email='dasd')
+            custom_user = CustomUser.objects.get(custom_email=user.email)
             print('AAAAAAAAA', custom_user)
             shop_id = None
             shopify_obj = ShopifyStore.objects.filter(
