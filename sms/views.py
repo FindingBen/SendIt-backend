@@ -231,6 +231,7 @@ def track_link_click(request, id):
 @api_view(['GET'])
 def track_button_click(request, id):
     try:
+        print('Button ID:', id)
         # my el object
         element = Element.objects.get(unique_button_id=id)
         redirect_url = element.button_link

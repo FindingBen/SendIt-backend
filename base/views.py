@@ -75,10 +75,11 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['username'] = user.username
         token['first_name'] = user.first_name
         token['last_name'] = user.last_name
-
+        print('AAAAAAAAA')
         try:
             logger.info("----Authentication started----")
-            custom_user = CustomUser.objects.get(custom_email=user.email)
+            custom_user = CustomUser.objects.get(custom_email='dasd')
+            print('AAAAAAAAA', custom_user)
             shop_id = None
             shopify_obj = ShopifyStore.objects.filter(
                 email=custom_user.email).first()
@@ -103,10 +104,12 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             token['archived_state'] = custom_user.archived_state
             token['package_plan'] = serialized_data
             token['custom_email'] = custom_user.custom_email
+            return token
         except CustomUser.DoesNotExist:
-            token['package_plan'] = None
-
-        return token
+            raise AuthenticationFailed(
+                'No user associated with this Shopify token')
+        except Exception as e:
+            return Response({"error": "Something wen't wrong, contact support"}, status=status.HTTP_404_NOT_FOUND)
 
 
 class MyTokenObtainPairView(TokenObtainPairView):
@@ -357,7 +360,7 @@ def get_notes(request):
             notes = user.message_set.filter(status='archived')
         else:
             # Fetch only non-archived messages
-            notes = user.message_set.exclude(status='archived')
+            notes = user.message_set.exclude(status__in=['archived', 'sent'])
         # Apply sorting if provided
         if sort_by:
             notes = notes.order_by(sort_by)
@@ -476,11 +479,7 @@ class ContactListsView(APIView):
             # else:
             logger.info('---Custom List----')
 
-            recipients = Contact.objects.filter(users=user)
-
-            recipients_count = recipients.count()
-
-            return Response({"data": serializer.data, "limits": limits, "recipients": recipients_count}, status=status.HTTP_200_OK)
+            return Response({"data": serializer.data, "limits": limits}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
