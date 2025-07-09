@@ -211,6 +211,7 @@ def stripe_webhook(request):
                     Notification.objects.create(
                         user=user_obj,
                         notif_type='purchase',
+                        title="Purchase Successful",
                         message=f"Your purchase of {package_obj.plan_type} was successful!"
                     )
                     StripeEvent.objects.create(event_id=event_id)
@@ -230,6 +231,12 @@ def stripe_webhook(request):
                         from_email='benarmys4@gmail.com'
                     )
                 else:
+                    Notification.objects.create(
+                        user=user_obj,
+                        notif_type='purchase',
+                        title="Purchase Not completed",
+                        message=f"Your purchase of {package_obj.plan_type} was not completed, contact support!"
+                    )
                     return Response('Payment not completed! Contact administrator for more info')
             except IntegrityError:
                 pass

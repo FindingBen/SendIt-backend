@@ -108,6 +108,7 @@ def send_scheduled_sms(unique_tracking_id: None):
                         Notification.objects.create(
                             user=user,
                             notif_type='Sms sending error',
+                            title='SMS Sending Error',
                             message=f"There has been an error while sending your sms!"
                         )
                         send_email_notification(user.id)

@@ -85,6 +85,7 @@ class createSms(generics.GenericAPIView):
                         # If you need to handle different statuses, you can check them here
                         Notification.objects.create(
                             user=user_obj,
+                            title='Sms sent successfully',
                             notif_type='Sms sending',
                             message=f"You just executed successfully a sms transaction!"
                         )
