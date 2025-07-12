@@ -115,7 +115,7 @@ def get_campaign_stats(request):
         else:
             campaigns = CampaignStats.objects.filter(
                 user=user, campaign_end__lte=today
-            ).order_by('-overall_perfromance')[:5]
+            ).order_by('-overall_perfromance')[:4]
         serializer = CampaignStatsSerializer(campaigns, many=True)
     except Exception as e:
         return Response(f'There has been an error: {e}')
@@ -370,7 +370,8 @@ def get_outbound_pricing(request):
 
 def schedule_archive_task(sms_id, scheduled_time):
     # Calculate the scheduled time for archiving the message (5 days after scheduled time)
-
+    print("SSS", scheduled_time)
     archive_time = scheduled_time + timedelta(minutes=5)
-    archive_message.apply_async((sms_id,), eta=archive_time)
+    print('ARCHIVED_TIME', archive_time)
+    archive_message.apply_async((sms_id,), countdown=archive_time)
     print("scheduled for archive")
