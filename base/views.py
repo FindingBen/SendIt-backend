@@ -781,7 +781,7 @@ def bulk_create_contacts(request):
     try:
         shopify_domain = request.headers.get('shopify-domain', None)
         if shopify_domain:
-
+            contacts_response = []
             url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
             shopify_token = request.headers['Authorization'].split(' ')[1]
 
@@ -801,7 +801,7 @@ def bulk_create_contacts(request):
                         id=request.data['list_id'])
                     contact_list.shopify_list = True
                     contact_list.save()
-                    contacts_response = []
+
                     for customer in customers:
                         node = customer.get('node', {})
 
@@ -1461,7 +1461,17 @@ def customer_redact_request_webhook(request):
             return HttpResponse(status=401)  # Unauthorized
 
         data = json.loads(body)
-
+        print(data)
+        shop_domain = data.get('shop_domain', None)
+        print('shop', shop_domain)
+        if shop_domain is not None:
+            get_obj = ShopifyStore.objects.get(shop_domain=shop_domain)
+            print('store', get_obj)
+            custom_user = CustomUser.objects.get(custom_email=get_obj.email)
+            print('custom_user', custom_user)
+            shopify_contact_list = ContactList.objects.get(
+                users=custom_user, shopify_list=True)
+            shopify_contact_list.delete()
         print("Webhook triggered, we are not storing customers data from shopify")
 
         return HttpResponse(status=200)
@@ -1474,7 +1484,7 @@ def customer_shop_redact_request_webhook(request):
 
     shopify_hmac = request.META.get('HTTP_X_SHOPIFY_HMAC_SHA256')
     if shopify_hmac:
-
+        print("Webhook triggered, we are deleting shopify store object")
         body = request.body
         hashit = hmac.new(settings.SHOPIFY_API_SECRET.encode(
             'utf-8'), body, hashlib.sha256)

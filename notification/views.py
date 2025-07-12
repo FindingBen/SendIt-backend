@@ -10,7 +10,7 @@ class NotificationView(APIView):
 
     def get(self, request):
         notifications = Notification.objects.filter(
-            user=request.user).order_by('-created_at')[:5]
+            user=request.user).order_by('-created_at')[:4]
         serializer = NotificationSerializer(notifications, many=True)
         return Response(serializer.data)
 
