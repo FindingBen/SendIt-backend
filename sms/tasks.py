@@ -107,7 +107,7 @@ def send_scheduled_sms(unique_tracking_id: None):
                         message.save()
                         Notification.objects.create(
                             user=user,
-                            notif_type='Sms sending error',
+                            notif_type='error',
                             title='SMS Sending Error',
                             message=f"There has been an error while sending your sms!"
                         )
@@ -306,7 +306,7 @@ def archive_message(sms_id):
             Notification.objects.create(
                 user=sms.user,
                 title='Campaign arvhived successfully',
-                notif_type='Sms sending',
+                notif_type='success',
                 message=f"Your campaign got archived successfully. You can view the stats in your dashboard.",
             )
             return 'Message archived successfully'

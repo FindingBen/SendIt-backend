@@ -210,7 +210,7 @@ def stripe_webhook(request):
                     user_payment.save()
                     Notification.objects.create(
                         user=user_obj,
-                        notif_type='purchase',
+                        notif_type='success',
                         title="Purchase Successful",
                         message=f"Your purchase of {package_obj.plan_type} was successful!"
                     )
@@ -233,7 +233,7 @@ def stripe_webhook(request):
                 else:
                     Notification.objects.create(
                         user=user_obj,
-                        notif_type='purchase',
+                        notif_type='error',
                         title="Purchase Not completed",
                         message=f"Your purchase of {package_obj.plan_type} was not completed, contact support!"
                     )
