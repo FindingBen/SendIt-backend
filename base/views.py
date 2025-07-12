@@ -360,7 +360,8 @@ def get_notes(request):
             notes = user.message_set.filter(status='archived')
         else:
             # Fetch only non-archived messages
-            notes = user.message_set.exclude(status__in=['archived', 'sent'])
+            notes = user.message_set.exclude(
+                status__in=['archived', 'sent', 'Scheduled'])
         # Apply sorting if provided
         if sort_by:
             notes = notes.order_by(sort_by)
