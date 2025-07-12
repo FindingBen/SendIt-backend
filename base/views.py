@@ -791,9 +791,10 @@ def bulk_create_contacts(request):
             response = shopify_factory.get_customers()
             if response.status_code == 200:
                 data = response.json()
-                print('RESPONSE', response)
+                print(data)
                 customers = data.get("data", {}).get(
                     "customers", {}).get("edges", [])
+                print(data)
                 with transaction.atomic():
                     custom_user = CustomUser.objects.get(id=request.user.id)
                     custom_user.shopify_connect = True
@@ -1463,16 +1464,19 @@ def customer_redact_request_webhook(request):
         data = json.loads(body)
         print(data)
         shop_domain = data.get('shop_domain', None)
-        print('shop', shop_domain)
+
         if shop_domain is not None:
-            get_obj = ShopifyStore.objects.get(shop_domain=shop_domain)
-            print('store', get_obj)
-            custom_user = CustomUser.objects.get(custom_email=get_obj.email)
-            print('custom_user', custom_user)
-            shopify_contact_list = ContactList.objects.get(
-                users=custom_user, shopify_list=True)
-            shopify_contact_list.delete()
-        print("Webhook triggered, we are not storing customers data from shopify")
+            with transaction.atomic():
+                get_obj = ShopifyStore.objects.get(shop_domain=shop_domain)
+                custom_user = CustomUser.objects.get(
+                    custom_email=get_obj.email)
+                shopify_contact_list = ContactList.objects.get(
+                    users=custom_user.id, shopify_list=True)
+                # Delete contacts first
+                Contact.objects.filter(
+                    contact_list=shopify_contact_list).delete()
+                shopify_contact_list.delete()
+        print("Webhook triggered, customers data from shopify deleted!")
 
         return HttpResponse(status=200)
     return Response({"error": "Missing shopify signature!"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -1495,7 +1499,7 @@ def customer_shop_redact_request_webhook(request):
 
         data = json.loads(body)
         print(data)
-        shop_domain = data.get('shop_domain', None)
+        shop_domain = data.get('shop_domain', 'spplane.myshopify.com')
         if shop_domain is not None:
             get_obj = ShopifyStore.objects.get(shop_domain=shop_domain)
             get_obj.delete()
