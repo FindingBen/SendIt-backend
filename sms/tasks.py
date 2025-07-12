@@ -263,7 +263,8 @@ def archive_message(sms_id):
             custom_user.archived_state = True
             custom_user.save()
 
-            total_clicks = ( sms.click_button + sms.click_number)
+            total_clicks = (sms.click_button + sms.click_number)
+            print('TOTAL_CLICKS', total_clicks)
             audience = sms.sms_sends
             total_views = sms.total_views
             unsub_users = 0
