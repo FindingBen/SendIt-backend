@@ -373,5 +373,10 @@ def schedule_archive_task(sms_id, scheduled_time):
     print("SSS", scheduled_time)
     archive_time = scheduled_time + timedelta(minutes=5)
     print('ARCHIVED_TIME', archive_time)
-    archive_message.apply_async((sms_id,), countdown=archive_time)
+    now = datetime.now(tz=scheduled_time.tzinfo)  # ensure timezone-aware
+    countdown_seconds = (archive_time - now).total_seconds()
+    # avoid negative countdown
+    countdown_seconds = max(0, int(countdown_seconds))
+    print('COUNTDOWN_SECONDS', countdown_seconds)
+    archive_message.apply_async((sms_id,), countdown=countdown_seconds)
     print("scheduled for archive")
