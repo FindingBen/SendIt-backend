@@ -1440,7 +1440,7 @@ def customer_data_request_webhook(request):
 
         data = json.loads(body)
 
-        print("Webhook triggered")
+        print('Webhook triggered! We are not storing customers data with this webhook.')
 
         return HttpResponse(status=200)
     return Response({"error": "Missing shopify signature!"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

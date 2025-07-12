@@ -302,7 +302,13 @@ def archive_message(sms_id):
             )
 
             campaign_stats.save()
-
+            sms.delete()
+            Notification.objects.create(
+                user=sms.user,
+                title='Campaign arvhived successfully',
+                notif_type='Sms sending',
+                message=f"Your campaign got archived successfully. You can view the stats in your dashboard.",
+            )
             return 'Message archived successfully'
     except Sms.DoesNotExist:
         logger.error(f'SMS with id {sms_id} does not exist')

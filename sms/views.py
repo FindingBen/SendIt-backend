@@ -86,7 +86,7 @@ class createSms(generics.GenericAPIView):
                         Notification.objects.create(
                             user=user_obj,
                             title='Sms sent successfully',
-                            notif_type='Sms sending',
+                            notif_type='success',
                             message=f"You just executed successfully a sms transaction!"
                         )
                         return Response({
@@ -189,7 +189,12 @@ def schedule_sms(request):
 
                     send_scheduled_sms.apply_async(
                         (sms.unique_tracking_id,), eta=scheduled_time_utc)
-
+                    Notification.objects.create(
+                        user=user_obj,
+                        title='Sms scheduled successfully',
+                        notif_type='success',
+                        message=f"You just executed successfully a sms schedule transaction!"
+                    )
                     return Response({
                         "sms": f'{data}'
                     })
@@ -366,6 +371,6 @@ def get_outbound_pricing(request):
 def schedule_archive_task(sms_id, scheduled_time):
     # Calculate the scheduled time for archiving the message (5 days after scheduled time)
 
-    archive_time = scheduled_time + timedelta(days=5)
+    archive_time = scheduled_time + timedelta(minutes=5)
     archive_message.apply_async((sms_id,), eta=archive_time)
     print("scheduled for archive")

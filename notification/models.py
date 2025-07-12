@@ -6,17 +6,15 @@ from base.models import User
 
 class Notification(models.Model):
     NOTIF_TYPES = [
-        ('success', 'password_change'),
-        ('success', 'purchase'),
-        ('error', 'purchase_error'),
-        ('error', 'send_error'),
+        ('success', 'success'),
+        ('error', 'error')
     ]
 
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='notifications')
     notif_type = models.CharField(max_length=30, choices=NOTIF_TYPES)
     message = models.TextField(max_length=2020)
-    title = models.CharField(max_length=255,default='Default title')
+    title = models.CharField(max_length=255, default='Default title')
     created_at = models.DateTimeField(auto_now_add=True)
     read = models.BooleanField(default=False)
 
