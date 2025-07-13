@@ -115,8 +115,8 @@ def send_scheduled_sms(unique_tracking_id: None, scheduled_time: None):
                         logger.error(
                             f"Message failed: {responseData['messages'][0].get('error-text', 'Unknown error')}")
                         return
-                    from .views import schedule_archive_task
-                    schedule_archive_task(smsObj.id, scheduled_time)
+                    archive_message.apply_async(
+                        (sms.id,), countdown=300)
                     print(
                         f"Sms successfully sent: {responseData['messages'][0]}")
 

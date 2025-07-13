@@ -393,7 +393,7 @@ def schedule_archive_task(sms_id, scheduled_time):
         print('ARCHIVE_TIME (Copenhagen):', archive_time_naive)
 
         # Schedule task using local time directly
-        archive_message.apply_async((sms_id,), eta=archive_time_naive)
+        archive_message.apply_async((sms_id,), countdown=300)
         print("scheduled for archive")
     except Exception as e:
         print("Error in schedule_archive_task:", e)
