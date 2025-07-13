@@ -279,7 +279,8 @@ CELERY_IMPORTS = ("sms.tasks", )
 CELERY_BROKER_URL = os.environ.get('REDIS_URL')
 CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL')
 CELERY_CACHE_BACKEND = 'default'
-# USE_TZ = True
+CELERY_ENABLE_UTC = False
+USE_TZ = True
 
 DEFAULT_FROM_EMAIL = 'benarmys4@gmail.com'
 

@@ -1,3 +1,4 @@
+from django.utils.timezone import is_aware, make_aware, localtime
 import time
 import pytz
 import requests
@@ -110,9 +111,15 @@ def get_campaign_stats(request):
         today = timezone.now().date()
         user = request.user
         show_all = request.query_params.get('all', 'false').lower() == 'true'
+        limit = request.query_params.get('limit', 'false').lower() == 'true'
+        best_perf = request.query_params.get(
+            'best_perf', 'false').lower() == 'true'
         if show_all:
             campaigns = CampaignStats.objects.filter(user=user)
-        else:
+        elif limit:
+            campaigns = CampaignStats.objects.filter(
+                user=user, campaign_end__lte=today)[:6]
+        elif best_perf:
             campaigns = CampaignStats.objects.filter(
                 user=user, campaign_end__lte=today
             ).order_by('-overall_perfromance')[:4]
@@ -188,7 +195,7 @@ def schedule_sms(request):
                     message.save()
 
                     send_scheduled_sms.apply_async(
-                        (sms.unique_tracking_id,), eta=scheduled_time_utc)
+                        (sms.unique_tracking_id, scheduled_time_utc), eta=scheduled_time_utc)
                     Notification.objects.create(
                         user=user_obj,
                         title='Sms scheduled successfully',
@@ -369,14 +376,24 @@ def get_outbound_pricing(request):
 
 
 def schedule_archive_task(sms_id, scheduled_time):
-    # Calculate the scheduled time for archiving the message (5 days after scheduled time)
-    print("SSS", scheduled_time)
-    archive_time = scheduled_time + timedelta(minutes=5)
-    print('ARCHIVED_TIME', archive_time)
-    now = datetime.now(tz=scheduled_time.tzinfo)  # ensure timezone-aware
-    countdown_seconds = (archive_time - now).total_seconds()
-    # avoid negative countdown
-    countdown_seconds = max(0, int(countdown_seconds))
-    print('COUNTDOWN_SECONDS', countdown_seconds)
-    archive_message.apply_async((sms_id,), countdown=countdown_seconds)
-    print("scheduled for archive")
+    try:
+        print("SSS", scheduled_time, type(scheduled_time))
+
+        # Ensure scheduled_time is timezone-aware in Europe/Copenhagen
+        copenhagen_tz = pytz.timezone('Europe/Copenhagen')
+        if not is_aware(scheduled_time):
+            scheduled_time = make_aware(scheduled_time, timezone=copenhagen_tz)
+        else:
+            scheduled_time = scheduled_time.astimezone(copenhagen_tz)
+
+        archive_time_aware = scheduled_time + timedelta(minutes=5)
+        # Add 5 minutes for testing (or 5 days in production)
+        archive_time_naive = archive_time_aware.replace(tzinfo=None)
+
+        print('ARCHIVE_TIME (Copenhagen):', archive_time_naive)
+
+        # Schedule task using local time directly
+        archive_message.apply_async((sms_id,), eta=archive_time_naive)
+        print("scheduled for archive")
+    except Exception as e:
+        print("Error in schedule_archive_task:", e)

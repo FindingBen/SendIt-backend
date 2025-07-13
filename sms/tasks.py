@@ -19,7 +19,7 @@ from phonenumbers import geocoder
 
 
 @shared_task
-def send_scheduled_sms(unique_tracking_id: None):
+def send_scheduled_sms(unique_tracking_id: None, scheduled_time: None):
     logger = logging.getLogger(__name__)
     try:
         from .models import Sms
@@ -116,7 +116,7 @@ def send_scheduled_sms(unique_tracking_id: None):
                             f"Message failed: {responseData['messages'][0].get('error-text', 'Unknown error')}")
                         return
                     from .views import schedule_archive_task
-                    schedule_archive_task(smsObj.id, smsObj.scheduled_time)
+                    schedule_archive_task(smsObj.id, scheduled_time)
                     print(
                         f"Sms successfully sent: {responseData['messages'][0]}")
 
