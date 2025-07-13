@@ -361,7 +361,7 @@ def get_notes(request):
         else:
             # Fetch only non-archived messages
             notes = user.message_set.exclude(
-                status__in=['archived', 'sent', 'Scheduled'])
+                status__in=['archived', 'sent'])
         # Apply sorting if provided
         if sort_by:
             notes = notes.order_by(sort_by)
@@ -649,8 +649,9 @@ def contact_detail(request, id=None):
     try:
 
         shopify_domain = request.headers.get('shopify-domain', None)
-
-        if shopify_domain and request.method == 'PUT':
+        contact_list = ContactList.objects.get(id=id)
+        print(contact_list.shopify_list)
+        if shopify_domain and request.method == 'PUT' and contact_list.shopify_list:
             print('DDDDDDDDDD')
             shopify_token = request.headers['Authorization'].split(' ')[1]
             url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
@@ -673,15 +674,15 @@ def contact_detail(request, id=None):
                 cache.delete(cache_key)
                 serializer.save()
 
-            return Response({"response": response})
+            return Response({"response": response}, status=status.HTTP_200_OK)
 
         # if request.method == 'GET':
         #     serializer = ContactSerializer(contact)
         #     return Response(serializer.data, status=status.HTTP_200_OK)
 
-        elif request.method == 'PUT' and not shopify_domain:
-            print('SSSSSSSS')
-            contact = Contact.objects.get(custom_id=id)
+        elif request.method == 'PUT':
+
+            contact = Contact.objects.get(custom_id=request.data['id'])
             serializer = ContactSerializer(
                 contact, data=request.data, partial=True)
             if serializer.is_valid():
@@ -690,7 +691,10 @@ def contact_detail(request, id=None):
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    except Contact.DoesNotExist:
+
+        return Response({"detail": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    except Exception as e:
+        print(e)
         return Response({"error": "Contact not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
@@ -758,19 +762,23 @@ def create_contact(request, id):
             data = request.data.copy()
             data['custom_id'] = random_custom_id
 
+            required_fields = ['firstName', 'lastName', 'phone', 'email']
+            missing_fields = [f for f in required_fields if not data.get(f)]
+            if missing_fields:
+                return Response(
+                    {"detail": "Missing required fields",
+                        "missing": missing_fields},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
             serializer = ContactSerializer(data=data)
-            if serializer.is_valid(raise_exception=True):
-                serializer.save(contact_list=contact_list, users=custom_user)
-                if not data['firstName'] and data['phone']:
-                    return Response({'detail': 'Empty form submission.'}, status=status.HTTP_400_BAD_REQUEST)
+            serializer.is_valid(raise_exception=True)
+            serializer.save(contact_list=contact_list, users=custom_user)
 
-                serializer.save(contact_list=contact_list, users=request.user)
+            cache_key = f"user_contacts:{contact_list.id}"
+            cache.delete(cache_key)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-                cache_key = f"user_contacts:{contact_list.id}"
-                cache.delete(cache_key)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
