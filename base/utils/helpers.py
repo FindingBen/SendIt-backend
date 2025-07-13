@@ -300,3 +300,12 @@ class Utils:
 
         shopify_object = ShopifyStore.objects.get(email=user.email)
         return shopify_object
+
+    def convert_keys(self, profile):
+        print('Converting keys:', profile)
+        return {
+            "firstName": profile.get("first_name"),
+            "lastName": profile.get("last_name"),
+            "phone": profile.get("phone"),
+            "email": profile.get("email"),
+        }

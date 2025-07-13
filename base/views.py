@@ -785,6 +785,68 @@ def create_contact(request, id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+def upload_bulk_contacts(request):
+    try:
+        shopify_domain = request.headers.get('shopify-domain', None)
+
+        bulk_data = request.data.get('data', None).get('bulk_data')
+        print('0', bulk_data)
+        if not bulk_data:
+            return Response({"detail": "No data provided."}, status=status.HTTP_400_BAD_REQUEST)
+        required_fields = ['firstName', 'lastName', 'phone', 'email']
+        invalid_items = []
+        contacts_to_create = []
+        print('1')
+        custom_user = CustomUser.objects.get(id=request.user.id)
+        contact_list_id = request.data.get("data", None).get('list_id', None)
+        print('2')
+        try:
+            contact_list = ContactList.objects.get(id=contact_list_id)
+        except ContactList.DoesNotExist:
+            return Response({"error": "Contact list not found"}, status=status.HTTP_404_NOT_FOUND)
+        print('3')
+        for idx, profile in enumerate(bulk_data):
+            # profile = utils.convert_keys(profile)
+            print('converterd', profile)
+            missing_fields = [f for f in required_fields if not profile.get(f)]
+            if missing_fields:
+                print('missing?')
+                invalid_items.append({"index": idx, "missing": missing_fields})
+                continue
+            serializer = ContactSerializer(data=profile)
+            print('here')
+            if serializer.is_valid():
+                contact = Contact(
+                    first_name=serializer.validated_data['first_name'],
+                    last_name=serializer.validated_data['last_name'],
+                    phone_number=serializer.validated_data['phone_number'],
+                    email=serializer.validated_data['email'],
+                    contact_list=contact_list,
+                    users=custom_user
+                )
+                contacts_to_create.append(contact)
+            else:
+                invalid_items.append(
+                    {"index": idx, "errors": serializer.errors})
+        if contacts_to_create:
+            Contact.objects.bulk_create(contacts_to_create)
+            contact_list.update_contact_count(contact_list)
+            
+
+        cache_key = f"user_contacts:{contact_list.id}"
+        cache.delete(cache_key)
+
+        return Response({
+            "created": len(contacts_to_create),
+            "invalid": invalid_items,
+            "data": ContactSerializer(contacts_to_create, many=True).data
+        }, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def bulk_create_contacts(request):
 
     try:
@@ -1082,33 +1144,7 @@ def delete_element(request, id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def delete_contact_recipient(request, id=None):
-    print("SSSSSSS")
     try:
-        # shopify_domain = request.headers.get('shopify-domain', None)
-        # if shopify_domain:
-        #     shopify_token = request.headers['Authorization'].split(' ')[1]
-        #     # Shopify GraphQL endpoint
-        #     url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
-
-        #     shopify_factory = ShopifyFactoryFunction(
-        #         shopify_domain, shopify_token, url, request=request, query=DELETE_CUSTOMER_QUERY)
-        #     response = shopify_factory.delete_customer()
-        #     print("AAAAAAA", response)
-        #     if response.get("data", {}).get("customerDelete", {}).get("userErrors"):
-
-        #         return Response(
-        #             {"error":  response["data"]["customerDelete"]["userErrors"],
-        #              },
-        #             status=status.HTTP_400_BAD_REQUEST,
-        #         )
-        #     deleted_customer_id = response.get("data", {}).get(
-        #         "customerDelete", {}).get("deletedCustomerId")
-        #     contact = Contact.objects.get(id=id)
-        #     contact.delete()
-        #     cache_key = f"user_contacts:{request.user.id}"
-        #     cache.delete(cache_key)
-        #     return Response({"deleted_customer_id": deleted_customer_id}, status=status.HTTP_200_OK)
-        # else:
         contact = Contact.objects.get(id=id)
         contact.delete()
         cache_key = f"user_contacts:{request.user.id}"

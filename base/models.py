@@ -186,6 +186,13 @@ class ContactList(models.Model):
         contact_list.contact_lenght = contact_count
         contact_list.save()
 
+    @classmethod
+    def update_contact_count(cls, contact_list):
+        from .models import Contact  # avoid circular import
+        count = Contact.objects.filter(contact_list=contact_list).count()
+        contact_list.contact_lenght = count
+        contact_list.save()
+
     def save(self, *args, **kwargs):
         if not self.created_at:
             self.created_at = timezone.now().date()
@@ -199,7 +206,7 @@ class Contact(models.Model):
         ContactList, null=True, on_delete=models.CASCADE)
     first_name = models.CharField(max_length=20, blank=True, null=True)
     last_name = models.CharField(max_length=20, blank=True, null=True)
-    phone_number = models.BigIntegerField(blank=True, null=True)
+    phone_number = models.CharField(blank=True, null=True)
     is_shopify_contact = models.BooleanField(default=False)
     email = models.EmailField(blank=True, null=True)
     created_at = models.DateField(
