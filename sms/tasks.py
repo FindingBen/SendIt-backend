@@ -116,7 +116,7 @@ def send_scheduled_sms(unique_tracking_id: None, scheduled_time: None):
                             f"Message failed: {responseData['messages'][0].get('error-text', 'Unknown error')}")
                         return
                     archive_message.apply_async(
-                        (smsObj.id,), countdown=300)
+                        (smsObj.id,), countdown=432000)
                     print(
                         f"Sms successfully sent: {responseData['messages'][0]}")
 
