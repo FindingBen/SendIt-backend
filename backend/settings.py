@@ -281,6 +281,8 @@ CELERY_BROKER_URL = os.environ.get('REDIS_URL')
 CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL')
 CELERY_CACHE_BACKEND = 'default'
 CELERY_ENABLE_UTC = False
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
 USE_TZ = True
 
 DEFAULT_FROM_EMAIL = 'benarmys4@gmail.com'
