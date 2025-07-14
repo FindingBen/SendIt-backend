@@ -10,6 +10,7 @@ from .views import RegisterAPI, CreateNote, CreateElement, CustomUserViewSet, Se
 urlpatterns = [
     path('notes/', views.get_notes),
     path('active_campaigns/', views.get_active_campaigns),
+    path('scheduled_campaigns/', views.get_scheduled_campaigns),
     path('register/', RegisterAPI.as_view(), name='register'),
     path('create_notes/', CreateNote.as_view(), name='create_message'),
     path('create_element/', CreateElement.as_view(), name='create_element'),

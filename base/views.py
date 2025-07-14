@@ -342,38 +342,50 @@ def update_element(request, id):
 def get_notes(request):
     try:
         user = request.user
-        archive = request.GET.get('archive', None)
-        sort_by = request.GET.get('sort_by', None)
+        # archived, draft, scheduled, sent, active
+
+        sort_by = request.GET.get('sort_by', '-created_at')  # Default sort
 
         customUser = CustomUser.objects.get(user_ptr_id=user.id)
-
-        # if search_query:
-        #     notes = user.message_set.filter(
-        #         message_name__icontains=search_query)
-
-        if customUser.archived_state == True:
+        if customUser.archived_state:
             customUser.archived_state = False
             customUser.save()
-        # Determine which messages to fetch based on 'archive' parameter
-        if archive == 'true':
-            # Fetch only archived messages
-            notes = user.message_set.filter(status='archived')
-        else:
-            # Fetch only non-archived messages
-            notes = user.message_set.exclude(
-                status__in=['archived', 'sent'])
-        # Apply sorting if provided
-        if sort_by:
-            notes = notes.order_by(sort_by)
 
+        # Default to all messages if no type is provided
+        notes = user.message_set.filter(status='Draft')
+
+        # Apply sorting
+        try:
+            notes = notes.order_by(sort_by)
+        except Exception as e:
+            notes = notes.order_by('-created_at')
+
+        # Count sent messages (optional, based on returned queryset)
+
+        serializer = MessageSerializer(notes, many=True)
+        return Response({
+            "messages": serializer.data,
+
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response({"error": f"There has been some error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_scheduled_campaigns(request):
+    try:
+        user = request.user
+
+        notes = user.message_set.filter(status='Scheduled')
         # Serialize the notes
         serializer = MessageSerializer(notes, many=True)
         serialized_data = serializer.data
 
         # Count the 'sent' messages for additional information
-        sent_message_count = notes.filter(status='sent').count()
 
-        return Response({"messages": serialized_data, "messages_count": sent_message_count})
+        return Response({"messages": serialized_data}, status=status.HTTP_200_OK)
 
     except Exception as e:
         return Response({"error": f"There has been some error: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -831,7 +843,6 @@ def upload_bulk_contacts(request):
         if contacts_to_create:
             Contact.objects.bulk_create(contacts_to_create)
             contact_list.update_contact_count(contact_list)
-            
 
         cache_key = f"user_contacts:{contact_list.id}"
         cache.delete(cache_key)
