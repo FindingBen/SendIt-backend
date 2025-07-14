@@ -118,7 +118,7 @@ def send_scheduled_sms(unique_tracking_id: None):
                         logger.error(
                             f"Message failed: {responseData['messages'][0].get('error-text', 'Unknown error')}")
                         return
-                    scheduled_time_utc = now() + timedelta(minutes=5)
+                    scheduled_time_utc = now() + timedelta(days=3)
                     scheduled_time_utc = scheduled_time_utc.astimezone(
                         pytz.utc)
 
