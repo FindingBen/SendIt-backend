@@ -1,20 +1,23 @@
-from __future__ import absolute_import, unicode_literals
+import vonage
+import logging
+import phonenumbers
+import hashlib
+import json
+import pytz
 from datetime import timedelta
 from base.models import Message, Element, AnalyticsData
 from .models import Sms, CampaignStats
 from celery import shared_task
-import vonage
+from django_celery_beat.models import ClockedSchedule, PeriodicTask
+from uuid import uuid4
 from django.conf import settings
 from django.utils import timezone
-import logging
-import uuid
+from django.utils.timezone import now
 from django.db import transaction
-import hashlib
 from django.core.cache import cache
 from notification.models import Notification
 from base.email.email import send_email_notification
 from .utils import price_util
-import phonenumbers
 from phonenumbers import geocoder
 
 
@@ -115,8 +118,20 @@ def send_scheduled_sms(unique_tracking_id: None):
                         logger.error(
                             f"Message failed: {responseData['messages'][0].get('error-text', 'Unknown error')}")
                         return
-                    archive_message.apply_async(
-                        (smsObj.id,), countdown=432000)
+                    scheduled_time_utc = now() + timedelta(minutes=5)
+                    scheduled_time_utc = scheduled_time_utc.astimezone(
+                        pytz.utc)
+
+                    clocked, _ = ClockedSchedule.objects.get_or_create(
+                        clocked_time=scheduled_time_utc)
+
+                    PeriodicTask.objects.create(
+                        name=f'archive-message-{uuid4()}',
+                        task='sms.tasks.archive_message',
+                        clocked=clocked,
+                        one_off=True,
+                        args=json.dumps([smsObj.id]),
+                    )
                     print(
                         f"Sms successfully sent: {responseData['messages'][0]}")
 
