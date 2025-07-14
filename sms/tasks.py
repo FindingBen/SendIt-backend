@@ -19,7 +19,7 @@ from phonenumbers import geocoder
 
 
 @shared_task
-def send_scheduled_sms(unique_tracking_id: None, scheduled_time: None):
+def send_scheduled_sms(unique_tracking_id: None):
     logger = logging.getLogger(__name__)
     try:
         from .models import Sms

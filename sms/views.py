@@ -1,15 +1,13 @@
-from django.utils.timezone import is_aware, make_aware, localtime
 import time
 import pytz
-import requests
-import phonenumbers
-from phonenumbers import geocoder
+import json
 from django.conf import settings
 from rest_framework import status, generics
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from .models import Sms, CampaignStats
+from django.utils.timezone import is_aware, make_aware, localtime
 from django.views.decorators.csrf import csrf_exempt
 from base.models import Message, ContactList, Contact, CustomUser, Element, AnalyticsData
 from base.serializers import MessageSerializer
@@ -18,11 +16,12 @@ from django.http import HttpResponseRedirect, JsonResponse
 from django.db import transaction
 from datetime import datetime, timedelta
 from .tasks import send_scheduled_sms, send_sms, archive_message
-from base.email.email import send_email_notification
 from django.utils import timezone
 from django.utils.timezone import make_aware
 from notification.models import Notification
 from .utils import price_util
+from uuid import uuid4
+from django_celery_beat.models import PeriodicTask, ClockedSchedule
 
 
 @api_view(['GET'])
@@ -194,8 +193,19 @@ def schedule_sms(request):
 
                     message.save()
 
-                    send_scheduled_sms.apply_async(
-                        (sms.unique_tracking_id, scheduled_time_utc), eta=scheduled_time_utc)
+                    # send_scheduled_sms.apply_async(
+                    #     (sms.unique_tracking_id, scheduled_time_utc), eta=scheduled_time_utc)
+                    clocked, _ = ClockedSchedule.objects.get_or_create(
+                        clocked_time=scheduled_time_utc)
+
+                    PeriodicTask.objects.create(
+                        # unique name
+                        name=f'send-scheduled-sms-{uuid4()}',
+                        task='sms.tasks.send_scheduled_sms',
+                        clocked=clocked,
+                        one_off=True,
+                        args=json.dumps([sms.unique_tracking_id]),
+                    )
                     Notification.objects.create(
                         user=user_obj,
                         title='Sms scheduled successfully',
