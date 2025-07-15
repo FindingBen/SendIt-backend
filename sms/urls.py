@@ -8,6 +8,8 @@ urlpatterns = [
     path('sms/<str:id>', views.get_sms),
     path('sms-send/', createSms.as_view(), name='sms-send'),
     path('sms-send-schedule/', views.schedule_sms, name='sms-schedule'),
+    path('cancel-schedule-sms/', views.cancel_scheduled_sms,
+         name='cancel-schedule-sms'),
     path('sms/newsletter/<str:id>', views.track_link_click),
     path('sms/button/<str:id>', views.track_button_click),
     path('campaign-stats/', views.get_campaign_stats),

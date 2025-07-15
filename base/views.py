@@ -75,11 +75,9 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['username'] = user.username
         token['first_name'] = user.first_name
         token['last_name'] = user.last_name
-        print('AAAAAAAAA')
         try:
             logger.info("----Authentication started----")
             custom_user = CustomUser.objects.get(custom_email=user.email)
-            print('AAAAAAAAA', custom_user)
             shop_id = None
             shopify_obj = ShopifyStore.objects.filter(
                 email=custom_user.email).first()

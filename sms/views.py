@@ -240,30 +240,29 @@ def schedule_sms(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def cancel_scheduled_sms(request):
-    unique_tracking_id = request.data.get('unique_tracking_id')
-
-    if not unique_tracking_id:
-        return Response({"error": "Missing unique_tracking_id"}, status=status.HTTP_400_BAD_REQUEST)
+    message_id = request.data.get('message_obj')
+    sms = Sms.objects.get(message_id=message_id)
+    if not message_id:
+        return Response({"error": "Missing message_id"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         # 1. Find and delete the scheduled task
-        task_name = f'send-scheduled-sms-{unique_tracking_id}'
+        task_name = f'send-scheduled-sms-{sms.unique_tracking_id}'
         task = PeriodicTask.objects.get(name=task_name)
         clocked_id = task.clocked_id
         task.delete()
 
-        # 2. Optionally delete the clocked schedule if no other task uses it
+        # # 2. Optionally delete the clocked schedule if no other task uses it
         if not PeriodicTask.objects.filter(clocked_id=clocked_id).exists():
             ClockedSchedule.objects.filter(id=clocked_id).delete()
 
-        # 3. Update SMS/message state
-        sms = Sms.objects.get(unique_tracking_id=unique_tracking_id)
-        sms.is_sent = False
-        sms.save()
+        with transaction.atomic():
+            sms.is_sent = False
+            sms.save()
 
-        message = sms.message
-        message.status = 'Draft'
-        message.save()
+            message = sms.message
+            message.status = 'Draft'
+            message.save()
 
         return Response({"success": "Scheduled SMS cancelled."}, status=status.HTTP_200_OK)
 
