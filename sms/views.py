@@ -77,8 +77,19 @@ class createSms(generics.GenericAPIView):
                 sms_result_task = send_sms.delay(
                     sms.unique_tracking_id, user_obj.id)
                 time.sleep(2)
-                archive_message.apply_async(
-                    (sms.id,), countdown=432000)
+                scheduled_time_utc = (
+                    now() + timedelta(days=3)).astimezone(pytz.utc)
+
+                clocked, _ = ClockedSchedule.objects.get_or_create(
+                    clocked_time=scheduled_time_utc)
+
+                PeriodicTask.objects.create(
+                    name=f'archive-message-{uuid4()}',
+                    task='sms.tasks.archive_message',
+                    clocked=clocked,
+                    one_off=True,
+                    args=json.dumps([smsObj.id]),
+                )
 
                 if sms_result_task:
                     try:
@@ -200,7 +211,7 @@ def schedule_sms(request):
 
                     PeriodicTask.objects.create(
                         # unique name
-                        name=f'send-scheduled-sms-{uuid4()}',
+                        name=f'send-scheduled-sms-{sms.unique_tracking_id}',
                         task='sms.tasks.send_scheduled_sms',
                         clocked=clocked,
                         one_off=True,
@@ -224,6 +235,44 @@ def schedule_sms(request):
             return Response({'error': 'You dont have enough credit amount to cover this send. Top up your credit'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
     except Exception as e:
         return Response({'There has been an error:': str(e)}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def cancel_scheduled_sms(request):
+    unique_tracking_id = request.data.get('unique_tracking_id')
+
+    if not unique_tracking_id:
+        return Response({"error": "Missing unique_tracking_id"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        # 1. Find and delete the scheduled task
+        task_name = f'send-scheduled-sms-{unique_tracking_id}'
+        task = PeriodicTask.objects.get(name=task_name)
+        clocked_id = task.clocked_id
+        task.delete()
+
+        # 2. Optionally delete the clocked schedule if no other task uses it
+        if not PeriodicTask.objects.filter(clocked_id=clocked_id).exists():
+            ClockedSchedule.objects.filter(id=clocked_id).delete()
+
+        # 3. Update SMS/message state
+        sms = Sms.objects.get(unique_tracking_id=unique_tracking_id)
+        sms.is_sent = False
+        sms.save()
+
+        message = sms.message
+        message.status = 'Draft'
+        message.save()
+
+        return Response({"success": "Scheduled SMS cancelled."}, status=status.HTTP_200_OK)
+
+    except PeriodicTask.DoesNotExist:
+        return Response({"error": "Scheduled task not found."}, status=status.HTTP_404_NOT_FOUND)
+    except Sms.DoesNotExist:
+        return Response({"error": "SMS object not found."}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])
@@ -288,6 +337,7 @@ def vonage_webhook(request):
         # Parse the JSON data from the request body
         data = request.data
         ref = data.get('client-ref', '')
+        print('AAAAAA')
         country_code, encoded_price, short_tracking_id = ref.split("-")
         price = int(encoded_price) / 10000.0
         credits_to_deduct = int(round(price * 100))
@@ -300,6 +350,7 @@ def vonage_webhook(request):
             user = sms_object.user
             analytics = AnalyticsData.objects.get(custom_user=user.id)
             user.sms_count -= credits_to_deduct
+            print('DEDUCTED!! GODAMN')
             # Do some other condition which checks weather the same number already passed
             if data['status'] == 'delivered':
                 sms_object.delivered += 1
