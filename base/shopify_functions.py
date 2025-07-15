@@ -61,27 +61,53 @@ class ShopifyFactoryFunction:
         reverse = self._request.GET.get('reverse', 'false').lower() == 'true'
         user = CustomUser.objects.get(id=self._request.user.id)
         user_package = user.serialize_package_plan()
+        recipients_limit = user_package['recipients_limit']
+        shopify_limit = 250
         headers = {
             "X-Shopify-Access-Token": self._token,
         }
 
-        variables = {
-            # Number of customers to fetch per request
-            "first": user_package['recipients_limit'],
-            "after": None,  # Cursor for pagination
-            "query": search_query,  # Optional search query
-            # "sortKey": sort_by.upper(),  # Sort key (e.g., CREATED_AT, FIRST_NAME)
-            "reverse": reverse,  # Reverse the order if true
-        }
+        all_customers = []
+        cursor = None
+        total_fetched = 0
+        unlimited = recipients_limit == "Unlimited"
+        limit = float('inf') if unlimited else int(recipients_limit)
 
-        response = requests.post(
-            self._url,
-            headers=headers,
-            json={"query": self._query, "variables": variables},
-        )
+        while total_fetched < limit:
+            variables = {
+                "first": min(shopify_limit, limit - total_fetched),
+                "after": cursor,
+                "query": search_query,
+                "reverse": reverse,
+            }
 
-        # Return the response from Shopify's API
-        return response
+            response = requests.post(
+                self._url,
+                headers=headers,
+                json={"query": self._query, "variables": variables},
+            )
+
+            if response.status_code != 200:
+                break  # Fail fast if Shopify API error
+
+            data = response.json()
+
+            # Extract data safely
+            try:
+                edges = data['data']['customers']['edges']
+                page_info = data['data']['customers']['pageInfo']
+            except (KeyError, TypeError):
+                break  # Shopify response is malformed
+
+            all_customers.extend(edges)
+            total_fetched += len(edges)
+
+            if not page_info.get('hasNextPage') or not edges:
+                break  # No more pages
+
+            cursor = edges[-1]['cursor']
+
+        return all_customers
 
     def create_customers(self):
         headers = {

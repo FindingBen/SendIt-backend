@@ -868,43 +868,43 @@ def bulk_create_contacts(request):
             shopify_factory = ShopifyFactoryFunction(
                 shopify_domain, shopify_token, url, request=request, query=GET_CUSTOMERS_QUERY)
 
-            response = shopify_factory.get_customers()
-            if response.status_code == 200:
-                data = response.json()
-                print(data)
-                customers = data.get("data", {}).get(
-                    "customers", {}).get("edges", [])
-                print(data)
-                with transaction.atomic():
-                    custom_user = CustomUser.objects.get(id=request.user.id)
-                    custom_user.shopify_connect = True
-                    contact_list = ContactList.objects.get(
-                        id=request.data['list_id'])
-                    contact_list.shopify_list = True
-                    contact_list.save()
+            customers = shopify_factory.get_customers()
+            # if response.status_code == 200:
+            # data = response.json()
+            print(customers)
+            # customers = data.get("data", {}).get(
+            #         "customers", {}).get("edges", [])
+            # print(data)
+            with transaction.atomic():
+                custom_user = CustomUser.objects.get(id=request.user.id)
+                custom_user.shopify_connect = True
+                contact_list = ContactList.objects.get(
+                    id=request.data['list_id'])
+                contact_list.shopify_list = True
+                contact_list.save()
 
-                    for customer in customers:
-                        node = customer.get('node', {})
+                for customer in customers:
+                    node = customer.get('node', {})
 
-                        if not node.get("phone") or not node.get("firstName"):
-                            continue
-                        contact_data = {
-                            "custom_id": node.get("id"),
-                            "firstName": node.get("firstName"),
-                            "lastName": node.get("lastName"),
-                            "email": node.get("email"),
-                            "phone": node.get("phone"),
-                            # YYYY-MM-DD
-                            "created_at": node.get("createdAt", None)[:10] if node.get("createdAt") else None,
-                        }
-                        serializer = ContactSerializer(
-                            data=contact_data)
+                    if not node.get("phone") or not node.get("firstName"):
+                        continue
+                    contact_data = {
+                        "custom_id": node.get("id"),
+                        "firstName": node.get("firstName"),
+                        "lastName": node.get("lastName"),
+                        "email": node.get("email"),
+                        "phone": node.get("phone"),
+                        # YYYY-MM-DD
+                        "created_at": node.get("createdAt", None)[:10] if node.get("createdAt") else None,
+                    }
+                    serializer = ContactSerializer(
+                        data=contact_data)
 
-                        if serializer.is_valid(raise_exception=True):
+                    if serializer.is_valid(raise_exception=True):
 
-                            serializer.save(contact_list=contact_list,
-                                            users=custom_user)
-                            contacts_response.append(serializer.data)
+                        serializer.save(contact_list=contact_list,
+                                        users=custom_user)
+                        contacts_response.append(serializer.data)
 
         return Response({"data": contacts_response}, status=status.HTTP_201_CREATED)
     except Exception as e:
@@ -926,6 +926,7 @@ def create_contact_via_qr(request, id):
                 shopify_obj.shop_domain, shopify_obj.access_token, url, request=request, query=CREATE_CUSTOMER_QUERY)
 
             response = shopify_factory.create_customers()
+
             if response.status_code == 200:
                 data = response.json()
                 if data.get("data", {}).get("customerCreate", {}).get("userErrors"):
