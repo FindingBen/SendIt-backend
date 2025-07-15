@@ -46,23 +46,23 @@ def send_scheduled_sms(unique_tracking_id: None):
                 smsObj.has_button = True
         smsObj.save()
 
-        with transaction.atomic():
-            if not smsObj.is_sent:
+        if not smsObj.is_sent:
 
-                client = vonage.Client(
-                    key=settings.VONAGE_ID, secret=settings.VONAGE_TOKEN)
-                sms = vonage.Sms(client)
+            client = vonage.Client(
+                key=settings.VONAGE_ID, secret=settings.VONAGE_TOKEN)
+            sms = vonage.Sms(client)
 
-                # Use self.contact_list to get the related ContactList instance
-                contact_obj = Contact.objects.filter(
-                    contact_list=contact_list)
-                # Get value for total sms sends based on contact list length
-                query_params = {
-                    "api_key": settings.VONAGE_ID,
-                    "api_secret": settings.VONAGE_TOKEN
-                }
-                country_prices = price_util.vonage_api_pricing(query_params)
-                try:
+            # Use self.contact_list to get the related ContactList instance
+            contact_obj = Contact.objects.filter(
+                contact_list=contact_list)
+            # Get value for total sms sends based on contact list length
+            query_params = {
+                "api_key": settings.VONAGE_ID,
+                "api_secret": settings.VONAGE_TOKEN
+            }
+            country_prices = price_util.vonage_api_pricing(query_params)
+            try:
+                with transaction.atomic():
                     for recipient in contact_obj:
                         phone_number = str(recipient.phone_number)
                         if not phone_number.startswith('+'):
@@ -133,18 +133,18 @@ def send_scheduled_sms(unique_tracking_id: None):
                         args=json.dumps([smsObj.id]),
                     )
 
-                except Exception as e:
-                    message.status = 'error'
-                    message.save()
-                    logger.exception("Error sending SMS")
-                    Notification.objects.create(
-                        user=user,
-                        notif_type='error',
-                        title='SMS Schedule Error',
-                        message=f"There has been an error while scheduling your sms!"
-                    )
-                    send_email_notification(user.id)
-                    raise
+            except Exception as e:
+                message.status = 'error'
+                message.save()
+                logger.exception("Error sending SMS")
+                Notification.objects.create(
+                    user=user,
+                    notif_type='error',
+                    title='SMS Schedule Error',
+                    message=f"There has been an error while scheduling your sms!"
+                )
+                send_email_notification(user.id)
+                raise
 
             else:
                 logger.info(f"SMS {smsObj.id} already sent, skipping.")
