@@ -132,14 +132,17 @@ def send_scheduled_sms(unique_tracking_id: None):
                         one_off=True,
                         args=json.dumps([smsObj.id]),
                     )
-                    print(
-                        f"Sms successfully sent: {responseData['messages'][0]}")
 
                 except Exception as e:
                     message.status = 'error'
                     message.save()
                     logger.exception("Error sending SMS")
-
+                    Notification.objects.create(
+                        user=user,
+                        notif_type='error',
+                        title='SMS Schedule Error',
+                        message=f"There has been an error while scheduling your sms!"
+                    )
                     send_email_notification(user.id)
                     raise
 
