@@ -203,7 +203,8 @@ def schedule_sms(request):
                     message.status = 'Scheduled'
 
                     message.save()
-                    scheduled_time_utc = scheduled_time_utc.replace(microsecond=0)
+                    scheduled_time_utc = scheduled_time_utc.replace(
+                        microsecond=0)
                     # send_scheduled_sms.apply_async(
                     #     (sms.unique_tracking_id, scheduled_time_utc), eta=scheduled_time_utc)
                     clocked, _ = ClockedSchedule.objects.get_or_create(
@@ -246,6 +247,7 @@ def cancel_scheduled_sms(request):
         return Response({"error": "Missing message_id"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
+        print(sms.unique_tracking_id)
         # 1. Find and delete the scheduled task
         task_name = f'send-scheduled-sms-{sms.unique_tracking_id}'
         task = PeriodicTask.objects.get(name=task_name)
