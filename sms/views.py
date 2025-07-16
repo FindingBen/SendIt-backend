@@ -205,8 +205,7 @@ def schedule_sms(request):
                     message.save()
                     scheduled_time_utc = scheduled_time_utc.replace(
                         microsecond=0)
-                    # send_scheduled_sms.apply_async(
-                    #     (sms.unique_tracking_id, scheduled_time_utc), eta=scheduled_time_utc)
+
                     clocked, _ = ClockedSchedule.objects.get_or_create(
                         clocked_time=scheduled_time_utc)
 

@@ -878,6 +878,7 @@ def bulk_create_contacts(request):
             with transaction.atomic():
                 custom_user = CustomUser.objects.get(id=request.user.id)
                 custom_user.shopify_connect = True
+                custom_user.save()
                 contact_list = ContactList.objects.get(
                     id=request.data['list_id'])
                 contact_list.shopify_list = True
