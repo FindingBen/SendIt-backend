@@ -475,21 +475,6 @@ class ContactListsView(APIView):
             shopify_domain = request.headers.get('shopify-domain', None)
             limits = utils.get_package_limits(user_package)
 
-            # if shopify_domain and contact_list.shopify_list:
-            #     logger.info('---Shopify List----')
-            #     logger.info(shopify_domain, user.shopify_connect)
-            #     url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
-            #     shopify_token = request.headers['Authorization'].split(' ')[1]
-            #     shopify_factory = ShopifyFactoryFunction(
-            #         shopify_domain, shopify_token, url, request=request, query=GET_TOTAL_CUSTOMERS_NR)
-            #     recipients_count = shopify_factory.get_total_customers()
-            #     max_recipients_allowed = limits['recipients']
-            #     capped_recipients_count = min(
-            #         recipients_count, max_recipients_allowed)
-            #     return Response({"data": serializer.data, "limits": limits, "recipients": capped_recipients_count}, status=status.HTTP_200_OK)
-            # else:
-            logger.info('---Custom List----')
-
             return Response({"data": serializer.data, "limits": limits}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -536,29 +521,6 @@ class ContactListsView(APIView):
 @permission_classes([IsAuthenticated])
 def get_contacts(request, id):
     try:
-        # shopify_domain = request.headers.get('shopify-domain', None)
-        # if shopify_domain:
-        #     shopify_domain = request.headers['shopify-domain']
-        #     url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
-        #     shopify_token = request.headers['Authorization'].split(' ')[1]
-        #     shopify_factory = ShopifyFactoryFunction(
-        #         shopify_domain, shopify_token, url, request=request, query=GET_CUSTOMERS_QUERY)
-
-        #     response = shopify_factory.get_customers()
-
-        #     if response.status_code == 200:
-        #         data = response.json()
-
-        #         customers = data.get("data", {}).get("customers", {})
-        #         print('CUSTOMERS', customers)
-        #         return Response(customers, status=status.HTTP_200_OK)
-        #     else:
-        #         return Response(
-        #             {"error": "Failed to fetch customers from Shopify",
-        #              "details": response.json()},
-        #             status=response.status_code,
-        #         )
-
         contact_list = ContactList.objects.get(id=id)
         cache_key = f"user_contacts:{contact_list.id}"
 

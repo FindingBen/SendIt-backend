@@ -258,8 +258,7 @@ def cancel_scheduled_sms(request):
             ClockedSchedule.objects.filter(id=clocked_id).delete()
 
         with transaction.atomic():
-            sms.is_sent = False
-            sms.save()
+            sms.delete()
 
             message = sms.message
             message.status = 'Draft'
