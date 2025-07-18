@@ -87,7 +87,7 @@ class createSms(generics.GenericAPIView):
                     task='sms.tasks.archive_message',
                     clocked=clocked,
                     one_off=True,
-                    args=json.dumps([smsObj.id]),
+                    args=json.dumps([sms.id]),
                 )
 
                 try:
