@@ -91,23 +91,21 @@ class createSms(generics.GenericAPIView):
                     args=json.dumps([smsObj.id]),
                 )
 
-                if sms_result_task:
-                    try:
-                        # If you need to handle different statuses, you can check them here
-                        Notification.objects.create(
-                            user=user_obj,
-                            title='Sms sent successfully',
-                            notif_type='success',
-                            message=f"You just executed successfully a sms transaction!"
-                        )
-                        return Response({
-                            "sms": "Successfully sent!"}, status=status.HTTP_200_OK)
-                    except ValueError as ve:
-                        return Response({'error': 'There has been a system error. Contact support for more help.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-                    except Exception as e:
-                        return Response({'error': 'There has been a system error. Contact support for more help.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-                else:
-                    return Response({'error': 'Its taking longer then excpected..Contact support for more information'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+                try:
+                    # If you need to handle different statuses, you can check them here
+                    Notification.objects.create(
+                        user=user_obj,
+                        title='Sms sent successfully',
+                        notif_type='success',
+                        message=f"You just executed successfully a sms transaction!"
+                    )
+                    return Response({
+                        "sms": "Successfully sent!"}, status=status.HTTP_200_OK)
+                except ValueError as ve:
+                    return Response({'error': 'There has been a system error. Contact support for more help.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+                except Exception as e:
+                    return Response({'error': 'There has been a system error. Contact support for more help.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
         elif user_obj.sms_count < 0:
             return Response({'error': 'You have insufficient credit amount to cover this send. Top up your credit'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
         else:
