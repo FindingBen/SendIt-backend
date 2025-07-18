@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from .models import Sms, CampaignStats
-from django.utils.timezone import is_aware, make_aware, localtime
+from django.utils.timezone import is_aware, make_aware, localtime, now, make_aware
 from django.views.decorators.csrf import csrf_exempt
 from base.models import Message, ContactList, Contact, CustomUser, Element, AnalyticsData
 from base.serializers import MessageSerializer
@@ -17,7 +17,6 @@ from django.db import transaction
 from datetime import datetime, timedelta
 from .tasks import send_scheduled_sms, send_sms, archive_message
 from django.utils import timezone
-from django.utils.timezone import make_aware
 from notification.models import Notification
 from .utils import price_util
 from uuid import uuid4
