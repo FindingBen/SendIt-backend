@@ -5,6 +5,7 @@ from rest_framework_simplejwt.views import (
 )
 from .views import MyTokenObtainPairView, OAuthAuthorization, CallbackAuthView
 from .views import RegisterAPI, CreateNote, CreateElement, CustomUserViewSet, SendEmailConfirmationTokenAPIView, ShopifyAuth, ContactListsView
+from django.http import JsonResponse
 
 
 urlpatterns = [
@@ -76,5 +77,6 @@ urlpatterns = [
     path('customer_data_webhook', views.customer_data_request_webhook),
     path('customer_redact_data_webhook', views.customer_redact_request_webhook),
     path('customer_shop_redact_webhook',
-         views.customer_shop_redact_request_webhook)
+         views.customer_shop_redact_request_webhook),
+
 ]
