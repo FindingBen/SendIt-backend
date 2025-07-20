@@ -64,7 +64,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 ROOT_URLCONF = 'backend.urls'
 
-CORS_ALLOW_ALL_ORIGINS = TRUE
+CORS_ALLOW_ALL_ORIGINS = True
 ENVIRONMENT = os.environ.get('DJANGO_ENV', 'development')
 
 # CORS_ALLOWED_ORIGINS = os.environ.get('ORIGINS', '').split(',')
