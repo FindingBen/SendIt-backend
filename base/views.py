@@ -1508,7 +1508,6 @@ def webhook_debug_view(request):
     return JsonResponse({"status": "ok"})
 
 
-@require_http_methods(['POST'])
 @csrf_exempt
 def customer_shop_redact_request_webhook(request):
     print("🧪 Raw body:", request.body)
