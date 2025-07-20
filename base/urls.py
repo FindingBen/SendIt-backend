@@ -77,6 +77,6 @@ urlpatterns = [
     path('customer_data_webhook', views.customer_data_request_webhook),
     path('customer_redact_data_webhook', views.customer_redact_request_webhook),
     path('customer_shop_redact_webhook',
-         views.webhook_debug_view),
+         views.customer_shop_redact_request_webhook),
 
 ]
