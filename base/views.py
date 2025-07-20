@@ -1500,34 +1500,39 @@ def customer_redact_request_webhook(request):
     return Response({"error": "Missing shopify signature!"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@csrf_exempt
+def webhook_debug_view(request):
+    print("🔔 Shopify webhook reached Django view")
+    print("Headers:", dict(request.headers))
+    print("Body:", request.body)
+    return JsonResponse({"status": "ok"})
+
+
 @require_http_methods(['POST'])
 @csrf_exempt
 def customer_shop_redact_request_webhook(request):
     print("🧪 Raw body:", request.body)
     shopify_hmac = request.META.get('HTTP_X_SHOPIFY_HMAC_SHA256')
-    shopify_hmac_2 = request.META.get('X-SHOPIFY-HMAC-SHA256')
+
     print("🧪 HMAC body:", shopify_hmac)
-    print("🧪 HMAC2 body:", shopify_hmac_2)
+
     if shopify_hmac:
         print("Webhook triggered, we are deleting shopify store object")
         print("🧪 Raw body:", request.body)
         print("🧪 HMAC header:", shopify_hmac)
 
         body = request.body
-        digest = hmac.new(
-            key=settings.SHOPIFY_API_SECRET.encode('utf-8'),
-            msg=body,
-            digestmod=hashlib.sha256
-        ).digest()
-        print("DDDDDDDD", digest)
-        calculated_hmac = base64.b64encode(digest).decode()
+
+        hashit = hmac.new(settings.SHOPIFY_API_SECRET.encode(
+            'utf-8'), body, hashlib.sha256)
+        calculated_hmac = base64.b64encode(hashit.digest()).decode()
 
         if not hmac.compare_digest(calculated_hmac, shopify_hmac):
             return HttpResponse(status=401)  # Unauthorized
 
         data = json.loads(body)
         print("HEREEEE", data)
-        shop_domain = data.get('shop_domain', 'spplane.myshopify.com')
+        shop_domain = data.get('shop_domain', None)
         if shop_domain is not None:
             get_obj = ShopifyStore.objects.get(shop_domain=shop_domain)
             get_obj.delete()
