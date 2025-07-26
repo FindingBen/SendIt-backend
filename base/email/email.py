@@ -1,11 +1,14 @@
 from djoser.email import PasswordResetEmail, ActivationEmail
 from django.core.mail import send_mail
 from base.models import CustomUser
-from django.template.loader import get_template
+from django.template.loader import render_to_string
 from django.conf import settings
+from django.core.mail import EmailMultiAlternatives
 
 
 class CustomPasswordResetConfirmationEmail(PasswordResetEmail):
+    template_name = 'email/password_reset_email.html'
+
     def get_context_data(self):
         context = super().get_context_data()
         context['domain'] = 'spplane.app'
@@ -18,75 +21,87 @@ class CustomPasswordResetConfirmationEmail(PasswordResetEmail):
 def send_confirmation_email(email, token_id, user_id):
     user_obj = CustomUser.objects.get(id=user_id)
 
-    send_mail(
-        subject=f'[SENDPERPLANE] Hi {user_obj.first_name}, we need to confirm your email',
-        message=f"""
-        Please confirm your email by clicking on the link below:
+    subject = f'[SENDPERPLANE] Hi {user_obj.first_name}, please confirm your email'
+    from_email = settings.DEFAULT_FROM_EMAIL
+    to_email = [email]
 
-        https://spplane.app/activate_email/{token_id}/{user_id}/
-        """,
-        from_email='benarmys4@gmail.com',
-        recipient_list=[email],
-        fail_silently=True
-    )
+    context = {
+        'first_name': user_obj.first_name or 'there',
+        'token_id': token_id,
+        'user_id': user_id,
+    }
+
+    html_content = render_to_string('email/activation_email.html', context)
+    text_content = f"Hi {user_obj.first_name},\n\nPlease confirm your email by clicking the link below:\nhttps://spplane.app/activate_email/{token_id}/{user_id}/"
+
+    msg = EmailMultiAlternatives(subject, text_content, from_email, to_email)
+    msg.attach_alternative(html_content, "text/html")
+    msg.send()
 
 
 def send_welcome_email(email: None, user_object: None):
+    subject = 'Welcome to Sendperplane - Your SMS Marketing Platform'
+    from_email = settings.DEFAULT_FROM_EMAIL
+    to_email = [email]
 
-    send_mail(
-        subject='Welcome to Sendperplane - Your SMS Marketing Platform',
-        message=f'''Dear,
+    # Render email HTML
+    html_content = render_to_string('email/welcome_email.html', {
+        'first_name': user_object.first_name or 'there'
+    })
 
-                    Welcome to Sendperplane - the platform that empowers you to supercharge your SMS marketing efforts! 🚀
+    # Optional plain-text fallback
+    text_content = "Welcome to Sendperplane! Visit spplane.app to start sending messages."
 
-                    We're thrilled to have you on board! Here's a quick rundown of what you can achieve with Sendperplane:
-
-                    1. Import Contacts: Easily import and organize your contact lists for targeted campaigns.
-                    2. Create Compelling Content: Craft engaging SMS messages with our user-friendly editor. Personalize your content to make a lasting impression.
-                    3. Send Messages Effortlessly: With a few clicks, you can send SMS messages to your contacts, ensuring your messages reach the right audience at the right time.
-
-                    Get started now and elevate your SMS marketing game!
-
-                    If you have any questions or need assistance along the way, our support team is here to help. Simply reply to this email, and we'll be happy to assist you.
-
-                    Thanks for choosing Sendperplane. Let's make your SMS marketing journey a success!
-
-                    Best regards,
-                    The Sendperplane Team''',
-        from_email='benarmys4@gmail.com',  # Replace with your sender email address
-        recipient_list=[email],  # Use the user's email address
-        fail_silently=False,
-    )
+    msg = EmailMultiAlternatives(subject, text_content, from_email, to_email)
+    msg.attach_alternative(html_content, "text/html")
+    msg.send()
 
 
 def send_email_notification(user_id):
     try:
-        # Retrieve user email from request
         user_obj = CustomUser.objects.get(id=user_id)
         subject = "Scheduled SMS Failed"
-        message = f"IMPORTANT NOTIFICATION! One of your recent messages has failed. Go to the spplane platform to investigate."
         from_email = settings.DEFAULT_FROM_EMAIL
-        recipient_list = [user_obj.email]
-        send_mail(subject, message, from_email, recipient_list)
+        to_email = [user_obj.email]
+
+        context = {
+            'first_name': user_obj.first_name or 'there'
+        }
+
+        html_content = render_to_string(
+            'email/sms_failure_notification.html', context)
+        text_content = (
+            f"Dear {user_obj.first_name},\n\n"
+            "IMPORTANT NOTIFICATION: One of your scheduled messages has failed.\n"
+            "Please visit https://spplane.app to check your dashboard.\n"
+        )
+
+        msg = EmailMultiAlternatives(
+            subject, text_content, from_email, to_email)
+        msg.attach_alternative(html_content, "text/html")
+        msg.send()
     except Exception as e:
         print("Error sending email notification:", str(e))
 
 
 def send_confirmation_email_account_close(email):
-    email_sent = False
-    send_mail(
-        subject=f'[SENDPERPLANE] We were honored to have you with us!',
-        message=f"""
-        Thank you for using our service, we hope to see you back some day, hopefully soon!
-        
-        Your account is now closed and all of the data we had is deleted as per our privacy policy rules which you can
-        check out here: https://spplane.app/privacy-policy .
+    try:
+        subject = '[SENDPERPLANE] We were honored to have you with us!'
+        from_email = 'benarmys4@gmail.com'
+        to_email = [email]
 
-        Have a good one!
-        """,
-        from_email='benarmys4@gmail.com',
-        recipient_list=[email],
-        fail_silently=True
-    )
-    email_sent = True
-    return email_sent
+        html_content = render_to_string('email/account_closure.html', {})
+        text_content = (
+            "Thank you for using our service. Your account is now closed and your data has been deleted.\n\n"
+            "You can review our privacy policy here: https://spplane.app/privacy-policy\n\n"
+            "We hope to see you back someday."
+        )
+
+        msg = EmailMultiAlternatives(
+            subject, text_content, from_email, to_email)
+        msg.attach_alternative(html_content, "text/html")
+        msg.send()
+        return True
+    except Exception as e:
+        print("Error sending account closure email:", str(e))
+        return False

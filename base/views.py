@@ -15,7 +15,7 @@ from io import BytesIO
 from django.shortcuts import redirect
 from django.http import HttpResponse
 from .utils.googleAnalytics import sample_run_report
-from .email.email import send_confirmation_email, send_welcome_email, send_confirmation_email_account_close
+from .email.email import send_confirmation_email, send_welcome_email, send_confirmation_email_account_close, send_email_notification
 from django.db.models import Sum
 from django.db import transaction
 from sms.models import Sms
