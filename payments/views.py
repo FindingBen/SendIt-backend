@@ -2,7 +2,7 @@ from django.urls import reverse
 import stripe
 import time
 import requests
-from datetime import datetime
+from datetime import datetime, date
 from django.core.cache import cache
 from django.conf import settings
 from rest_framework.views import APIView
@@ -403,60 +403,97 @@ def create_shopify_charge(request):
 @api_view(['GET'])
 def check_users_charge(request):
     try:
-        # print(request.headers)
         shopify_domain = request.headers.get('shopify-domain', None)
-        # print(shopify_domain)
         url = f"https://{shopify_domain}/admin/api/{settings.SHOPIFY_API_VERSION}/graphql.json"
+        charge_id = request.GET.get('charge_id', None)
         if shopify_domain:
             shopify_token = request.headers['Authorization'].split(' ')[1]
             shopify_obj = ShopifyStore.objects.get(
                 shop_domain=shopify_domain, access_token=shopify_token)
-            user_obj = CustomUser.objects.get(
-                custom_email=shopify_obj.email)
+            user_obj = CustomUser.objects.get(custom_email=shopify_obj.email)
+            if Billing.objects.filter(shopify_charge_id=charge_id, user=user_obj).exists() or charge_id is None:
+                return Response({
+                    "package": "Data already returned",
+                    "status": 208
+                }, status=status.HTTP_208_ALREADY_REPORTED)
             shopify_factory = ShopifyFactoryFunction(
-                shopify_domain, shopify_token, url, request=request, query=CURRENT_CHARGE, headers=request.headers)
+                shopify_domain, shopify_token, url, request=request, query=CURRENT_CHARGE, headers=request.headers
+            )
             response = shopify_factory.get_users_charge()
             data = response.json()
+
             if data.get("errors", {}):
                 return Response(
-                    {"error": "Url doesnt exists",
+                    {"error": "Url doesn't exist",
                         "details": data["errors"]["message"]},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+
             plan_data = data.get('data', {}).get(
-                'currentAppInstallation', {}).get('activeSubscriptions', [])[0]
-            print("PLAN", plan_data)
-            with transaction.atomic():
-                shopify_charge_id = plan_data.get('id')
-                billing_amount = float(
-                    plan_data['lineItems'][0]['plan']['pricingDetails']['price']['amount'])
-                billing_status = plan_data.get('status', 'pending')
-                billing_plan = plan_data.get('name', 'None')
-                charge_number = shopify_charge_id.split('/')[-1]
-                # Create Billing only if not exists for this charge
-                if not Billing.objects.filter(shopify_charge_id=charge_number, user=user_obj).exists():
-                    print('AAAAAAAAAAAA')
-                    Billing.objects.create(
-                        user=user_obj,
-                        billing_amount=billing_amount,
-                        billing_plan=billing_plan,
-                        billing_status=billing_status,
-                        shopify_charge_id=charge_number
-                    )
-                # print(get_plan)
-                if len(plan_data) > 0:
-                    util = Utils(shopify_domain)
-                    plan = plan_data.get('name', None)
-                    package_obj = PackagePlan.objects.get(plan_type=plan)
+                'currentAppInstallation', {}
+            ).get('activeSubscriptions', [])
+            if len(plan_data) > 0:
+                plan_info = plan_data[0]
+            else:
+                return Response({"error": "No active subscription found"}, status=status.HTTP_404_NOT_FOUND)
+            shopify_charge_id = plan_info.get('id')
+            charge_number = shopify_charge_id.split('/')[-1]
+            print(plan_info, "SSSSSSSSSSS")
+            billing_amount = float(
+                plan_info['lineItems'][0]['plan']['pricingDetails']['price']['amount'])
+            billing_status = plan_info.get('status', 'pending')
+            billing_plan = plan_info.get('name', 'None')
+            next_billing_date_str = plan_info.get(
+                'currentPeriodEnd')  # ISO 8601 format
 
-                    user_obj.package_plan = package_obj
+            # Create billing if it doesn't exist
+            if not Billing.objects.filter(shopify_charge_id=charge_number, user=user_obj).exists():
+                Billing.objects.create(
+                    user=user_obj,
+                    billing_amount=billing_amount,
+                    billing_plan=billing_plan,
+                    billing_status=billing_status,
+                    shopify_charge_id=charge_number
+                )
 
-                    user_obj.sms_count = package_obj.sms_count_pack
-                    user_obj.save()
-                    limits = util.get_package_limits(user_obj.package_plan)
-                    package_data = PackageSerializer(package_obj).data
+            package_obj = PackagePlan.objects.get(plan_type=billing_plan)
+            util = Utils(shopify_domain)
 
-                return Response({"package": package_data, "limits": limits}, status=status.HTTP_200_OK)
+            # Check if user already has an active plan
+            if not user_obj.scheduled_subscription or user_obj.scheduled_subscription <= date.today():
+                # First-time plan assignment
+                user_obj.package_plan = package_obj
+                user_obj.sms_count = package_obj.sms_count_pack
+                user_obj.scheduled_subscription = None  # clear any scheduled
+                user_obj.save()
+
+                package_data = PackageSerializer(package_obj).data
+                limits = util.get_package_limits(user_obj.package_plan)
+
+                return Response({
+                    "package": package_data,
+                    "limits": limits,
+                    "info": "Plan activated immediately."
+                }, status=status.HTTP_200_OK)
+
+            else:
+                # Schedule plan switch
+                next_billing_date = datetime.fromisoformat(
+                    next_billing_date_str.replace('Z', '+00:00')).date()
+                user_obj.scheduled_subscription = next_billing_date
+                user_obj.scheduled_package = billing_plan
+                user_obj.save()
+                print('scheduled!!')
+                print(user_obj.scheduled_subscription)
+                package_data = PackageSerializer(package_obj).data
+                limits = util.get_package_limits(user_obj.package_plan)
+
+                return Response({
+                    "scheduled_package": "Plan subscription triggered!",
+                    "scheduled_date": next_billing_date,
+                    "info": f"Plan scheduled to activate on {next_billing_date}."
+                }, status=status.HTTP_200_OK)
+
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 

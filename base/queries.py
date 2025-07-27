@@ -338,6 +338,7 @@ CURRENT_CHARGE = """query {
       name
       status
       createdAt
+      currentPeriodEnd
       test
       lineItems {
         plan {
