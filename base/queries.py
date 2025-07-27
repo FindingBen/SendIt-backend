@@ -316,3 +316,42 @@ query getOrders($first: Int = 10, $after: String) {
   }
 }
 """
+
+
+CREATE_CHARGE = """mutation AppSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean = true) {
+    appSubscriptionCreate(name: $name, returnUrl: $returnUrl, lineItems: $lineItems, test: $test) {
+      userErrors {
+        field
+        message
+      }
+      appSubscription {
+        id
+      }
+      confirmationUrl
+    }
+  }"""
+
+CURRENT_CHARGE = """query {
+  currentAppInstallation {
+    activeSubscriptions {
+      id
+      name
+      status
+      createdAt
+      test
+      lineItems {
+        plan {
+          pricingDetails {
+            ... on AppRecurringPricing {
+              price {
+                amount
+                currencyCode
+              }
+              interval
+            }
+          }
+        }
+      }
+    }
+  }
+}"""

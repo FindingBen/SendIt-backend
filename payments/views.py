@@ -1,6 +1,7 @@
 from django.urls import reverse
 import stripe
 import time
+import requests
 from datetime import datetime
 from django.core.cache import cache
 from django.conf import settings
@@ -11,14 +12,17 @@ from rest_framework.decorators import permission_classes, api_view
 from rest_framework.response import Response
 from .serializers import PurchaseSerializer
 from django.db import transaction, IntegrityError
+
 from django.http import HttpResponse
 from rest_framework import status
-from base.models import CustomUser, PackagePlan, AnalyticsData
-from base.serializers import CustomUserSerializer
+from base.models import CustomUser, PackagePlan, AnalyticsData, ShopifyStore
+from base.serializers import CustomUserSerializer, PackageSerializer
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.core.mail import send_mail
 from notification.models import Notification
+from base.shopify_functions import ShopifyFactoryFunction
+from base.queries import CREATE_CHARGE, CURRENT_CHARGE
 import vonage
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -331,3 +335,107 @@ def ammount_split(package: None):
             return settings.BASIC_PACKAGE_AMOUNT
     except Exception as e:
         return e
+
+
+@api_view(['GET'])
+def get_shopify(request):
+    try:
+        print(request.headers)
+        shopify_domain = request.headers.get('shopify-domain', None)
+        if shopify_domain:
+            shopify_token = request.headers['Authorization'].split(' ')[1]
+            shopify_obj = ShopifyStore.objects.get(
+                shop_domain=shopify_domain, access_token=shopify_token)
+            if shopify_obj:
+                return Response({
+                    "is_shopify": True,
+                }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": "Shopify domain not provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+def create_shopify_charge(request):
+    shop = request.data.get("shop")  # like mystore.myshopify.com
+    shopify_token = request.headers['Authorization'].split(' ')[1]
+    plan = request.data.get("plan")  # e.g., basic, silver, gold
+    # Define plan logic
+    # data_package = [package for package in settings.ACTIVE_PRODUCTS_SHOPIFY]
+
+    packages = settings.PROD_PRODUCTS_SHOPIFY
+
+    if packages is None:
+        return Response({"error": "Invalid package name"}, status=status.HTTP_400_BAD_REQUEST)
+    package_lookup = {pkg['plan_type']: pkg for pkg in packages}
+
+    package = package_lookup.get(plan)
+
+    charge_data = {"name": package["plan_type"],
+                   "returnUrl": f"http://localhost:3000/shopify/charge/confirmation?shop={shop}",
+                   "lineItems": [
+        {
+            "plan": {
+                "appRecurringPricingDetails": {
+                    "price": {
+                        "amount": package["price"],
+                        "currencyCode": "USD"
+                    },
+                    "interval": "EVERY_30_DAYS"
+                }
+            }
+        }
+    ]
+    }
+
+    url = f"https://{shop}/admin/api/{settings.SHOPIFY_API_VERSION}/graphql.json"
+    shopify_factory = ShopifyFactoryFunction(
+        shop, shopify_token, url, request=request, query=CREATE_CHARGE)
+    response = shopify_factory.create_reccuring_charge(variable=charge_data)
+    data = response.json()
+    print("SSSS", data)
+    print(response)
+
+    confirmation_url = data.get('data', {}).get(
+        'appSubscriptionCreate', {}).get('confirmationUrl')
+    return Response({"url": confirmation_url})
+
+
+@api_view(['GET'])
+def check_users_charge(request):
+    try:
+        # print(request.headers)
+        shopify_domain = request.headers.get('shopify-domain', None)
+        # print(shopify_domain)
+        url = f"https://{shopify_domain}/admin/api/{settings.SHOPIFY_API_VERSION}/graphql.json"
+        if shopify_domain:
+            shopify_token = request.headers['Authorization'].split(' ')[1]
+            shopify_obj = ShopifyStore.objects.get(
+                shop_domain=shopify_domain, access_token=shopify_token)
+            user_obj = CustomUser.objects.get(
+                custom_email=shopify_obj.email)
+            shopify_factory = ShopifyFactoryFunction(
+                shopify_domain, shopify_token, url, request=request, query=CURRENT_CHARGE, headers=request.headers)
+            response = shopify_factory.get_users_charge()
+            data = response.json()
+            if data.get("errors", {}):
+                return Response(
+                    {"error": "Url doesnt exists",
+                        "details": data["errors"]["message"]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            get_plan = data.get('data', {}).get(
+                'currentAppInstallation', {}).get('activeSubscriptions', [])
+            # print(get_plan)
+            if len(get_plan) > 0:
+                plan = get_plan[0].get('name', None)
+                package_obj = PackagePlan.objects.get(plan_type=plan)
+                print("COUNT", package_obj.sms_count_pack)
+                user_obj.package_plan = package_obj
+                print("USER SMSS", user_obj.sms_count)
+                user_obj.sms_count = package_obj.sms_count_pack
+                user_obj.save()
+                package_data = PackageSerializer(package_obj).data
+
+            return Response({"package": package_data}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

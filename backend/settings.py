@@ -308,12 +308,25 @@ TEST_PRODUCTS = (('Basic package', 'price_1NSzPTAD7NIuijyS69UOcr4w', 2), ('Silve
 PROD_PRODUCTS = (('Basic package', 'price_1RkR9zAD7NIuijySzHhzsw0Y', 2), ('Silver package',
                                                                           'price_1RkRD7AD7NIuijySEHyr6ye2', 3), ('Gold package', 'price_1RkREbAD7NIuijySWZJIClDh', 4))
 
+TEST_PRODUCTS_SHOPIFY = [
+    {"plan_type": "Basic package", "price": 19.0, "shopify_name": "Basic plan"},
+    {"plan_type": "Silver package", "price": 39.0, "shopify_name": "Silver plan"},
+    {"plan_type": "Gold package", "price": 99.0, "shopify_name": "Gold plan"},
+]
+
+PROD_PRODUCTS_SHOPIFY = [
+    {"plan_type": "Basic package", "price": 19.0, "shopify_name": "Basic plan"},
+    {"plan_type": "Silver package", "price": 49.0, "shopify_name": "Silver plan"},
+    {"plan_type": "Gold package", "price": 99.0, "shopify_name": "Gold plan"},
+]
 
 # Set ACTIVE_PRODUCTS based on the environment
 if ENVIRONMENT == 'development':
     ACTIVE_PRODUCTS = TEST_PRODUCTS
+    SHOPIFY_PRODUCTS = TEST_PRODUCTS_SHOPIFY
 elif ENVIRONMENT == 'production':
     ACTIVE_PRODUCTS = PROD_PRODUCTS
+    SHOPIFY_PRODUCTS = PROD_PRODUCTS_SHOPIFY
 else:
     raise ValueError('Invalid environment specified in DJANGO_ENV variable.')
 
@@ -322,7 +335,7 @@ SHOPIFY_API_KEY = os.environ.get("SHOPIFY_API_KEY")
 SHOPIFY_API_SECRET = os.environ.get("SHOPIFY_API_SECRET")
 SHOPIFY_SCOPES = "read_products,write_orders,read_customers,write_customers"
 SHOPIFY_REDIRECT_URI = os.environ.get("SHOPIFY_REDIRECT_URI")
-
+SHOPIFY_API_VERSION = os.environ.get("SHOPIFY_API_VERSION")
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')

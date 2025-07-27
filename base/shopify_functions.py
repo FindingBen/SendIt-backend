@@ -18,12 +18,13 @@ from .queries import (
 
 
 class ShopifyFactoryFunction:
-    def __init__(self,  domain, token, url, request=None, query=None):
+    def __init__(self,  domain, token, url, request=None, query=None, headers=None):
         self._query = query
         self._domain = domain
         self._token = token
         self._url = url
         self._request = request
+        self._headers = headers
 
     def run_query(self, query, variables=None):
         headers = {
@@ -266,3 +267,28 @@ class ShopifyFactoryFunction:
 
     def get_shop_orders(self, variable=None):
         return self.run_query(GET_SHOP_ORDERS, variable)
+
+    def create_reccuring_charge(self, variable):
+        headers = {
+            "X-Shopify-Access-Token": self._token,
+            "Content-Type": "application/json",
+        }
+        response = requests.post(
+            self._url,
+            headers=headers,
+            json={"query": self._query, "variables": variable},
+        )
+        return response
+
+    def get_users_charge(self):
+        headers = {
+            "X-Shopify-Access-Token": self._token,
+            "Content-Type": "application/json",
+        }
+        response = requests.post(
+            self._url,
+            headers=headers,
+            json={"query": self._query},
+        )
+
+        return response
