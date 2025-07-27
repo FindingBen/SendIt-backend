@@ -406,6 +406,8 @@ def check_users_charge(request):
         shopify_domain = request.headers.get('shopify-domain', None)
         url = f"https://{shopify_domain}/admin/api/{settings.SHOPIFY_API_VERSION}/graphql.json"
         charge_id = request.GET.get('charge_id', None)
+        print("CHARGE ID", charge_id)
+        print(request.GET)
         if shopify_domain:
             shopify_token = request.headers['Authorization'].split(' ')[1]
             shopify_obj = ShopifyStore.objects.get(
@@ -460,12 +462,15 @@ def check_users_charge(request):
             util = Utils(shopify_domain)
 
             # Check if user already has an active plan
-            if not user_obj.scheduled_subscription or user_obj.scheduled_subscription <= date.today():
+            if user_obj.scheduled_subscription is None or user_obj.scheduled_subscription <= date.today():
                 # First-time plan assignment
                 user_obj.package_plan = package_obj
                 user_obj.sms_count = package_obj.sms_count_pack
                 user_obj.scheduled_subscription = None  # clear any scheduled
                 user_obj.save()
+                analytics = AnalyticsData.objects.get(custom_user=user_obj.id)
+                analytics.total_spend += package_obj.price
+                analytics.save()
 
                 package_data = PackageSerializer(package_obj).data
                 limits = util.get_package_limits(user_obj.package_plan)
