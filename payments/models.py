@@ -12,6 +12,15 @@ class UserPayment(models.Model):
     purchase_id = models.CharField(max_length=250)
 
 
+class Billing(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    billing_plan = models.CharField(max_length=50, default='Trial')
+    billing_date = models.DateField(auto_now_add=True)
+    billing_amount = models.IntegerField(default=0)
+    billing_status = models.CharField(max_length=20, default='pending')
+    shopify_charge_id = models.CharField(max_length=500, blank=True, null=True)
+
+
 class Purchase(models.Model):
     userPayment = models.ForeignKey(UserPayment, on_delete=models.CASCADE)
     package_name = models.CharField(max_length=20)

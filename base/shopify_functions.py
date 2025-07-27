@@ -292,3 +292,16 @@ class ShopifyFactoryFunction:
         )
 
         return response
+
+    def get_users_billings(self):
+        headers = {
+            "X-Shopify-Access-Token": self._token,
+            "Content-Type": "application/json",
+        }
+        response = requests.post(
+            self._url,
+            headers=headers,
+            json={"query": self._query},
+        )
+
+        return response

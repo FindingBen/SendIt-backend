@@ -6,13 +6,13 @@ from datetime import datetime
 from django.core.cache import cache
 from django.conf import settings
 from rest_framework.views import APIView
-from .models import UserPayment, StripeEvent
+from .models import UserPayment, StripeEvent, Billing
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes, api_view
 from rest_framework.response import Response
 from .serializers import PurchaseSerializer
 from django.db import transaction, IntegrityError
-
+from base.utils.helpers import Utils
 from django.http import HttpResponse
 from rest_framework import status
 from base.models import CustomUser, PackagePlan, AnalyticsData, ShopifyStore
@@ -22,7 +22,7 @@ from django.views.decorators.http import require_http_methods
 from django.core.mail import send_mail
 from notification.models import Notification
 from base.shopify_functions import ShopifyFactoryFunction
-from base.queries import CREATE_CHARGE, CURRENT_CHARGE
+from base.queries import CREATE_CHARGE, CURRENT_CHARGE, GET_SHOPIFY_CHARGE
 import vonage
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -423,19 +423,63 @@ def check_users_charge(request):
                         "details": data["errors"]["message"]},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            get_plan = data.get('data', {}).get(
-                'currentAppInstallation', {}).get('activeSubscriptions', [])
-            # print(get_plan)
-            if len(get_plan) > 0:
-                plan = get_plan[0].get('name', None)
-                package_obj = PackagePlan.objects.get(plan_type=plan)
-                print("COUNT", package_obj.sms_count_pack)
-                user_obj.package_plan = package_obj
-                print("USER SMSS", user_obj.sms_count)
-                user_obj.sms_count = package_obj.sms_count_pack
-                user_obj.save()
-                package_data = PackageSerializer(package_obj).data
+            plan_data = data.get('data', {}).get(
+                'currentAppInstallation', {}).get('activeSubscriptions', [])[0]
+            print("PLAN", plan_data)
+            with transaction.atomic():
+                shopify_charge_id = plan_data.get('id')
+                billing_amount = float(
+                    plan_data['lineItems'][0]['plan']['pricingDetails']['price']['amount'])
+                billing_status = plan_data.get('status', 'pending')
+                billing_plan = plan_data.get('name', 'None')
+                charge_number = shopify_charge_id.split('/')[-1]
+                # Create Billing only if not exists for this charge
+                if not Billing.objects.filter(shopify_charge_id=charge_number, user=user_obj).exists():
+                    print('AAAAAAAAAAAA')
+                    Billing.objects.create(
+                        user=user_obj,
+                        billing_amount=billing_amount,
+                        billing_plan=billing_plan,
+                        billing_status=billing_status,
+                        shopify_charge_id=charge_number
+                    )
+                # print(get_plan)
+                if len(plan_data) > 0:
+                    util = Utils(shopify_domain)
+                    plan = plan_data.get('name', None)
+                    package_obj = PackagePlan.objects.get(plan_type=plan)
 
-            return Response({"package": package_data}, status=status.HTTP_200_OK)
+                    user_obj.package_plan = package_obj
+
+                    user_obj.sms_count = package_obj.sms_count_pack
+                    user_obj.save()
+                    limits = util.get_package_limits(user_obj.package_plan)
+                    package_data = PackageSerializer(package_obj).data
+
+                return Response({"package": package_data, "limits": limits}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_billings(request):
+    try:
+        user_obj = CustomUser.objects.get(
+            id=request.user.id)
+        # Get latest 5 billings for this user
+        billings = Billing.objects.filter(
+            user=user_obj).order_by('-billing_date')[:5]
+        billing_list = [
+            {
+                "billing_date": billing.billing_date,
+                "billing_amount": billing.billing_amount,
+                "billing_status": billing.billing_status,
+                "billing_plane": billing.billing_plan,
+                "shopify_charge_id": billing.shopify_charge_id,
+            }
+            for billing in billings
+        ]
+        return Response({"billings": billing_list}, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

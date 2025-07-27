@@ -309,13 +309,13 @@ PROD_PRODUCTS = (('Basic package', 'price_1RkR9zAD7NIuijySzHhzsw0Y', 2), ('Silve
                                                                           'price_1RkRD7AD7NIuijySEHyr6ye2', 3), ('Gold package', 'price_1RkREbAD7NIuijySWZJIClDh', 4))
 
 TEST_PRODUCTS_SHOPIFY = [
-    {"plan_type": "Basic package", "price": 19.0, "shopify_name": "Basic plan"},
-    {"plan_type": "Silver package", "price": 39.0, "shopify_name": "Silver plan"},
+    {"plan_type": "Basic package", "price": 9.0, "shopify_name": "Basic plan"},
+    {"plan_type": "Silver package", "price": 49.0, "shopify_name": "Silver plan"},
     {"plan_type": "Gold package", "price": 99.0, "shopify_name": "Gold plan"},
 ]
 
 PROD_PRODUCTS_SHOPIFY = [
-    {"plan_type": "Basic package", "price": 19.0, "shopify_name": "Basic plan"},
+    {"plan_type": "Basic package", "price": 9.0, "shopify_name": "Basic plan"},
     {"plan_type": "Silver package", "price": 49.0, "shopify_name": "Silver plan"},
     {"plan_type": "Gold package", "price": 99.0, "shopify_name": "Gold plan"},
 ]

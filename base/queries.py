@@ -355,3 +355,32 @@ CURRENT_CHARGE = """query {
     }
   }
 }"""
+
+GET_SHOPIFY_CHARGE = """query {
+  currentAppInstallation {
+    appSubscriptions(first: 10) {
+      edges {
+        node {
+          id
+          name
+          status
+          createdAt
+          test
+          lineItems {
+            plan {
+              pricingDetails {
+                ... on AppRecurringPricing {
+                  price {
+                    amount
+                    currencyCode
+                  }
+                  interval
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}"""
