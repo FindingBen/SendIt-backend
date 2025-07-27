@@ -15,5 +15,5 @@ urlpatterns = [
     path('shopify_status/', views.get_shopify),
     path('shopify_charge/', views.create_shopify_charge),
     path('users_charge/', views.check_users_charge),
-    path('user_billings', views.get_billings)
+    path('user_billings/', views.get_billings)
 ]
