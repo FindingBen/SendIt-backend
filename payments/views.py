@@ -406,8 +406,7 @@ def check_users_charge(request):
         shopify_domain = request.headers.get('shopify-domain', None)
         url = f"https://{shopify_domain}/admin/api/{settings.SHOPIFY_API_VERSION}/graphql.json"
         charge_id = request.GET.get('charge_id', None)
-        print("CHARGE ID", charge_id)
-        print(request.GET)
+
         if shopify_domain:
             shopify_token = request.headers['Authorization'].split(' ')[1]
             shopify_obj = ShopifyStore.objects.get(
@@ -440,23 +439,15 @@ def check_users_charge(request):
                 return Response({"error": "No active subscription found"}, status=status.HTTP_404_NOT_FOUND)
             shopify_charge_id = plan_info.get('id')
             charge_number = shopify_charge_id.split('/')[-1]
-            print(plan_info, "SSSSSSSSSSS")
+
             billing_amount = float(
                 plan_info['lineItems'][0]['plan']['pricingDetails']['price']['amount'])
             billing_status = plan_info.get('status', 'pending')
             billing_plan = plan_info.get('name', 'None')
             next_billing_date_str = plan_info.get(
                 'currentPeriodEnd')  # ISO 8601 format
-
-            # Create billing if it doesn't exist
-            if not Billing.objects.filter(shopify_charge_id=charge_number, user=user_obj).exists():
-                Billing.objects.create(
-                    user=user_obj,
-                    billing_amount=billing_amount,
-                    billing_plan=billing_plan,
-                    billing_status=billing_status,
-                    shopify_charge_id=charge_number
-                )
+            next_billing_date = datetime.fromisoformat(
+                next_billing_date_str.replace('Z', '+00:00')).date()
 
             package_obj = PackagePlan.objects.get(plan_type=billing_plan)
             util = Utils(shopify_domain)
@@ -464,9 +455,18 @@ def check_users_charge(request):
             # Check if user already has an active plan
             if user_obj.scheduled_subscription is None or user_obj.scheduled_subscription <= date.today():
                 # First-time plan assignment
+                Billing.objects.create(
+                    user=user_obj,
+                    billing_amount=billing_amount,
+                    billing_plan=billing_plan,
+                    billing_status=billing_status,
+                    shopify_charge_id=charge_number
+                )
+                print('FIRST TIME')
                 user_obj.package_plan = package_obj
                 user_obj.sms_count = package_obj.sms_count_pack
-                user_obj.scheduled_subscription = None  # clear any scheduled
+                user_obj.scheduled_subscription = next_billing_date
+                user_obj.scheduled_package = billing_plan
                 user_obj.save()
                 analytics = AnalyticsData.objects.get(custom_user=user_obj.id)
                 analytics.total_spend += package_obj.price
@@ -480,11 +480,7 @@ def check_users_charge(request):
                     "limits": limits,
                     "info": "Plan activated immediately."
                 }, status=status.HTTP_200_OK)
-
             else:
-                # Schedule plan switch
-                next_billing_date = datetime.fromisoformat(
-                    next_billing_date_str.replace('Z', '+00:00')).date()
                 user_obj.scheduled_subscription = next_billing_date
                 user_obj.scheduled_package = billing_plan
                 user_obj.save()

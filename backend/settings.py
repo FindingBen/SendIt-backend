@@ -199,6 +199,19 @@ VONAGE_TOKEN = os.environ.get('VONAGE_TOKEN')
 CACHE_TTL = 60 * 15
 SMART_INSIGHTS_CACHE = 60 * 10
 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+}
 
 CACHES = {
     "default": {

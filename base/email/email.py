@@ -105,3 +105,38 @@ def send_confirmation_email_account_close(email):
     except Exception as e:
         print("Error sending account closure email:", str(e))
         return False
+
+
+def send_plan_renewal_email(user_id, plan):
+    try:
+        user_obj = CustomUser.objects.get(id=user_id)
+        subject = "Your Sendperplane account plan got renewed"
+        from_email = settings.DEFAULT_FROM_EMAIL
+        to_email = [user_obj.email]
+
+        context = {
+            'user': user_obj,
+            'plan': plan,  # Make sure `plan.plan_type` is available in template
+        }
+
+        html_content = render_to_string('email/plan_renewal.html', context)
+        text_content = (
+            f"Dear {user_obj.first_name or 'there'},\n\n"
+            f"Your plan got renewed for Sendperplane. The plan you're on is {plan.plan_type}.\n"
+            f"You can change your plan here: https://spplane.app/plans/\n\n"
+            f"Thanks for using Sendperplane!"
+        )
+
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=from_email,
+            to=to_email,
+        )
+        msg.attach_alternative(html_content, "text/html")
+        msg.send()
+
+        return True
+    except Exception as e:
+        print("Error sending plan renewal email:", str(e))
+        return False

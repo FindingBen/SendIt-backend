@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+</head>
+<body>
+  <div style="padding: 20px; margin: 0 auto; text-align: left; font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+    
+    <p style="margin-bottom: 16px;">Dear {{ user.first_name|default:"there" }},</p>
+
+    <p style="margin-bottom: 16px;">
+      Your plan got renewed for Sendperplane account. The plan which you are on is {{ plan.plan_type }}
+    </p>
+
+    <p style="margin-bottom: 16px;">
+      Click the button below to choose a new plan in case you would like to switch:
+    </p>
+
+    <div style="text-align: left; margin: 30px 0;">
+      <a href="https://spplane.app/plans/" 
+         style="display: inline-block; background-color: #4937BA; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold;">
+         Change plan
+      </a>
+    </div>
+
+    <p style="margin-bottom: 16px;">
+      Thank you for being a part of Sendperplane! We appreciate your continued support and look forward to helping you grow your business.
+    </p>
+
+    <p style="margin-bottom: 16px;">Best regards,<br>The Sendperplane Team</p>
+
+    <div style="margin-top: 30px; text-align: left; font-size: 13px; color: #888;">
+      <img src="https://sendperplane.com/assets/spplaneLogo-133b367a.png" alt="Sendperplane Logo" style="width: 120px; margin-top: 20px;" />
+      <p style="margin-top: 8px; font-size: 16px; color: #333;">Connect – Engage – Grow</p>
+    </div>
+
+  </div>
+</body>
+</html>
