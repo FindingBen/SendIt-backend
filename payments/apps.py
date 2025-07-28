@@ -11,8 +11,8 @@ class PaymentsConfig(AppConfig):
         import json
 
         schedule, _ = IntervalSchedule.objects.get_or_create(
-            every=2,
-            period=IntervalSchedule.MINUTES,
+            every=1,
+            period=IntervalSchedule.DAYS,
         )
 
         PeriodicTask.objects.update_or_create(
