@@ -50,13 +50,13 @@ class CustomUser(User):
         if self.package_plan:
             if self.package_plan.plan_type == settings.TRIAL_PLAN:
                 list_limit = 2
-                recipients_limit = 20
+                recipients_limit = 100
             elif self.package_plan.plan_type == settings.BASIC_PLAN:
                 list_limit = 3
-                recipients_limit = 10
+                recipients_limit = 5000
             elif self.package_plan.plan_type == settings.SILVER_PLAN:
                 list_limit = 10
-                recipients_limit = 30
+                recipients_limit = 10000
             elif self.package_plan.plan_type == settings.GOLD_PLAN:
                 list_limit = 20
                 recipients_limit = "Unlimited"
