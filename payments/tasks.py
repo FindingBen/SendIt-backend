@@ -85,7 +85,7 @@ def activate_scheduled_packages():
             )
 
         logger.info(f"Fetfhing all customers for user {user.id}")
-        recipients_qs = Contact.objects.filter(user=user)
+        recipients_qs = Contact.objects.filter(users=user)
         flag_result = util.flag_recipients(user, recipients_qs)
         if flag_result:
             Notification.objects.create(
