@@ -1,7 +1,7 @@
 import logging
 from django.utils import timezone
 from django.conf import settings
-from base.models import CustomUser, PackagePlan, AnalyticsData, ShopifyStore
+from base.models import CustomUser, PackagePlan, AnalyticsData, ShopifyStore, Contact
 from celery import shared_task
 from base.shopify_functions import ShopifyFactoryFunction
 from notification.models import Notification
@@ -10,8 +10,10 @@ from datetime import datetime, date
 from django.db import transaction, IntegrityError
 from base.email.email import send_plan_renewal_email
 from base.queries import CURRENT_CHARGE
+from base.utils.helpers import Utils
 
 logger = logging.getLogger(__name__)
+util = Utils()
 
 
 @shared_task
@@ -79,6 +81,17 @@ def activate_scheduled_packages():
                 user=user,
                 title=f"{package_obj.plan_type} Activated",
                 message=f"Your plan '{package_obj.plan_type}' has been activated successfully.",
+                notif_type="success"
+            )
+
+        logger.info(f"Fetfhing all customers for user {user.id}")
+        recipients_qs = Contact.objects.filter(user=user)
+        flag_result = util.flag_recipients(user, recipients_qs)
+        if flag_result:
+            Notification.objects.create(
+                user=user,
+                title="Recipient Limit Exceeded",
+                message=flag_result["message"],
                 notif_type="success"
             )
     logger.info(f"Activated {users.count()} scheduled packages.")

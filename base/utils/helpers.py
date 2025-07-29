@@ -309,3 +309,57 @@ class Utils:
             "phone": profile.get("phone"),
             "email": profile.get("email"),
         }
+
+    def flag_recipients(self, user, recipients_queryset):
+        """
+        Flags recipients as allowed or not based on the user's current package.
+        Returns metadata if recipients were flagged due to a downgrade.
+        """
+        user_package = user.serialize_package_plan()
+        recipients_limit = user_package.get('recipients_limit')
+
+        if not recipients_limit:
+            print(f"Invalid package limit for user {user.email}")
+            return None
+
+        if recipients_limit == "Unlimited":
+            # Only act if any recipients were previously disallowed
+            if recipients_queryset.filter(allowed=False).exists():
+                recipients_queryset.update(allowed=True)
+                return {
+                    "flagged_count": 0,
+                    "flagged_ids": [],
+                    "was_downgraded": False,
+                    "message": "All recipients allowed due to Unlimited plan."
+                }
+            return None
+
+        try:
+            limit = int(recipients_limit)
+        except ValueError:
+            print(
+                f"Malformed limit value for user {user.email}: {recipients_limit}")
+            return None
+
+        # Sort by created_at, keep oldest recipients (or reverse for newest)
+        recipients = recipients_queryset.order_by('created_at')
+        allowed_ids = list(recipients[:limit].values_list('id', flat=True))
+        disallowed_qs = recipients[limit:]
+        disallowed_ids = list(disallowed_qs.values_list('id', flat=True))
+
+        if not disallowed_ids:
+            return None  # No downgrade effect, nothing to flag
+
+        from base.models import Contact
+        Contact.objects.filter(id__in=allowed_ids).update(allowed=True)
+        Contact.objects.filter(id__in=disallowed_ids).update(allowed=False)
+
+        print(
+            f"Flagged {len(disallowed_ids)} recipients for user {user.email} due to downgrade")
+
+        return {
+            "flagged_count": len(disallowed_ids),
+            "flagged_ids": disallowed_ids,
+            "was_downgraded": True,
+            "message": f"{len(disallowed_ids)} recipients disabled due to new plan limit of {limit}"
+        }

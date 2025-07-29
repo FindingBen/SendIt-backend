@@ -53,10 +53,10 @@ class CustomUser(User):
                 recipients_limit = 20
             elif self.package_plan.plan_type == settings.BASIC_PLAN:
                 list_limit = 3
-                recipients_limit = 5000
+                recipients_limit = 10
             elif self.package_plan.plan_type == settings.SILVER_PLAN:
                 list_limit = 10
-                recipients_limit = 10000
+                recipients_limit = 30
             elif self.package_plan.plan_type == settings.GOLD_PLAN:
                 list_limit = 20
                 recipients_limit = "Unlimited"
@@ -211,6 +211,7 @@ class Contact(models.Model):
     phone_number = models.CharField(blank=True, null=True)
     is_shopify_contact = models.BooleanField(default=False)
     email = models.EmailField(blank=True, null=True)
+    allowed = models.BooleanField(default=True)
     created_at = models.DateField(
         auto_now_add=True)
 

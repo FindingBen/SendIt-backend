@@ -1,16 +1,14 @@
-from django.urls import reverse
+import logging
 import stripe
 import time
-import requests
+import vonage
 from datetime import datetime, date
-from django.core.cache import cache
 from django.conf import settings
 from rest_framework.views import APIView
 from .models import UserPayment, StripeEvent, Billing
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes, api_view
 from rest_framework.response import Response
-from .serializers import PurchaseSerializer
 from django.db import transaction, IntegrityError
 from base.utils.helpers import Utils
 from django.http import HttpResponse
@@ -22,9 +20,12 @@ from django.views.decorators.http import require_http_methods
 from django.core.mail import send_mail
 from notification.models import Notification
 from base.shopify_functions import ShopifyFactoryFunction
-from base.queries import CREATE_CHARGE, CURRENT_CHARGE, GET_SHOPIFY_CHARGE
-import vonage
+from base.queries import CREATE_CHARGE, CURRENT_CHARGE
+
 stripe.api_key = settings.STRIPE_SECRET_KEY
+
+
+logger = logging.getLogger(__name__)
 
 
 class StripeCheckoutVIew(APIView):
@@ -445,7 +446,7 @@ def check_users_charge(request):
             billing_status = plan_info.get('status', 'pending')
             billing_plan = plan_info.get('name', 'None')
             next_billing_date_str = plan_info.get(
-                'currentPeriodEnd')  # ISO 8601 format
+                'currentPeriodEnd')
             next_billing_date = datetime.fromisoformat(
                 next_billing_date_str.replace('Z', '+00:00')).date()
 
@@ -455,22 +456,24 @@ def check_users_charge(request):
             # Check if user already has an active plan
             if user_obj.scheduled_subscription is None or user_obj.scheduled_subscription <= date.today():
                 # First-time plan assignment
-                Billing.objects.create(
-                    user=user_obj,
-                    billing_amount=billing_amount,
-                    billing_plan=billing_plan,
-                    billing_status=billing_status,
-                    shopify_charge_id=charge_number
-                )
-                print('FIRST TIME')
-                user_obj.package_plan = package_obj
-                user_obj.sms_count = package_obj.sms_count_pack
-                user_obj.scheduled_subscription = next_billing_date
-                user_obj.scheduled_package = billing_plan
-                user_obj.save()
-                analytics = AnalyticsData.objects.get(custom_user=user_obj.id)
-                analytics.total_spend += package_obj.price
-                analytics.save()
+                with transaction.atomic():
+                    Billing.objects.create(
+                        user=user_obj,
+                        billing_amount=billing_amount,
+                        billing_plan=billing_plan,
+                        billing_status=billing_status,
+                        shopify_charge_id=charge_number
+                    )
+                    logger.info('Activating plan for user')
+                    user_obj.package_plan = package_obj
+                    user_obj.sms_count = package_obj.sms_count_pack
+                    user_obj.scheduled_subscription = next_billing_date
+                    user_obj.scheduled_package = billing_plan
+                    user_obj.save()
+                    analytics = AnalyticsData.objects.get(
+                        custom_user=user_obj.id)
+                    analytics.total_spend += package_obj.price
+                    analytics.save()
 
                 package_data = PackageSerializer(package_obj).data
                 limits = util.get_package_limits(user_obj.package_plan)
@@ -484,8 +487,6 @@ def check_users_charge(request):
                 user_obj.scheduled_subscription = next_billing_date
                 user_obj.scheduled_package = billing_plan
                 user_obj.save()
-                print('scheduled!!')
-                print(user_obj.scheduled_subscription)
                 package_data = PackageSerializer(package_obj).data
                 limits = util.get_package_limits(user_obj.package_plan)
 
