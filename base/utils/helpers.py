@@ -347,12 +347,10 @@ class Utils:
         disallowed_qs = recipients[limit:]
         disallowed_ids = list(disallowed_qs.values_list('id', flat=True))
 
-        # if not disallowed_ids:
-        #     return None  # No downgrade effect, nothing to flag
-
-        from base.models import Contact
-        Contact.objects.filter(id__in=allowed_ids).update(allowed=True)
-        Contact.objects.filter(id__in=disallowed_ids).update(allowed=False)
+        # Flag allowed recipients (up to the limit) as allowed
+        recipients_queryset.filter(id__in=allowed_ids).update(allowed=True)
+        # Flag recipients above the limit as not allowed
+        recipients_queryset.filter(id__in=disallowed_ids).update(allowed=False)
 
         print(
             f"Flagged {len(disallowed_ids)} recipients for user {user.email} due to downgrade")
