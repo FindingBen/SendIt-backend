@@ -20,7 +20,7 @@ def activate_scheduled_packages():
 
     for user in users:
         shopify_store = ShopifyStore.objects.get(
-            email=user.email)
+            email=user.custom_email)
         shopify_domain = shopify_store.shop_domain
         token = shopify_store.access_token
         url = f"https://{shopify_domain}/admin/api/{settings.SHOPIFY_API_VERSION}/graphql.json"
