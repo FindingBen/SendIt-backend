@@ -20,7 +20,7 @@ def activate_scheduled_packages():
 
     for user in users:
         shopify_store = ShopifyStore.objects.get(
-            custom_email=user.custom_email)
+            custom_email=user.email)
         shopify_domain = shopify_store.shop_domain
         token = shopify_store.access_token
         url = f"https://{shopify_domain}/admin/api/{settings.SHOPIFY_API_VERSION}/graphql.json"
@@ -53,31 +53,31 @@ def activate_scheduled_packages():
         if not package_obj:
             continue
 
-        with transaction.atomic():
-            Billing.objects.create(
-                user=user,
-                billing_amount=package_obj.price,
-                billing_plan=package_obj.plan_type,
-                billing_status=plan_status,
-                shopify_charge_id=shopify_charge_id
-            )
-            logger.info('Activating plan for user:', user.email)
-            user.package_plan = package_obj
-            user.sms_count = package_obj.sms_count_pack
-            user.scheduled_subscription = next_billing_date
-            user.save()
+        # with transaction.atomic():
+        Billing.objects.create(
+            user=user,
+            billing_amount=package_obj.price,
+            billing_plan=package_obj.plan_type,
+            billing_status=plan_status,
+            shopify_charge_id=shopify_charge_id
+        )
+        logger.info('Activating plan for user:', user.email)
+        user.package_plan = package_obj
+        user.sms_count = package_obj.sms_count_pack
+        user.scheduled_subscription = next_billing_date
+        user.save()
 
-            analytics = AnalyticsData.objects.get(custom_user=user.id)
-            analytics.total_spend += package_obj.price
-            analytics.save()
-            logger.info('DONE', next_billing_date)
-            send_plan_renewal_email(user.id, package_obj)
+        analytics = AnalyticsData.objects.get(custom_user=user.id)
+        analytics.total_spend += package_obj.price
+        analytics.save()
+        logger.info('DONE', next_billing_date)
+        # send_plan_renewal_email(user.id, package_obj)
 
-            Notification.objects.create(
-                user=user,
-                title=f"{package_obj.plan_type} Activated",
-                message=f"Your plan '{package_obj.plan_type}' has been activated successfully.",
-                notif_type="success"
-            )
+        # Notification.objects.create(
+        #     user=user,
+        #     title=f"{package_obj.plan_type} Activated",
+        #     message=f"Your plan '{package_obj.plan_type}' has been activated successfully.",
+        #     notif_type="success"
+        # )
     logger.info(f"Activated {users.count()} scheduled packages.")
     return f"Activated {users.count()} scheduled plans"
