@@ -1494,6 +1494,8 @@ def customer_redact_request_webhook(request):
                 Contact.objects.filter(
                     contact_list=shopify_contact_list).delete()
                 shopify_contact_list.delete()
+                custom_user.is_active = False
+                custom_user.save()
         print("Webhook triggered, customers data from shopify deleted!")
 
         return HttpResponse(status=200)
@@ -1530,11 +1532,14 @@ def customer_shop_redact_request_webhook(request):
             return HttpResponse(status=401)  # Unauthorized
 
         data = json.loads(body)
-        print("HEREEEE", data)
         shop_domain = data.get('shop_domain', None)
         if shop_domain is not None:
             get_obj = ShopifyStore.objects.get(shop_domain=shop_domain)
             get_obj.delete()
+            custom_user = CustomUser.objects.get(
+                custom_email=get_obj.email)
+            custom_user.is_active = False
+            custom_user.save()
             print(get_obj)
             logger.info("***Shop object deleted!***")
         # Do something with the data, e.g., log or process

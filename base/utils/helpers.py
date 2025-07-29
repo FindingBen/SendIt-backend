@@ -347,8 +347,8 @@ class Utils:
         disallowed_qs = recipients[limit:]
         disallowed_ids = list(disallowed_qs.values_list('id', flat=True))
 
-        if not disallowed_ids:
-            return None  # No downgrade effect, nothing to flag
+        # if not disallowed_ids:
+        #     return None  # No downgrade effect, nothing to flag
 
         from base.models import Contact
         Contact.objects.filter(id__in=allowed_ids).update(allowed=True)
