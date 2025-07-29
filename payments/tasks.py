@@ -9,6 +9,7 @@ from .models import Billing
 from datetime import datetime, date
 from django.db import transaction, IntegrityError
 from base.email.email import send_plan_renewal_email
+from base.queries import CURRENT_CHARGE
 
 logger = logging.getLogger(__name__)
 
@@ -21,12 +22,14 @@ def activate_scheduled_packages():
     for user in users:
         shopify_store = ShopifyStore.objects.get(
             email=user.custom_email)
+        logger.info('MAIO', user.custom_email)
+        logger.info(f"STORE:", shopify_store)
         shopify_domain = shopify_store.shop_domain
         token = shopify_store.access_token
         url = f"https://{shopify_domain}/admin/api/{settings.SHOPIFY_API_VERSION}/graphql.json"
 
         shopify_factory = ShopifyFactoryFunction(
-            shopify_domain, token, url, query=None
+            shopify_domain, token, url, query=CURRENT_CHARGE
         )
         response = shopify_factory.get_users_charge()
         data = response.json()
@@ -71,13 +74,13 @@ def activate_scheduled_packages():
         analytics.total_spend += package_obj.price
         analytics.save()
         logger.info('DONE', next_billing_date)
-        # send_plan_renewal_email(user.id, package_obj)
+        send_plan_renewal_email(user.id, package_obj)
 
-        # Notification.objects.create(
-        #     user=user,
-        #     title=f"{package_obj.plan_type} Activated",
-        #     message=f"Your plan '{package_obj.plan_type}' has been activated successfully.",
-        #     notif_type="success"
-        # )
+        Notification.objects.create(
+            user=user,
+            title=f"{package_obj.plan_type} Activated",
+            message=f"Your plan '{package_obj.plan_type}' has been activated successfully.",
+            notif_type="success"
+        )
     logger.info(f"Activated {users.count()} scheduled packages.")
     return f"Activated {users.count()} scheduled plans"
