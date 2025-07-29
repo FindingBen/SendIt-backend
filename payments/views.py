@@ -372,7 +372,7 @@ def create_shopify_charge(request):
     package = package_lookup.get(plan)
 
     charge_data = {"name": package["plan_type"],
-                   "returnUrl": f"http://localhost:3000/shopify/charge/confirmation?shop={shop}",
+                   "returnUrl": f"https://spplane.app/shopify/charge/confirmation?shop={shop}",
                    "lineItems": [
         {
             "plan": {
