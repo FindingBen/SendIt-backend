@@ -320,7 +320,7 @@ class Utils:
 
         if not recipients_limit:
             print(f"Invalid package limit for user {user.email}")
-            return None
+            return "NO RECIPIENTS"
 
         if recipients_limit == "Unlimited":
             # Only act if any recipients were previously disallowed
@@ -332,14 +332,14 @@ class Utils:
                     "was_downgraded": False,
                     "message": "All recipients allowed due to Unlimited plan."
                 }
-            return None
+            return "UNLIMITED"
 
         try:
             limit = int(recipients_limit)
         except ValueError:
             print(
                 f"Malformed limit value for user {user.email}: {recipients_limit}")
-            return None
+            return "ERRRROORRR"
 
         # Sort by created_at, keep oldest recipients (or reverse for newest)
         recipients = recipients_queryset.order_by('created_at')
@@ -348,7 +348,7 @@ class Utils:
         disallowed_ids = list(disallowed_qs.values_list('id', flat=True))
 
         if not disallowed_ids:
-            return None  # No downgrade effect, nothing to flag
+            return "NO DISSALOWED"  # No downgrade effect, nothing to flag
 
         from base.models import Contact
         Contact.objects.filter(id__in=allowed_ids).update(allowed=True)
