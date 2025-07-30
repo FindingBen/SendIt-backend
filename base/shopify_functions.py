@@ -135,6 +135,39 @@ class ShopifyFactoryFunction:
 
         return response
 
+    def create_customers_bulk(self):
+        results = []
+        headers = {
+            "X-Shopify-Access-Token": self._token,
+            "Content-Type": "application/json",
+        }
+
+        bulk_customers = self._request.data.get('data', None).get('bulk_data')
+
+        for customer in bulk_customers:
+
+            customer_data = {
+                "firstName": customer.get("firstName"),
+                "lastName": customer.get("lastName"),
+                "email": customer.get("email"),
+                "phone": f'+{customer.get("phone")}',
+            }
+
+            variables = {
+                "input": customer_data
+            }
+
+            response = requests.post(
+                self._url,
+                headers=headers,
+                json={"query": self._query, "variables": variables},
+            )
+            data = response.json()
+            print(data)
+            print('AFTER RESPONSE', response.status_code)
+
+        return results
+
     def update_customer(self):
         headers = {
             "X-Shopify-Access-Token": self._token,

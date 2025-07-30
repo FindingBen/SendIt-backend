@@ -705,7 +705,7 @@ def create_contact(request, id):
 
             shopify_factory = ShopifyFactoryFunction(
                 shopify_domain, shopify_token, url, request=request, query=CREATE_CUSTOMER_QUERY)
-
+            print(request.data)
             response = shopify_factory.create_customers()
 
             if response.status_code == 200:
@@ -716,9 +716,30 @@ def create_contact(request, id):
                             "details": data["data"]["customerCreate"]["userErrors"]},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
-                customer = data.get("data", {}).get(
-                    "customerCreate", {}).get("customer", {})
-                return Response(customer, status=status.HTTP_201_CREATED)
+                custom_user = CustomUser.objects.get(id=request.user.id)
+                random_custom_id = str(uuid.uuid4())
+
+                contact_list = ContactList.objects.get(id=id)
+                data = request.data.copy()
+                data['custom_id'] = random_custom_id
+
+                required_fields = ['firstName', 'lastName', 'phone', 'email']
+                missing_fields = [
+                    f for f in required_fields if not data.get(f)]
+                if missing_fields:
+                    return Response(
+                        {"detail": "Missing required fields",
+                            "missing": missing_fields},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                serializer = ContactSerializer(data=data)
+                serializer.is_valid(raise_exception=True)
+                serializer.save(contact_list=contact_list, users=custom_user)
+
+                cache_key = f"user_contacts:{contact_list.id}"
+                cache.delete(cache_key)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
 
                 return Response(
@@ -726,6 +747,7 @@ def create_contact(request, id):
                         "details": data['details']},
                     status=response.status_code,
                 )
+
         else:
             custom_user = CustomUser.objects.get(id=request.user.id)
             random_custom_id = str(uuid.uuid4())
@@ -777,6 +799,12 @@ def upload_bulk_contacts(request):
         except ContactList.DoesNotExist:
             return Response({"error": "Contact list not found"}, status=status.HTTP_404_NOT_FOUND)
         print('3')
+        if shopify_domain:
+            url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
+            shopify_token = request.headers['Authorization'].split(' ')[1]
+
+            shopify_factory = ShopifyFactoryFunction(
+                shopify_domain, shopify_token, url, request=request, query=CREATE_CUSTOMER_QUERY)
         for idx, profile in enumerate(bulk_data):
             # profile = utils.convert_keys(profile)
             print('converterd', profile)
@@ -797,6 +825,11 @@ def upload_bulk_contacts(request):
                     users=custom_user
                 )
                 contacts_to_create.append(contact)
+                if shopify_domain:
+                    print('enter shopify')
+                    response = shopify_factory.create_customers_bulk()
+                    if response:
+                        return Response({"error": response.get('error')}, status=status.HTTP_400_BAD_REQUEST)
             else:
                 invalid_items.append(
                     {"index": idx, "errors": serializer.errors})

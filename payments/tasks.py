@@ -90,7 +90,7 @@ def activate_scheduled_packages():
         if flag_result:
             Notification.objects.create(
                 user=user,
-                title="Recipient Limit Exceeded",
+                title="Recipient Limit Changed",
                 message=flag_result["message"],
                 notif_type="success"
             )
