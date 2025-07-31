@@ -1522,7 +1522,7 @@ def customer_redact_request_webhook(request):
                 custom_user = CustomUser.objects.get(
                     custom_email=get_obj.email)
                 shopify_contact_list = ContactList.objects.get(
-                    users=custom_user.id, shopify_list=True)
+                    users=custom_user)
                 # Delete contacts first
                 Contact.objects.filter(
                     contact_list=shopify_contact_list).delete()
