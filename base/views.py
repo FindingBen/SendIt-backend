@@ -1519,7 +1519,7 @@ def customer_redact_request_webhook(request):
         data = json.loads(body)
         logger.info(f"Customer redact webhook payload: {data}")
         shop_domain = data.get('shop_domain')
-        customer_id = data.get('customer', {}).get('id')
+        customer_email = data.get('customer', {}).get('email')
         if not shop_domain:
             logger.error("Shop domain missing in payload.")
             return HttpResponse("Bad request", status=400)
@@ -1531,7 +1531,7 @@ def customer_redact_request_webhook(request):
                 if user:
                     contact_list = ContactList.objects.filter(
                         users=user, shopify_list=True).first()
-                Contact.objects.get(id=customer_id).delete()
+                Contact.objects.get(email=customer_email).delete()
 
                 logger.info(
                     f"Customer with id {customer_id} redacted for shop: {shop_domain}")
