@@ -825,14 +825,14 @@ def upload_bulk_contacts(request):
                     users=custom_user
                 )
                 contacts_to_create.append(contact)
-                if shopify_domain:
-                    print('enter shopify')
-                    response = shopify_factory.create_customers_bulk()
-                    if response:
-                        return Response({"error": response.get('error')}, status=status.HTTP_400_BAD_REQUEST)
             else:
                 invalid_items.append(
                     {"index": idx, "errors": serializer.errors})
+        if shopify_domain:
+            print('enter shopify')
+            response = shopify_factory.create_customers_bulk()
+            if response:
+                return Response({"error": response.get('error')}, status=status.HTTP_400_BAD_REQUEST)
         if contacts_to_create:
             Contact.objects.bulk_create(contacts_to_create)
             contact_list.update_contact_count(contact_list)
@@ -1502,37 +1502,56 @@ def customer_data_request_webhook(request):
 def customer_redact_request_webhook(request):
 
     shopify_hmac = request.META.get('HTTP_X_SHOPIFY_HMAC_SHA256')
-    if shopify_hmac:
+    if not shopify_hmac:
+        logger.warning("Missing HMAC header in customer redact webhook.")
+        return HttpResponse("Missing signature", status=400)
 
+    try:
         body = request.body
-        hashit = hmac.new(settings.SHOPIFY_API_SECRET.encode(
-            'utf-8'), body, hashlib.sha256)
-        calculated_hmac = base64.b64encode(hashit.digest()).decode()
-
-        if not hmac.compare_digest(calculated_hmac, shopify_hmac):
-            return HttpResponse(status=401)  # Unauthorized
+        expected_hmac = base64.b64encode(
+            hmac.new(settings.SHOPIFY_API_SECRET.encode(),
+                     body, hashlib.sha256).digest()
+        ).decode()
+        if not hmac.compare_digest(expected_hmac, shopify_hmac):
+            logger.warning("Invalid HMAC signature.")
+            return HttpResponse("Unauthorized", status=401)
 
         data = json.loads(body)
-        print(data)
-        shop_domain = data.get('shop_domain', None)
-
-        if shop_domain is not None:
+        logger.info(f"Customer redact webhook payload: {data}")
+        shop_domain = data.get('shop_domain')
+        if not shop_domain:
+            logger.error("Shop domain missing in payload.")
+            return HttpResponse("Bad request", status=400)
+        try:
             with transaction.atomic():
-                get_obj = ShopifyStore.objects.get(shop_domain=shop_domain)
-                custom_user = CustomUser.objects.get(
-                    custom_email=get_obj.email)
-                shopify_contact_list = ContactList.objects.get(
-                    users=custom_user)
-                # Delete contacts first
-                Contact.objects.filter(
-                    contact_list=shopify_contact_list).delete()
-                shopify_contact_list.delete()
-                custom_user.is_active = False
-                custom_user.save()
-        print("Webhook triggered, customers data from shopify deleted!")
+                shop = ShopifyStore.objects.get(shop_domain=shop_domain)
+                user = CustomUser.objects.filter(
+                    custom_email=shop.email).first()
 
-        return HttpResponse(status=200)
-    return Response({"error": "Missing shopify signature!"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                if user:
+                    contact_list = ContactList.objects.filter(
+                        users=user).first()
+
+                    if contact_list:
+                        Contact.objects.filter(
+                            contact_list=contact_list).delete()
+                        contact_list.delete()
+                        logger.info(
+                            f"Deleted contact list for user: {user.email}")
+
+                    user.is_active = False
+                    user.save()
+                    logger.info(f"User {user.email} deactivated.")
+
+                return HttpResponse(status=200)
+
+        except ShopifyStore.DoesNotExist:
+            logger.warning(f"ShopifyStore not found for domain: {shop_domain}")
+            return HttpResponse(status=404)
+
+    except Exception as e:
+        logger.exception("Unhandled error in customer redact webhook.")
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 @csrf_exempt
@@ -1544,44 +1563,51 @@ def webhook_debug_view(request):
 
 
 @csrf_exempt
+@require_http_methods(['POST'])
 def customer_shop_redact_request_webhook(request):
-    print("🧪 Raw body:", request.body)
+
     shopify_hmac = request.META.get('HTTP_X_SHOPIFY_HMAC_SHA256')
 
-    print("🧪 HMAC body:", shopify_hmac)
-
-    if shopify_hmac:
-        print("Webhook triggered, we are deleting shopify store object")
-        print("🧪 Raw body:", request.body)
-        print("🧪 HMAC header:", shopify_hmac)
-
+    if not shopify_hmac:
+        logger.warning("Missing HMAC header in shop redact webhook.")
+        return HttpResponse("Missing signature", status=400)
+    try:
         body = request.body
+        expected_hmac = base64.b64encode(
+            hmac.new(settings.SHOPIFY_API_SECRET.encode(),
+                     body, hashlib.sha256).digest()
+        ).decode()
 
-        hashit = hmac.new(settings.SHOPIFY_API_SECRET.encode(
-            'utf-8'), body, hashlib.sha256)
-        calculated_hmac = base64.b64encode(hashit.digest()).decode()
-
-        if not hmac.compare_digest(calculated_hmac, shopify_hmac):
-            return HttpResponse(status=401)  # Unauthorized
+        if not hmac.compare_digest(expected_hmac, shopify_hmac):
+            logger.warning("Invalid HMAC signature.")
+            return HttpResponse("Unauthorized", status=401)
 
         data = json.loads(body)
-        shop_domain = data.get('shop_domain', None)
-        if shop_domain is not None:
-            get_obj = ShopifyStore.objects.get(shop_domain=shop_domain)
-            get_obj.delete()
-            custom_user = CustomUser.objects.get(
-                custom_email=get_obj.email)
-            custom_user.is_active = False
-            custom_user.save()
-            print(get_obj)
-            logger.info("***Shop object deleted!***")
-        # Do something with the data, e.g., log or process
-        else:
-            return logger.error("Shop domain not present!")
-        print("Webhook triggered")
+        shop_domain = data.get('shop_domain')
+        if not shop_domain:
+            logger.error("Shop domain missing in payload.")
+            return HttpResponse("Bad request", status=400)
+        try:
+            shop = ShopifyStore.objects.get(shop_domain=shop_domain)
+            user = CustomUser.objects.filter(custom_email=shop.email).first()
 
-        return HttpResponse(status=200)
-    return HttpResponse("Missing shopify signature!", status=500)
+            shop.delete()
+            if user:
+                user.is_active = False
+                user.shopify_connect = False
+                user.scheduled_package = None
+                user.package_plan = 1
+                user.save()
+
+            logger.info(f"Shopify store '{shop_domain}' deleted successfully.")
+            return HttpResponse(status=200)
+
+        except ShopifyStore.DoesNotExist:
+            logger.warning(f"ShopifyStore not found for domain: {shop_domain}")
+            return HttpResponse(status=404)
+    except Exception as e:
+        logger.exception("Unhandled error in shop redact webhook.")
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 @csrf_exempt
