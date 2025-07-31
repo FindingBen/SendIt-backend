@@ -417,7 +417,7 @@ def get_outbound_pricing(request):
         # Check shopify documentation regarding contact lists and recipients
 
         contact_obj = Contact.objects.filter(
-            contact_list=list_id)
+            contact_list=list_id, allowed=True)
 
         query_params = {
             "api_key": settings.VONAGE_ID,
