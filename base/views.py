@@ -1525,20 +1525,11 @@ def customer_redact_request_webhook(request):
             return HttpResponse("Bad request", status=400)
         try:
             with transaction.atomic():
-                shop = ShopifyStore.objects.get(shop_domain=shop_domain)
-                user = CustomUser.objects.filter(
-                    custom_email=shop.email).first()
-                if user:
-                    contact_list = ContactList.objects.filter(
-                        users=user, shopify_list=True).first()
                 Contact.objects.get(email=customer_email).delete()
 
                 logger.info(
                     f"Customer with id {customer_email} redacted for shop: {shop_domain}")
 
-                if contact_list and len(contact_list) == 0:
-                    user.shopify_connect = False
-                    user.save()
                 logger.info(f"Customers deleted for shop: {shop_domain}")
 
                 return HttpResponse(status=200)
