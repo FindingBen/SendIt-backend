@@ -1544,14 +1544,6 @@ def customer_redact_request_webhook(request):
 
 
 @csrf_exempt
-def webhook_debug_view(request):
-    print("🔔 Shopify webhook reached Django view")
-    print("Headers:", dict(request.headers))
-    print("Body:", request.body)
-    return JsonResponse({"status": "ok"})
-
-
-@csrf_exempt
 @require_http_methods(['POST'])
 def customer_shop_redact_request_webhook(request):
 

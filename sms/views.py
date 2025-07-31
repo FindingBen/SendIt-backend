@@ -58,7 +58,7 @@ class createSms(generics.GenericAPIView):
         contact_list = ContactList.objects.get(
             id=request.data['contact_list'])
         contact_obj = Contact.objects.filter(
-            contact_list=contact_list)
+            contact_list=contact_list, allowed=True)
         query_params = {
             "api_key": settings.VONAGE_ID,
             "api_secret": settings.VONAGE_TOKEN,
@@ -146,7 +146,7 @@ def schedule_sms(request):
         recipient_list = ContactList.objects.get(
             id=request.data['contact_list'])
         contact_obj = Contact.objects.filter(
-            contact_list=recipient_list)
+            contact_list=recipient_list, allowed=True)
         query_params = {
             "api_key": settings.VONAGE_ID,
             "api_secret": settings.VONAGE_TOKEN,
@@ -182,7 +182,7 @@ def schedule_sms(request):
 
                 message = Message.objects.get(id=data['message'])
 
-                sms_sends = contact_list.contact_lenght
+                sms_sends = len(contact_obj)
                 sms = Sms(
                     user=custom_user,
                     sender=data['sender'],

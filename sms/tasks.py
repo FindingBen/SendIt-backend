@@ -225,18 +225,18 @@ def send_sms(unique_tracking_id: None, user: None):
 
                     responseData = sms.send_message(sms_kwargs)
                 logger.info("VONAGE RESPONSE", responseData)
-                smsObj.sms_sends = contact_list.contact_lenght
+                smsObj.sms_sends = len(contact_obj)
                 smsObj.is_sent = True
 
                 smsObj.save()
                 message.status = 'sent'
                 message.save()
-                analytics_data.total_sends += contact_list.contact_lenght
+                analytics_data.total_sends += len(contact_obj)
                 analytics_data.save()
                 cache_key = f"messages:{smsObj.user.id}"
                 cache.delete(cache_key)
                 logger.info(
-                    f"SMS {smsObj.id} sent successfully to {contact_list.contact_lenght} recipients.")
+                    f"SMS {smsObj.id} sent successfully to {len(contact_obj)} recipients.")
             else:
                 logger.info(f"SMS {smsObj.id} already sent, skipping.")
     except Sms.DoesNotExist:
