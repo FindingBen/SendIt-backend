@@ -784,37 +784,40 @@ def upload_bulk_contacts(request):
         shopify_domain = request.headers.get('shopify-domain', None)
 
         bulk_data = request.data.get('data', None).get('bulk_data')
-        print('0', bulk_data)
         if not bulk_data:
             return Response({"detail": "No data provided."}, status=status.HTTP_400_BAD_REQUEST)
         required_fields = ['firstName', 'lastName', 'phone', 'email']
         invalid_items = []
         contacts_to_create = []
-        print('1')
+
         custom_user = CustomUser.objects.get(id=request.user.id)
         contact_list_id = request.data.get("data", None).get('list_id', None)
-        print('2')
+
         try:
             contact_list = ContactList.objects.get(id=contact_list_id)
         except ContactList.DoesNotExist:
             return Response({"error": "Contact list not found"}, status=status.HTTP_404_NOT_FOUND)
-        print('3')
+
         if shopify_domain:
             url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
             shopify_token = request.headers['Authorization'].split(' ')[1]
 
             shopify_factory = ShopifyFactoryFunction(
                 shopify_domain, shopify_token, url, request=request, query=CREATE_CUSTOMER_QUERY)
-        for idx, profile in enumerate(bulk_data):
-            # profile = utils.convert_keys(profile)
-            print('converterd', profile)
+            shopify_results = shopify_factory.create_customers_bulk()
+        for idx, (profile, result) in enumerate(zip(bulk_data, shopify_results)):
+            # print(shopify_results)
+            # if not result['success']:
+            #     invalid_items.append(
+            #         {"index": idx, "shopify_error": result['error']})
+            #     continue
+
             missing_fields = [f for f in required_fields if not profile.get(f)]
             if missing_fields:
-                print('missing?')
                 invalid_items.append({"index": idx, "missing": missing_fields})
                 continue
             serializer = ContactSerializer(data=profile)
-            print('here')
+
             if serializer.is_valid():
                 contact = Contact(
                     first_name=serializer.validated_data['first_name'],
@@ -828,11 +831,7 @@ def upload_bulk_contacts(request):
             else:
                 invalid_items.append(
                     {"index": idx, "errors": serializer.errors})
-        if shopify_domain:
-            print('enter shopify')
-            response = shopify_factory.create_customers_bulk()
-            if response:
-                return Response({"error": response.get('error')}, status=status.HTTP_400_BAD_REQUEST)
+
         if contacts_to_create:
             Contact.objects.bulk_create(contacts_to_create)
             contact_list.update_contact_count(contact_list)
@@ -1151,6 +1150,21 @@ def delete_element(request, id):
 @permission_classes([IsAuthenticated])
 def delete_contact_recipient(request, id=None):
     try:
+        shopify_domain = request.headers.get('shopify-domain', None)
+        if shopify_domain:
+            shopify_token = request.headers['Authorization'].split(' ')[1]
+            url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
+            shopify_factory = ShopifyFactoryFunction(
+                shopify_domain, shopify_token, url, request=request, query=DELETE_CUSTOMER_QUERY)
+            response = shopify_factory.delete_customer()
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("data", {}).get("customerDelete", {}).get("userErrors"):
+                    return Response(
+                        {"error": "Failed to delete customer",
+                            "details": data["data"]["customerDelete"]["userErrors"]},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
         contact = Contact.objects.get(id=id)
         contact.delete()
         cache_key = f"user_contacts:{request.user.id}"

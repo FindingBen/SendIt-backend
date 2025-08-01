@@ -163,8 +163,13 @@ class ShopifyFactoryFunction:
                 json={"query": self._query, "variables": variables},
             )
             data = response.json()
-            print(data)
-            print('AFTER RESPONSE', response.status_code)
+            errors = data.get("errors") or data.get("data", {}).get(
+                "customerCreate", {}).get("userErrors", [])
+
+            if errors:
+                results.append({"success": False, "error": errors})
+            else:
+                results.append({"success": True})
 
         return results
 
