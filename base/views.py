@@ -805,6 +805,7 @@ def upload_bulk_contacts(request):
             shopify_factory = ShopifyFactoryFunction(
                 shopify_domain, shopify_token, url, request=request, query=CREATE_CUSTOMER_QUERY)
             shopify_results = shopify_factory.create_customers_bulk()
+
         for idx, (profile, result) in enumerate(zip(bulk_data, shopify_results)):
             # print(shopify_results)
             # if not result['success']:
@@ -816,14 +817,25 @@ def upload_bulk_contacts(request):
             if missing_fields:
                 invalid_items.append({"index": idx, "missing": missing_fields})
                 continue
-            serializer = ContactSerializer(data=profile)
+            print('PROFILE', profile)
+            data_serialize = {
+                "firstName": profile.get('firstName'),
+                "lastName": profile.get('lastName'),
+                "phone": profile.get('phone'),
 
+                "custom_id": result.get("customer", {}).get("id"),
+            }
+            serializer = ContactSerializer(data=data_serialize)
+            print(result)
             if serializer.is_valid():
+                shopify_id = result.get("customer", {}).get("id")
+                print('ID', shopify_id)
                 contact = Contact(
+                    custom_id=serializer.validated_data['custom_id'],
                     first_name=serializer.validated_data['first_name'],
                     last_name=serializer.validated_data['last_name'],
                     phone_number=serializer.validated_data['phone_number'],
-                    email=serializer.validated_data['email'],
+                    # email=serializer.validated_data['email'],
                     contact_list=contact_list,
                     users=custom_user
                 )
@@ -1150,15 +1162,21 @@ def delete_element(request, id):
 @permission_classes([IsAuthenticated])
 def delete_contact_recipient(request, id=None):
     try:
+        print('DELETE?')
         shopify_domain = request.headers.get('shopify-domain', None)
+        print('DELETE?', request.data)
         if shopify_domain:
+            print('DELETE?')
             shopify_token = request.headers['Authorization'].split(' ')[1]
-            url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
+            url = f"https://{shopify_domain}/admin/api/2025-07/graphql.json"
             shopify_factory = ShopifyFactoryFunction(
                 shopify_domain, shopify_token, url, request=request, query=DELETE_CUSTOMER_QUERY)
             response = shopify_factory.delete_customer()
+            print('after')
+            print(response)
             if response.status_code == 200:
                 data = response.json()
+                print(data)
                 if data.get("data", {}).get("customerDelete", {}).get("userErrors"):
                     return Response(
                         {"error": "Failed to delete customer",

@@ -26,7 +26,6 @@ mutation createCustomer($input: CustomerInput!) {
       id
       firstName
       lastName
-      email
       phone
       createdAt
     }
@@ -58,7 +57,6 @@ mutation updateCustomer($input: CustomerInput!) {
       id
       firstName
       lastName
-      email
       phone
       updatedAt
     }

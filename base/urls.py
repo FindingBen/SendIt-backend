@@ -32,7 +32,6 @@ urlpatterns = [
     path('upload_bulk_contacts/', views.upload_bulk_contacts),
     path('create_bulk_contacts/', views.bulk_create_contacts),
     path('delete_recipient/<int:id>', views.delete_contact_recipient),
-    path('delete_recipient_shopify/', views.delete_contact_recipient),
     # Package plan
     path('package_plan/', views.get_packages),
     path('package_purchase/<str:id>/', views.purchase_package),

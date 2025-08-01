@@ -149,7 +149,7 @@ class ShopifyFactoryFunction:
             customer_data = {
                 "firstName": customer.get("firstName"),
                 "lastName": customer.get("lastName"),
-                "email": customer.get("email"),
+                # "email": customer.get("email"),
                 "phone": f'+{customer.get("phone")}',
             }
 
@@ -166,10 +166,13 @@ class ShopifyFactoryFunction:
             errors = data.get("errors") or data.get("data", {}).get(
                 "customerCreate", {}).get("userErrors", [])
 
-            if errors:
+            customer_info = data.get("data", {}).get(
+                "customerCreate", {}).get("customer")
+
+            if errors or not customer_info:
                 results.append({"success": False, "error": errors})
             else:
-                results.append({"success": True})
+                results.append({"success": True, "customer": customer_info})
 
         return results
 
@@ -204,28 +207,6 @@ class ShopifyFactoryFunction:
             json={"query": self._query, "variables": variables},
         )
         data = response.json()
-        return data
-
-    def delete_customer(self):
-        headers = {
-            "X-Shopify-Access-Token": self._token,
-            "Content-Type": "application/json",
-        }
-
-        shopify_id = self._request.data.get(
-            'id')  # Safely get the value of 'id'
-
-        variables = {
-            "id": shopify_id
-        }
-
-        response = requests.post(
-            self._url,
-            headers=headers,
-            json={"query": self._query, "variables": variables},
-        )
-        data = response.json()
-
         return data
 
     def get_shop_info(self):
@@ -305,6 +286,25 @@ class ShopifyFactoryFunction:
 
     def get_shop_orders(self, variable=None):
         return self.run_query(GET_SHOP_ORDERS, variable)
+
+    def delete_customer(self):
+        headers = {
+            "X-Shopify-Access-Token": self._token,
+            "Content-Type": "application/json",
+        }
+        shopify_id = self._request.data.get('id')
+        print(shopify_id)
+        variables = {
+
+            "id": shopify_id
+        }
+        response = requests.post(
+            self._url,
+            headers=headers,
+            json={"query": self._query, "variables": variables},
+        )
+        data = response.json()
+        return data
 
     def create_reccuring_charge(self, variable):
         headers = {
