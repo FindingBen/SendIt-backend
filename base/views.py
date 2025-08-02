@@ -1551,13 +1551,13 @@ def customer_redact_request_webhook(request):
         data = json.loads(body)
         logger.info(f"Customer redact webhook payload: {data}")
         shop_domain = data.get('shop_domain')
-        customer_email = data.get('customer', {}).get('email')
+        customer_id = data.get('customer', {}).get('id')
         if not shop_domain:
             logger.error("Shop domain missing in payload.")
             return HttpResponse("Bad request", status=400)
         try:
             with transaction.atomic():
-                Contact.objects.get(email=customer_email).delete()
+                Contact.objects.get(custom_id=customer_id).delete()
 
                 logger.info(
                     f"Customer with id {customer_email} redacted for shop: {shop_domain}")
