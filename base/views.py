@@ -717,7 +717,8 @@ def create_contact(request, id):
                         status=status.HTTP_400_BAD_REQUEST,
                     )
                 custom_user = CustomUser.objects.get(id=request.user.id)
-                random_custom_id = str(uuid.uuid4())
+                random_custom_id = data.get("data", {}).get(
+                    "customerCreate", {}).get("customer", {}).get("id", None)
 
                 contact_list = ContactList.objects.get(id=id)
                 data = request.data.copy()
@@ -1162,7 +1163,7 @@ def delete_element(request, id):
 @permission_classes([IsAuthenticated])
 def delete_contact_recipient(request, id=None):
     try:
-        print('DELETE?')
+        print('DELETE?', id)
         shopify_domain = request.headers.get('shopify-domain', None)
         print('DELETE?', request.data)
         if shopify_domain:
@@ -1552,12 +1553,13 @@ def customer_redact_request_webhook(request):
         logger.info(f"Customer redact webhook payload: {data}")
         shop_domain = data.get('shop_domain')
         customer_id = data.get('customer', {}).get('id')
+        print(customer_id)
         if not shop_domain:
             logger.error("Shop domain missing in payload.")
             return HttpResponse("Bad request", status=400)
         try:
             with transaction.atomic():
-                Contact.objects.get(custom_id=customer_id).delete()
+                Contact.objects.get(custom_id=f'gid://shopify/Customer/{}').delete()
 
                 logger.info(
                     f"Customer with id {customer_id} redacted for shop: {shop_domain}")
