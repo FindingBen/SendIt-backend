@@ -1560,7 +1560,7 @@ def customer_redact_request_webhook(request):
                 Contact.objects.get(custom_id=customer_id).delete()
 
                 logger.info(
-                    f"Customer with id {customer_email} redacted for shop: {shop_domain}")
+                    f"Customer with id {customer_id} redacted for shop: {shop_domain}")
 
                 logger.info(f"Customers deleted for shop: {shop_domain}")
 
