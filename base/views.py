@@ -784,20 +784,23 @@ def upload_bulk_contacts(request):
     try:
         bulk_data = request.data.get('data', {}).get('bulk_data')
         if not bulk_data:
-            return Response({"detail": "No data provided."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "No data provided."}, status=status.HTTP_400_BAD_REQUEST)
         print('BULK')
+
         required_fields = ['firstName', 'lastName', 'phone', 'email']
         invalid_items = []
         contacts_to_create = []
         print('SSS')
         custom_user = CustomUser.objects.get(id=request.user.id)
         contact_list_id = request.data.get("data", {}).get('list_id')
-
+        contact_list = None
         try:
             contact_list = ContactList.objects.get(id=contact_list_id)
         except ContactList.DoesNotExist:
             return Response({"error": "Contact list not found"}, status=status.HTTP_404_NOT_FOUND)
         print('DD')
+        if contact_list.shopify_list:
+            return Response({"error": "Bulk upload not allowed for Shopify list at this moment"}, status=status.HTTP_403_FORBIDDEN)
         for idx, profile in enumerate(bulk_data):
             # Check for missing fields
             missing_fields = [f for f in required_fields if not profile.get(f)]
@@ -844,6 +847,7 @@ def upload_bulk_contacts(request):
         return Response({
             "created": len(contacts_to_create),
             "invalid": invalid_items,
+            "shopify_list": contact_list.shopify_list,
             "data": ContactSerializer(contacts_to_create, many=True).data
         }, status=status.HTTP_201_CREATED)
 
