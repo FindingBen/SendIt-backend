@@ -11,6 +11,7 @@ from django.http import JsonResponse
 urlpatterns = [
     path('notes/', views.get_notes),
     path('active_campaigns/', views.get_active_campaigns),
+    path('get_user/', views.get_user),
     path('scheduled_campaigns/', views.get_scheduled_campaigns),
     path('register/', RegisterAPI.as_view(), name='register'),
     path('create_notes/', CreateNote.as_view(), name='create_message'),

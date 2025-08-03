@@ -276,8 +276,8 @@ def confirmation_token_view(request, token_id, user_id):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def get_user(request, id):
-    user = CustomUser.objects.get(id=id)
+def get_user(request):
+    user = CustomUser.objects.get(id=request.user.id)
     serializer = CustomUserSerializer(user)
 
     return Response(serializer.data)
