@@ -18,9 +18,24 @@ class CustomPasswordResetConfirmationEmail(PasswordResetEmail):
         return context
 
     def send(self, to, *args, **kwargs):
-        print("Sending email to", to)
-        print("Context:", self.get_context_data())
-        super().send(to, *args, **kwargs)
+        context = self.get_context_data()
+        subject = "SPP | Password reset request"
+        from_email = self.from_email
+
+        to_email = to
+
+        text_content = "Error contact support"  # fallback plain text
+        html_content = render_to_string(self.template_name, context)
+
+        msg = EmailMultiAlternatives(
+            subject, text_content, from_email, to_email)
+        msg.attach_alternative(html_content, "text/html")
+        try:
+            msg.send()
+
+            print("✅ Email sent successfully")
+        except Exception as e:
+            print("❌ Error sending email:", e)
 
 
 def send_confirmation_email(email, token_id, user_id):
