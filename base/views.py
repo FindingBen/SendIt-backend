@@ -1553,8 +1553,11 @@ def customer_redact_request_webhook(request):
             return HttpResponse("Bad request", status=400)
         try:
             with transaction.atomic():
-                Contact.objects.get(
-                    custom_id=f'gid://shopify/Customer/{customer_id}').delete()
+                try:
+                    Contact.objects.get(
+                        custom_id=f'gid://shopify/Customer/{customer_id}').delete()
+                except Exception as e:
+                    return HttpResponse("No data for this Contact found", status=400)
 
                 logger.info(
                     f"Customer with id {customer_id} redacted for shop: {shop_domain}")

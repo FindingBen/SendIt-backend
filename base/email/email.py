@@ -17,6 +17,11 @@ class CustomPasswordResetConfirmationEmail(PasswordResetEmail):
 
         return context
 
+    def send(self, to, *args, **kwargs):
+        print("Sending email to", to)
+        print("Context:", self.get_context_data())
+        super().send(to, *args, **kwargs)
+
 
 def send_confirmation_email(email, token_id, user_id):
     user_obj = CustomUser.objects.get(id=user_id)
