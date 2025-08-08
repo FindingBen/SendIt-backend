@@ -337,7 +337,6 @@ CURRENT_CHARGE = """query {
       status
       createdAt
       currentPeriodEnd
-      test
       lineItems {
         plan {
           pricingDetails {
