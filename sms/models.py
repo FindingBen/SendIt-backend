@@ -6,26 +6,18 @@ from django.db import transaction
 
 
 class Sms(models.Model):
-    unique_tracking_id = models.CharField(
-        max_length=22,
-        default=shortuuid.uuid,
-        unique=True
-        # Ensures the field is not editable in admin
-    )
+    unique_tracking_id = models.CharField(max_length=22,default=shortuuid.uuid,unique=True)
     created_at = models.DateField(auto_now_add=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     message = models.ForeignKey(Message, on_delete=models.CASCADE)
     sender = models.CharField(max_length=20, null=False)
     sms_text = models.TextField(max_length=500, null=False)
     content_link = models.URLField(max_length=500, null=True, blank=True)
-    contact_list = models.ForeignKey(
-        ContactList, on_delete=models.SET_NULL, null=True, blank=True)
+    contact_list = models.ForeignKey(ContactList, on_delete=models.SET_NULL, null=True, blank=True)
     has_button = models.BooleanField(default=False)
     sms_sends = models.IntegerField(default=0)
-    total_bounce_rate = models.DecimalField(
-        max_digits=3, decimal_places=1, default=0)
-    total_overall_rate = models.DecimalField(
-        max_digits=3, decimal_places=1, default=0)
+    total_bounce_rate = models.DecimalField(max_digits=3, decimal_places=1, default=0)
+    total_overall_rate = models.DecimalField(max_digits=3, decimal_places=1, default=0)
     total_views = models.IntegerField(default=0)
     button_1 = models.IntegerField(default=0)
     button_2 = models.IntegerField(default=0)
@@ -40,7 +32,7 @@ class Sms(models.Model):
     is_sent = models.BooleanField(default=False)
     delivered = models.IntegerField(default=0)
     unsubscribe_path = models.CharField(
-        max_length=100, default='https://sendit-frontend-production.up.railway.app/opt-out')
+        max_length=100, default='https://sendit-frontend-production.up.railway.app/opt-out') 
     not_delivered = models.IntegerField(default=0)
     scheduled_time = models.DateTimeField(null=True, blank=True)
 
@@ -79,3 +71,5 @@ class CampaignStats(models.Model):
     overall_perfromance = models.IntegerField(default=0)
     campaign_start = models.DateField(null=True)
     campaign_end = models.DateField(null=True)
+
+

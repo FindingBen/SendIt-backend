@@ -1527,48 +1527,49 @@ def customer_data_request_webhook(request):
 @require_http_methods(['POST'])
 @csrf_exempt
 def customer_redact_request_webhook(request):
-
-    shopify_hmac = request.META.get('HTTP_X_SHOPIFY_HMAC_SHA256')
+    shopify_hmac = request.META.get('HTTP_X_SHOPIFY_HMAC_SHA256', '').strip()
     if not shopify_hmac:
         logger.warning("Missing HMAC header in customer redact webhook.")
         return HttpResponse("Missing signature", status=400)
 
     try:
-        body = request.body
-        expected_hmac = base64.b64encode(
-            hmac.new(settings.SHOPIFY_API_SECRET.encode(),
-                     body, hashlib.sha256).digest()
-        ).decode()
-        if not hmac.compare_digest(expected_hmac, shopify_hmac):
+        body = request.body  # read raw body once
+        computed_hmac = hmac.new(
+            settings.SHOPIFY_API_SECRET.encode(),
+            body,
+            hashlib.sha256
+        ).digest()
+
+        expected_hmac = base64.b64encode(computed_hmac)
+        received_hmac = shopify_hmac.encode()
+
+        if not hmac.compare_digest(expected_hmac, received_hmac):
             logger.warning("Invalid HMAC signature.")
             return HttpResponse("Unauthorized", status=401)
 
+        # HMAC passed, parse body
         data = json.loads(body)
         logger.info(f"Customer redact webhook payload: {data}")
         shop_domain = data.get('shop_domain')
         customer_id = data.get('customer', {}).get('id')
         print(customer_id)
+
         if not shop_domain:
             logger.error("Shop domain missing in payload.")
             return HttpResponse("Bad request", status=400)
-        try:
-            with transaction.atomic():
-                try:
-                    Contact.objects.get(
-                        custom_id=f'gid://shopify/Customer/{customer_id}').delete()
-                except Exception as e:
-                    return HttpResponse("No data for this Contact found", status=400)
 
+        with transaction.atomic():
+            deleted, _ = Contact.objects.filter(
+                custom_id=f'gid://shopify/Customer/{customer_id}'
+            ).delete()
+
+            if deleted:
                 logger.info(
                     f"Customer with id {customer_id} redacted for shop: {shop_domain}")
+            else:
+                logger.info("Contact already deleted or not found — skipping.")
 
-                logger.info(f"Customers deleted for shop: {shop_domain}")
-
-                return HttpResponse(status=200)
-
-        except ShopifyStore.DoesNotExist:
-            logger.warning(f"ShopifyStore not found for domain: {shop_domain}")
-            return HttpResponse(status=404)
+        return HttpResponse(status=200)
 
     except Exception as e:
         logger.exception("Unhandled error in customer redact webhook.")
