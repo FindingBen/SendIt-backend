@@ -316,7 +316,7 @@ query getOrders($first: Int = 10, $after: String) {
 """
 
 
-CREATE_CHARGE = """mutation AppSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean = true) {
+CREATE_CHARGE = """mutation AppSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean = false) {
     appSubscriptionCreate(name: $name, returnUrl: $returnUrl, lineItems: $lineItems, test: $test) {
       userErrors {
         field
@@ -363,7 +363,6 @@ GET_SHOPIFY_CHARGE = """query {
           name
           status
           createdAt
-          test
           lineItems {
             plan {
               pricingDetails {
