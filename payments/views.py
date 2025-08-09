@@ -72,6 +72,11 @@ class StripeCheckoutVIew(APIView):
             return Response({"error": error_message}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class StripeSubscriptionView(APIView):
+    def post(self, request):
+        pass
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def payment_successful(request, id):
