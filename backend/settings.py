@@ -315,7 +315,7 @@ DOMAIN_STRIPE_NAME = os.environ.get('DOMAIN_STRIPE_NAME')
 DOMAIN_STRIPE_NAME_CANCEL = os.environ.get('DOMAIN_STRIPE_NAME_CANCEL')
 
 
-TEST_PRODUCTS = (('Basic package', 'price_1NSzPTAD7NIuijyS69UOcr4w', 2), ('Silver package',
+TEST_PRODUCTS = (('Basic package', 'price_1RuFECAD7NIuijySOnprBvf3', 2), ('Silver package',
                                                                           'price_1NTJF1AD7NIuijySWfczHhRp', 3), ('Gold package', 'price_1NTKmiAD7NIuijySwioi2U02', 4))
 
 PROD_PRODUCTS = (('Basic package', 'price_1RuF9lAD7NIuijySkvmcXQCm', 2), ('Silver package',
