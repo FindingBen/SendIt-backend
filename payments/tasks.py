@@ -182,8 +182,8 @@ def cancel_subscription_monitor():
 
         Notification.objects.create(
             user=user,
-            title=f"{package_obj.plan_type} subscription cancelled",
-            message=f"Your subscription plan '{package_obj.plan_type}' has been cancelled successfully. We hope you enjoyed our services and hope to see you back!",
+            title=f"Subscription cancelled",
+            message=f"Your subscription plan has been cancelled successfully. We hope you enjoyed our services and hope to see you back!",
             notif_type="success"
         )
 

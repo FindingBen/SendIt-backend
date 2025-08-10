@@ -84,50 +84,23 @@ class StripeSubscriptionView(APIView):
 def handle_stripe_subscription(request):
     try:
         session_id = request.data.get('session_id')
+        user_payment = UserPayment.objects.get(user=request.user)
+        custom_user = CustomUser.objects.get(id=request.user.id)
+
         if not session_id:
             return Response({'error': 'Session ID is required'}, status=status.HTTP_400_BAD_REQUEST)
-        with transaction.atomic():
-            user_payment = UserPayment.objects.select_for_update().get(user=request.user)
 
-            # Prevent duplicate processing
-            if user_payment.last_stripe_session_id == session_id:
-                return Response({'error': 'This session has already been processed.'}, status=status.HTTP_400_BAD_REQUEST)
+        if user_payment.stripe_checkout_id == session_id:
+            return Response({'error': 'This session has already been processed.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Retrieve Stripe session to confirm it's valid
-            stripe_session = stripe.checkout.Session.retrieve(session_id)
-            if stripe_session.payment_status != 'paid':
-                return Response({'error': 'Payment not completed.'}, status=status.HTTP_400_BAD_REQUEST)
+        stripe_session = stripe.checkout.Session.retrieve(session_id)
+        if stripe_session.payment_status != 'paid':
+            return Response({'error': 'Payment not completed.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Use transaction to avoid race conditions
-
-                # Retrieve subscription details
-            purchase_object = stripe.Subscription.retrieve(
-                id=user_payment.purchase_id
-            )
-            convert_epoch = datetime.fromtimestamp(
-                purchase_object['current_period_end'])
-
-            user_object = request.user
-            package_plan = PackagePlan.objects.get(
-                custom_id=purchase_object['plan']['product'])
-
-            user_object.package_plan = package_plan
-            user_object.sms_count = package_plan.sms_count_pack
-            user_object.scheduled_subscription = convert_epoch
-            user_object.scheduled_package = package_plan.plan_type
-
-            recipients_qs = Contact.objects.filter(users=user_object)
-            flag_users = util.flag_recipients(user_object, recipients_qs)
-            user_object.downgraded = not (
-                flag_users.get('was_downgraded') is False)
-
-            user_object.save()
-
-            # Mark this session as processed
-            user_payment.stripe_checkout_id = session_id
-            user_payment.save()
-
-        return Response({'purchase': purchase_object, 'user': CustomUserSerializer(user_object).data}, status=status.HTTP_200_OK)
+        subscription_obj = stripe.Subscription.retrieve(
+            id=user_payment.purchase_id)
+        print(subscription_obj)
+        return Response({'purchase': subscription_obj, 'user': CustomUserSerializer(custom_user).data}, status=status.HTTP_200_OK)
 
     except UserPayment.DoesNotExist:
         return Response({'error': 'Payment record not found.'}, status=status.HTTP_404_NOT_FOUND)
@@ -319,8 +292,29 @@ def stripe_webhook(request):
                 if (user_payment.payment_bool == True):
                     user_payment.payment_bool = False
                     print('HERE7')
-                    user_payment.last_stripe_session_id = session['id']
+                    user_payment.stripe_checkout_id = session['id']
                     user_payment.save()
+                    purchase_object = stripe.Subscription.retrieve(
+                        id=user_payment.purchase_id
+                    )
+                    convert_epoch = datetime.fromtimestamp(
+                        purchase_object['current_period_end'])
+
+                    package_plan = PackagePlan.objects.get(
+                        custom_id=purchase_object['plan']['product'])
+
+                    user_obj.package_plan = package_plan
+                    user_obj.sms_count = package_plan.sms_count_pack
+                    user_obj.scheduled_subscription = convert_epoch
+                    user_obj.scheduled_package = package_plan.plan_type
+
+                    recipients_qs = Contact.objects.filter(users=user_obj)
+                    flag_users = util.flag_recipients(
+                        user_obj, recipients_qs)
+                    user_obj.downgraded = not (
+                        flag_users.get('was_downgraded') is False)
+
+                    user_obj.save()
                     Notification.objects.create(
                         user=user_obj,
                         notif_type='success',
@@ -337,7 +331,7 @@ def stripe_webhook(request):
                         'Your purchase id is: ' +
                         f'{event["data"]["object"]["subscription"]}'', use that code to make an inquire in case you got any questions or issues during the payment.' +
                         '\n\n\n'
-                        'Please dont hesitate to contact us at: beniagic@gmail.com'+'\n'
+                        'Please dont hesitate to contact us at: support@sendperplane.com'+'\n'
                         'Once again, thank you for choosing Sendperplane. We look forward to serving you again in the future.' +
                         '\n\n'
                         'Best regards,'+'\n'
