@@ -319,7 +319,7 @@ TEST_PRODUCTS = (('Basic package', 'price_1RuFECAD7NIuijySOnprBvf3', 2), ('Silve
                                                                           'price_1NTJF1AD7NIuijySWfczHhRp', 3), ('Gold package', 'price_1NTKmiAD7NIuijySwioi2U02', 4))
 
 PROD_PRODUCTS = (('Basic package', 'price_1RuF9lAD7NIuijySkvmcXQCm', 2), ('Silver package',
-                                                                          'price_1RkRD7AD7NIuijySEHyr6ye2', 3), ('Gold package', 'price_1RkREbAD7NIuijySWZJIClDh', 4))
+                                                                          'price_1RuZM9AD7NIuijySsdUXBYMK', 3), ('Gold package', 'price_1RuZPMAD7NIuijySqCgJJ434', 4))
 
 TEST_PRODUCTS_SHOPIFY = [
     {"plan_type": "Basic package", "price": 9.0, "shopify_name": "Basic plan"},
