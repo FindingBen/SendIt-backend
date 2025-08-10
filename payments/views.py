@@ -90,9 +90,6 @@ def handle_stripe_subscription(request):
         if not session_id:
             return Response({'error': 'Session ID is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if user_payment.stripe_checkout_id == session_id:
-            return Response({'error': 'This session has already been processed.'}, status=status.HTTP_400_BAD_REQUEST)
-
         stripe_session = stripe.checkout.Session.retrieve(session_id)
         if stripe_session.payment_status != 'paid':
             return Response({'error': 'Payment not completed.'}, status=status.HTTP_400_BAD_REQUEST)
