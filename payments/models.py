@@ -42,4 +42,4 @@ class StripeEvent(models.Model):
 @receiver(post_save, sender=CustomUser)
 def create_user_payment(sender, instance, created, **kwargs):
     if created:
-        UserPayment.objects.create(user=instance)
+        UserPayment.objects.get_or_create(user=instance)
