@@ -87,7 +87,7 @@ def send_scheduled_sms(unique_tracking_id: None):
                         encoded_price = int(total_cost * 10000)
                         client_ref = f"{country_code}-{encoded_price:04}-{unique_tracking_id}"
                         sms_kwargs = {
-                            "from": '+12312345',
+                            "from": 'sendperplane',
                             "to": phone_number,
                             "text": message_text,
                             "client-ref": client_ref  # includes price + country
@@ -217,7 +217,7 @@ def send_sms(unique_tracking_id: None, user: None):
                     encoded_price = int(total_cost * 10000)
                     client_ref = f"{country_code}-{encoded_price:04}-{unique_tracking_id}"
                     sms_kwargs = {
-                        "from": '+12312345',
+                        "from": 'sendperplane',
                         "to": phone_number,
                         "text": message_text,
                         "client-ref": client_ref  # includes price + country
