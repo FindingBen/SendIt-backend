@@ -1,11 +1,12 @@
 import logging
+import stripe
 from django.utils import timezone
 from django.conf import settings
 from base.models import CustomUser, PackagePlan, AnalyticsData, ShopifyStore, Contact
 from celery import shared_task
 from base.shopify_functions import ShopifyFactoryFunction
 from notification.models import Notification
-from .models import Billing
+from .models import Billing, UserPayment
 from datetime import datetime, date
 from django.db import transaction, IntegrityError
 from base.email.email import send_plan_renewal_email
@@ -19,7 +20,8 @@ util = Utils()
 @shared_task
 def activate_scheduled_packages():
     today = timezone.now().date()
-    users = CustomUser.objects.filter(scheduled_subscription=today)
+    users = CustomUser.objects.filter(
+        scheduled_subscription=today, is_shopify_user=True)
 
     for user in users:
         shopify_store = ShopifyStore.objects.get(
@@ -94,5 +96,95 @@ def activate_scheduled_packages():
                 message=flag_result["message"],
                 notif_type="success"
             )
+            if flag_result.get('was_downgraded', None):
+                user.downgraded = True
+                user.save()
     logger.info(f"Activated {users.count()} scheduled packages.")
     return f"Activated {users.count()} scheduled plans"
+
+
+@shared_task
+def activate_scheduled_packages_from_stripe():
+    today = timezone.now().date()
+    users = CustomUser.objects.filter(
+        scheduled_subscription=today, is_shopify_user=False)
+
+    for user in users:
+        package_obj = PackagePlan.objects.filter(
+            plan_type=user.scheduled_package).first()
+
+        user_payment = UserPayment.objects.get(user=user.id)
+        purchase_object = stripe.Subscription.retrieve(
+            id=user_payment.purchase_id)
+        convert_epoch = datetime.fromtimestamp(
+            purchase_object['current_period_end'])
+
+        if purchase_object['status'] != 'active':
+            continue
+
+        with transaction.atomic():
+            Billing.objects.create(
+                user=user,
+                billing_amount=package_obj.price,
+                billing_plan=package_obj.plan_type,
+                billing_status=purchase_object['status'],
+                shopify_charge_id=user_payment.stripe_checkout_id
+            )
+
+            user.package_plan = package_obj
+            user.sms_count = package_obj.sms_count_pack
+            user.scheduled_subscription = convert_epoch.date()
+            user.save()
+
+            analytics = AnalyticsData.objects.get(custom_user=user.id)
+            analytics.total_spend += package_obj.price
+            analytics.save()
+
+            send_plan_renewal_email(user.id, package_obj)
+
+            Notification.objects.create(
+                user=user,
+                title=f"{package_obj.plan_type} Activated",
+                message=f"Your plan '{package_obj.plan_type}' has been activated successfully.",
+                notif_type="success"
+            )
+        logger.info(f"Fetfhing all customers for user {user.id}")
+        recipients_qs = Contact.objects.filter(users=user)
+        flag_result = util.flag_recipients(user, recipients_qs)
+        if flag_result:
+            Notification.objects.create(
+                user=user,
+                title="Recipient Limit Changed",
+                message=flag_result["message"],
+                notif_type="success"
+            )
+            if flag_result.get('was_downgraded', None):
+                user.downgraded = True
+                user.save()
+    logger.info(f"Activated {users.count()} scheduled packages.")
+    return f"Activated {users.count()} scheduled plans"
+
+
+@shared_task
+def cancel_subscription_monitor():
+    today = timezone.now().date()
+    users = CustomUser.objects.filter(
+        scheduled_cancel=today, is_shopify_user=False)
+    package_obj = PackagePlan.objects.get(
+        id=1)
+    for user in users:
+        user.package_plan = package_obj
+        recipients_qs = Contact.objects.filter(users=user)
+        flag_recipients = util.flag_recipients(user, recipients_qs)
+        if flag_recipients.get('was_downgraded', None) is True:
+            user.downgraded = True
+        user.save()
+
+        Notification.objects.create(
+            user=user,
+            title=f"{package_obj.plan_type} subscription cancelled",
+            message=f"Your subscription plan '{package_obj.plan_type}' has been cancelled successfully. We hope you enjoyed our services and hope to see you back!",
+            notif_type="success"
+        )
+
+        return f"Cancelled subscription plan for {user.first_name}"

@@ -98,6 +98,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             token['shopify_domain'] = shopify_obj.shop_domain if shopify_obj else None
             token['shopify_connect'] = custom_user.shopify_connect if custom_user else None
             token['sms_count'] = custom_user.sms_count
+            token['scheduled_billing'] = str(
+                custom_user.scheduled_subscription) if custom_user.scheduled_subscription else "No subscription"
             token['user_type'] = custom_user.user_type
             token['archived_state'] = custom_user.archived_state
             token['package_plan'] = serialized_data
@@ -107,7 +109,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             raise AuthenticationFailed(
                 'No user associated with this Shopify token')
         except Exception as e:
-            return Response({"error": "Something wen't wrong, contact support"}, status=status.HTTP_404_NOT_FOUND)
+            raise AuthenticationFailed(f"Something went wrong: {str(e)}")
 
 
 class MyTokenObtainPairView(TokenObtainPairView):
@@ -252,25 +254,42 @@ def confirmation_token_view(request, token_id, user_id):
     try:
         with transaction.atomic():
             token = EmailConfirmationToken.objects.get(pk=token_id)
+
+            # Ensure token belongs to the intended user
+            if str(token.user.id) != str(user_id):
+                return Response(status=status.HTTP_400_BAD_REQUEST)
+
             user = token.user
             user.is_active = True
             user.save()
 
-            if user.is_active is True:
-                if user.stripe_custom_id is None:
-                    stripe_customer = stripe.Customer.create(
-                        name=f'{user.first_name} {user.last_name}',
-                        email=user.email,
-                    )
-                    user.stripe_custom_id = stripe_customer['id']
-                    user.save()
-                if user.welcome_mail_sent is False:
-                    send_welcome_email(user.email, user)
-                    user.welcome_mail_sent = True
-                    user.save()
-            return Response(status=status.HTTP_200_OK)
-    except EmailConfirmationToken.DoesNotExist:
+            # Try to find Shopify store safely
+            shopify_store = ShopifyStore.objects.filter(
+                email=user.custom_email).first()
+            if shopify_store:
+                user.is_shopify_user = True
 
+            # Create Stripe customer if missing
+            if not user.stripe_custom_id:
+                stripe_customer = stripe.Customer.create(
+                    name=f'{user.first_name} {user.last_name}',
+                    email=user.email,
+                )
+                user.stripe_custom_id = stripe_customer['id']
+                user.save()
+
+            # Send welcome email if not sent before
+            if not user.welcome_mail_sent:
+                send_welcome_email(user.email, user)
+                user.welcome_mail_sent = True
+                user.save()
+
+            # Delete the token so the link can't be reused
+            token.delete()
+
+            return Response(status=status.HTTP_200_OK)
+
+    except EmailConfirmationToken.DoesNotExist:
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
 

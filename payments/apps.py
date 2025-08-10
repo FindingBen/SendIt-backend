@@ -11,8 +11,30 @@ class PaymentsConfig(AppConfig):
         import json
 
         schedule, _ = IntervalSchedule.objects.get_or_create(
-            every=1,
-            period=IntervalSchedule.DAYS,
+            every=2,
+            period=IntervalSchedule.MINUTES,
+        )
+
+        PeriodicTask.objects.update_or_create(
+            name='Activate Scheduled Packages for Stripe Users',
+            defaults={
+                'interval': schedule,
+                'task': 'payments.tasks.activate_scheduled_packages_from_stripe',
+                'start_time': now(),
+                'enabled': True,
+                'kwargs': json.dumps({})
+            }
+        )
+
+        PeriodicTask.objects.update_or_create(
+            name='Activate Subscription cancel for Stripe Users',
+            defaults={
+                'interval': schedule,
+                'task': 'payments.tasks.cancel_subscription_monitor',
+                'start_time': now(),
+                'enabled': True,
+                'kwargs': json.dumps({})
+            }
         )
 
         PeriodicTask.objects.update_or_create(

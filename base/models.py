@@ -13,6 +13,7 @@ class PackagePlan(models.Model):
         User, on_delete=models.CASCADE, blank=True, null=True)
     plan_type = models.CharField(max_length=20)
     price = models.IntegerField()
+    custom_id = models.CharField(max_length=100, null=True, blank=True)
     sms_count_pack = models.IntegerField()
     offer1 = models.CharField(max_length=200, null=True, blank=True)
     offer2 = models.CharField(max_length=200, null=True, blank=True)
@@ -41,8 +42,11 @@ class CustomUser(User):
     archived_state = models.BooleanField(default=False)
     welcome_mail_sent = models.BooleanField(default=False)
     stripe_custom_id = models.CharField(default=None, null=True)
+    is_shopify_user = models.BooleanField(default=False)
     scheduled_subscription = models.DateField(null=True, blank=True)
     scheduled_package = models.CharField(default=None, null=True)
+    scheduled_cancel = models.CharField(null=True, blank=True)
+    downgraded = models.BooleanField(default=False)
     shopify_connect = models.BooleanField(default=False)
 
     def serialize_package_plan(self):
@@ -50,7 +54,7 @@ class CustomUser(User):
         if self.package_plan:
             if self.package_plan.plan_type == settings.TRIAL_PLAN:
                 list_limit = 2
-                recipients_limit = 100
+                recipients_limit = 3
             elif self.package_plan.plan_type == settings.BASIC_PLAN:
                 list_limit = 3
                 recipients_limit = 5000

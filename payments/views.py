@@ -1,3 +1,4 @@
+from django.db import transaction
 import logging
 import stripe
 import time
@@ -13,7 +14,7 @@ from django.db import transaction, IntegrityError
 from base.utils.helpers import Utils
 from django.http import HttpResponse
 from rest_framework import status
-from base.models import CustomUser, PackagePlan, AnalyticsData, ShopifyStore
+from base.models import CustomUser, PackagePlan, AnalyticsData, ShopifyStore, Contact
 from base.serializers import CustomUserSerializer, PackageSerializer
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -24,18 +25,19 @@ from base.queries import CREATE_CHARGE, CURRENT_CHARGE
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
-
+util = Utils()
 logger = logging.getLogger(__name__)
 
 
 class StripeCheckoutVIew(APIView):
     def post(self, request):
         data_package = [package for package in settings.ACTIVE_PRODUCTS]
-
+        print("DATA", request.data)
         try:
+            print('ALOL')
             customer = CustomUser.objects.get(
                 id=request.data['currentUser'])
-
+            print('LOL')
         except Exception as e:
             return Response({"error": e}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -58,7 +60,7 @@ class StripeCheckoutVIew(APIView):
                     'product_id': package[2],
                 },
                 payment_method_types=['card'],
-                mode='payment',
+                mode='subscription',
                 customer=customer.stripe_custom_id,
                 success_url=settings.DOMAIN_STRIPE_NAME +
                 '/?success=true&session_id={CHECKOUT_SESSION_ID}',
@@ -77,6 +79,102 @@ class StripeSubscriptionView(APIView):
         pass
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def handle_stripe_subscription(request):
+    try:
+        session_id = request.data.get('session_id')
+        if not session_id:
+            return Response({'error': 'Session ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user_payment = UserPayment.objects.select_for_update().get(user=request.user)
+
+        # Prevent duplicate processing
+        if user_payment.last_stripe_session_id == session_id:
+            return Response({'error': 'This session has already been processed.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Retrieve Stripe session to confirm it's valid
+        stripe_session = stripe.checkout.Session.retrieve(session_id)
+        if stripe_session.payment_status != 'paid':
+            return Response({'error': 'Payment not completed.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Use transaction to avoid race conditions
+        with transaction.atomic():
+            # Retrieve subscription details
+            purchase_object = stripe.Subscription.retrieve(
+                id=user_payment.purchase_id
+            )
+            convert_epoch = datetime.fromtimestamp(
+                purchase_object['current_period_end'])
+
+            user_object = request.user
+            package_plan = PackagePlan.objects.get(
+                custom_id=purchase_object['plan']['product'])
+
+            user_object.package_plan = package_plan
+            user_object.sms_count = package_plan.sms_count_pack
+            user_object.scheduled_subscription = convert_epoch
+            user_object.scheduled_package = package_plan.plan_type
+
+            recipients_qs = Contact.objects.filter(users=user_object)
+            flag_users = util.flag_recipients(user_object, recipients_qs)
+            user_object.downgraded = not (
+                flag_users.get('was_downgraded') is False)
+
+            user_object.save()
+
+            # Mark this session as processed
+            user_payment.stripe_checkout_id = session_id
+            user_payment.save()
+
+        return Response({'purchase': purchase_object, 'user': CustomUserSerializer(user_object).data}, status=status.HTTP_200_OK)
+
+    except UserPayment.DoesNotExist:
+        return Response({'error': 'Payment record not found.'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def cancel_stripe_subscription(request):
+    try:
+        util = Utils()
+        user_id = request.user.id
+
+        user = CustomUser.objects.get(id=user_id)
+
+        user_payment = UserPayment.objects.get(user=user_id)
+        trial_package = PackagePlan.objects.get(id=1)
+        subscription_obj = stripe.Subscription.retrieve(
+            id=user_payment.purchase_id)
+        end_period = datetime.fromtimestamp(
+            subscription_obj['current_period_end'])
+
+        if subscription_obj['canceled_at'] is None:
+            subscription = stripe.Subscription.modify(
+                user_payment.purchase_id,
+                cancel_at_period_end=True
+            )
+        else:
+            return Response({'message': 'Subscription already cancelled!', 'subscription': subscription_obj}, status=status.HTTP_204_NO_CONTENT)
+
+        print(subscription_obj)
+        user.scheduled_subscription = None
+        user.scheduled_package = None
+        user.scheduled_cancel = end_period
+        user.save()
+        # recipients_qs = Contact.objects.filter(users=user)
+        # flag_recipients = util.flag_recipients(user, recipients_qs)
+        # if flag_recipients.get('was_downgraded', None) is True:
+        #     user.downgraded = True
+        #     user.save()
+        return Response({'message': 'Subscription cancellation scheduled.', 'subscription': subscription_obj}, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def payment_successful(request, id):
@@ -86,7 +184,7 @@ def payment_successful(request, id):
         user_serializer = CustomUserSerializer(user_object)
         user_payment = UserPayment.objects.get(user=user_id)
 
-        purchase_object = stripe.PaymentIntent.retrieve(
+        purchase_object = stripe.Subscription.retrieve(
             id=user_payment.purchase_id)
 
         # purchase_obj = Purchase.objects.get(
@@ -194,29 +292,34 @@ def stripe_webhook(request):
                 session = event['data']['object']
                 customer_email = session["customer_details"]["email"]
                 product_id = session["metadata"]["product_id"]
-                payment_intent = session['payment_intent']
+                payment_intent = session['subscription']
                 print('PRODUCTION', session)
                 ######
                 time.sleep(10)
                 ######
                 user_obj = CustomUser.objects.filter(email=customer_email)[0]
-
+                print('HERE')
                 package_obj = PackagePlan.objects.get(id=product_id)
                 user_obj.package_plan = package_obj
                 user_obj.sms_count += package_obj.sms_count_pack
                 user_obj.save()
+                print('HERE1')
                 user_payment = UserPayment.objects.get(
                     user_id=user_obj.id)
+                print('HERE3')
                 user_payment.purchase_id = payment_intent
                 user_payment.payment_bool = True
 
                 user_payment.save()
+                print('HERE4')
                 analytics = AnalyticsData.objects.get(custom_user=user_obj.id)
                 analytics.total_spend += package_obj.price
                 analytics.save()
+                print('HERE6')
                 if (user_payment.payment_bool == True):
                     user_payment.payment_bool = False
-
+                    print('HERE7')
+                    user_payment.last_stripe_session_id = session['id']
                     user_payment.save()
                     Notification.objects.create(
                         user=user_obj,
@@ -224,13 +327,15 @@ def stripe_webhook(request):
                         title="Purchase Successful",
                         message=f"Your purchase of {package_obj.plan_type} was successful!"
                     )
+                    print('HERE8')
                     StripeEvent.objects.create(event_id=event_id)
+                    print('HERE9')
                     send_mail(
                         subject=f'Receipt for sendperplane product {package_obj.plan_type}',
                         message='Thank you for purchasing the package from us! We hope that you will enjoy our sending service.' +
                         '\n\n\n'
                         'Your purchase id is: ' +
-                        f'{event["data"]["object"]["payment_intent"]}'', use that code to make an inquire in case you got any questions or issues during the payment.' +
+                        f'{event["data"]["object"]["subscription"]}'', use that code to make an inquire in case you got any questions or issues during the payment.' +
                         '\n\n\n'
                         'Please dont hesitate to contact us at: beniagic@gmail.com'+'\n'
                         'Once again, thank you for choosing Sendperplane. We look forward to serving you again in the future.' +
@@ -238,8 +343,9 @@ def stripe_webhook(request):
                         'Best regards,'+'\n'
                         'Sendperplane team',
                         recipient_list=[customer_email],
-                        from_email='benarmys4@gmail.com'
+                        from_email='support@sendperplane.com'
                     )
+                    print('HERE10')
                 else:
                     Notification.objects.create(
                         user=user_obj,
@@ -314,35 +420,6 @@ def calculate_plan_usage(request):
         return Response({'error': str(e)}, status=400)
 
 
-def vonage_account_topup(package):
-    try:
-        vonage_client = vonage.Client(
-            key=settings.VONAGE_ID, secret=settings.VONAGE_TOKEN)
-        account = vonage.Account(vonage_client)
-        if account:
-            adjusted_amount = ammount_split(package)
-        response = account.top_up(adjusted_amount)
-        print(response)
-        if response['status'] == '0':
-            print("Top-up successful!")
-        else:
-            print(f"Top-up failed: {response['error-text']}")
-    except Exception as e:
-        print(f"Error topping up Vonage account: {e}")
-
-
-def ammount_split(package: None):
-    try:
-        if package.plan_type == 'Gold package':
-            return settings.GOLD_PACKAGE_AMOUNT
-        elif package.plan_type == 'Silver package':
-            return settings.SILVER_PACKAGE_AMOUNT
-        elif package.plan_type == 'Basic package':
-            return settings.BASIC_PACKAGE_AMOUNT
-    except Exception as e:
-        return e
-
-
 @api_view(['GET'])
 def get_shopify(request):
     try:
@@ -356,6 +433,8 @@ def get_shopify(request):
                 return Response({
                     "is_shopify": True,
                 }, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Shopify domain not provided"}, status=status.HTTP_204_NO_CONTENT)
     except Exception as e:
         return Response({"error": "Shopify domain not provided"}, status=status.HTTP_400_BAD_REQUEST)
 
