@@ -86,21 +86,21 @@ def handle_stripe_subscription(request):
         session_id = request.data.get('session_id')
         if not session_id:
             return Response({'error': 'Session ID is required'}, status=status.HTTP_400_BAD_REQUEST)
-
-        user_payment = UserPayment.objects.select_for_update().get(user=request.user)
-
-        # Prevent duplicate processing
-        if user_payment.last_stripe_session_id == session_id:
-            return Response({'error': 'This session has already been processed.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Retrieve Stripe session to confirm it's valid
-        stripe_session = stripe.checkout.Session.retrieve(session_id)
-        if stripe_session.payment_status != 'paid':
-            return Response({'error': 'Payment not completed.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Use transaction to avoid race conditions
         with transaction.atomic():
-            # Retrieve subscription details
+            user_payment = UserPayment.objects.select_for_update().get(user=request.user)
+
+            # Prevent duplicate processing
+            if user_payment.last_stripe_session_id == session_id:
+                return Response({'error': 'This session has already been processed.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Retrieve Stripe session to confirm it's valid
+            stripe_session = stripe.checkout.Session.retrieve(session_id)
+            if stripe_session.payment_status != 'paid':
+                return Response({'error': 'Payment not completed.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Use transaction to avoid race conditions
+
+                # Retrieve subscription details
             purchase_object = stripe.Subscription.retrieve(
                 id=user_payment.purchase_id
             )
