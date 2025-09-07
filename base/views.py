@@ -271,12 +271,13 @@ def confirmation_token_view(request, token_id, user_id):
 
             # Create Stripe customer if missing
             if not user.stripe_custom_id:
-                stripe_customer = stripe.Customer.create(
-                    name=f'{user.first_name} {user.last_name}',
-                    email=user.email,
-                )
-                user.stripe_custom_id = stripe_customer['id']
-                user.save()
+                if user.is_shopify_user == False:
+                    stripe_customer = stripe.Customer.create(
+                        name=f'{user.first_name} {user.last_name}',
+                        email=user.email,
+                    )
+                    user.stripe_custom_id = stripe_customer['id']
+                    user.save()
 
             # Send welcome email if not sent before
             if not user.welcome_mail_sent:

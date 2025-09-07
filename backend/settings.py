@@ -212,7 +212,6 @@ LOGGING = {
         'level': 'INFO',
     },
 }
-
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
@@ -250,6 +249,8 @@ DATABASES = {
         'PORT': os.environ.get('PORT'),
     }
 }
+
+print("DB SETTINGS:", DATABASES['default'])
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators

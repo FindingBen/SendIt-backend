@@ -56,7 +56,7 @@ def send_confirmation_email(email, token_id, user_id):
 
     msg = EmailMultiAlternatives(subject, text_content, from_email, to_email)
     msg.attach_alternative(html_content, "text/html")
-    msg.send()
+    msg.send() 
 
 
 def send_welcome_email(email: None, user_object: None):
