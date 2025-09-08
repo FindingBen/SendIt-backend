@@ -28,7 +28,7 @@ class CustomPasswordResetConfirmationEmail(PasswordResetEmail):
         html_content = render_to_string(self.template_name, context)
 
         msg = EmailMultiAlternatives(
-            subject, text_content, from_email, to_email)
+            subject, text_content, from_email, [to_email])
         msg.attach_alternative(html_content, "text/html")
         try:
             msg.send()
@@ -36,8 +36,7 @@ class CustomPasswordResetConfirmationEmail(PasswordResetEmail):
             print("✅ Email sent successfully")
         except Exception as e:
             print("❌ Error sending email:", e)
-
-
+            
 def send_confirmation_email(email, token_id, user_id):
     user_obj = CustomUser.objects.get(id=user_id)
 
