@@ -22,16 +22,16 @@ class CustomPasswordResetConfirmationEmail(PasswordResetEmail):
         subject = "SPP | Password reset request"
         from_email = self.from_email
 
-        to_email = to
+        to_email = [to]
 
         text_content = "Error contact support"  # fallback plain text
         html_content = render_to_string(self.template_name, context)
 
         msg = EmailMultiAlternatives(
-            subject, text_content, from_email, [to_email])
+            subject, text_content, from_email, to_email)
         msg.attach_alternative(html_content, "text/html")
         try:
-            msg.send()
+            msg.send(fail_silently=False)
 
             print("✅ Email sent successfully")
         except Exception as e:
