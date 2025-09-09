@@ -4,7 +4,9 @@ from base.models import CustomUser
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
+import logging
 
+logger = logging.getLogger(__name__)
 
 class CustomPasswordResetConfirmationEmail(PasswordResetEmail):
     template_name = 'email/password_reset_email.html'
@@ -32,9 +34,14 @@ class CustomPasswordResetConfirmationEmail(PasswordResetEmail):
         print('eee')
         msg.attach_alternative(html_content, "text/html")
         print('fff')
-        msg.send(fail_silently=False)
-        logger.info("✅ Email sent successfully")
-        print("✅ Email sent successfully")
+        try:
+            print('SENDING')
+            result = msg.send(fail_silently=False)
+            logger.info("✅ Email sent to %s (result=%s)", to_email, result)
+        except Exception:
+            logger.exception("❌ Failed to send password reset email")
+            raise  # 🔥 don’t remove this, otherwise it disappears
+
         
             
 def send_confirmation_email(email, token_id, user_id):

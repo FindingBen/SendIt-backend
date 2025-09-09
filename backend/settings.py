@@ -228,6 +228,11 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': False,
         },
+        'django.core.mail': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
     },
 }
 
