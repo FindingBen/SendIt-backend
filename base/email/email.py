@@ -31,14 +31,11 @@ class CustomPasswordResetConfirmationEmail(PasswordResetEmail):
             subject, text_content, from_email, to_email)
         print('eee')
         msg.attach_alternative(html_content, "text/html")
-        try:
-            msg.send(fail_silently=False)
-            logger.info("✅ Email sent successfully")
-            print("✅ Email sent successfully")
-        except Exception as e:
-            logger.exception("❌ Error sending email")
-            print("❌ Error sending email", str(e))
-            raise
+        print('fff')
+        msg.send(fail_silently=False)
+        logger.info("✅ Email sent successfully")
+        print("✅ Email sent successfully")
+        
             
 def send_confirmation_email(email, token_id, user_id):
     user_obj = CustomUser.objects.get(id=user_id)
