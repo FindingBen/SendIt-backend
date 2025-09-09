@@ -35,7 +35,7 @@ class CustomPasswordResetConfirmationEmail(PasswordResetEmail):
         print('eee')
         msg.attach_alternative(html_content, "text/html")
         print('fff')
-         try:
+        try:
             result = resend.Emails.send({
                 "from": from_email,
                 "to": [to_email],
