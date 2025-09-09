@@ -28,7 +28,8 @@ class CustomPasswordResetConfirmationEmail(PasswordResetEmail):
         html_content = render_to_string(self.template_name, context)
         print('ddd')
         msg = EmailMultiAlternatives(
-            subject, text_content, from_email, [to_email])
+            subject, text_content, from_email, to_email)
+        print('eee')
         msg.attach_alternative(html_content, "text/html")
         try:
             msg.send(fail_silently=False)
