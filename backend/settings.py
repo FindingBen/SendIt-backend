@@ -296,6 +296,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY')
 
 # email configs
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
