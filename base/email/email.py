@@ -38,7 +38,8 @@ class CustomPasswordResetConfirmationEmail(PasswordResetEmail):
             print('SENDING')
             result = msg.send(fail_silently=False)
             logger.info("✅ Email sent to %s (result=%s)", to_email, result)
-        except Exception:
+        except Exception as e:
+            print('ERROR SENDING EMAIL', e)
             logger.exception("❌ Failed to send password reset email")
             raise  # 🔥 don’t remove this, otherwise it disappears
 
