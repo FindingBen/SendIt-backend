@@ -37,6 +37,7 @@ class CustomPasswordResetConfirmationEmail(PasswordResetEmail):
             print("✅ Email sent successfully")
         except Exception as e:
             logger.exception("❌ Error sending email")
+            print("❌ Error sending email", str(e))
             raise
             
 def send_confirmation_email(email, token_id, user_id):
