@@ -14,19 +14,19 @@ class CustomPasswordResetConfirmationEmail(PasswordResetEmail):
         context['domain'] = 'spplane.app'
         # context['domain'] = 'localhost:3000'
         context['protocol'] = 'https'
-
+        print('AAAAAA')
         return context
 
     def send(self, to, *args, **kwargs):
         context = self.get_context_data()
         subject = "SPP | Password reset request"
         from_email = self.from_email
-
+        print(context)
         to_email = to
 
         text_content = "Error contact support"  # fallback plain text
         html_content = render_to_string(self.template_name, context)
-
+        print('ddd')
         msg = EmailMultiAlternatives(
             subject, text_content, from_email, to_email)
         msg.attach_alternative(html_content, "text/html")

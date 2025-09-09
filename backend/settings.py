@@ -187,12 +187,12 @@ DJOSER = {
         'password_reset': 'base.email.email.CustomPasswordResetConfirmationEmail',
 
     },
-    'PERMISSIONS': {
-        'password_reset': ['rest_framework.permissions.AllowAny'],
-        'user_create': ['rest_framework.permissions.AllowAny'],
-        'activation': ['rest_framework.permissions.AllowAny'],
-        # Add others as needed
-    }
+    # 'PERMISSIONS': {
+    #     'password_reset': ['rest_framework.permissions.AllowAny'],
+    #     'user_create': ['rest_framework.permissions.AllowAny'],
+    #     'activation': ['rest_framework.permissions.AllowAny'],
+    #     # Add others as needed
+    # }
 }
 
 
