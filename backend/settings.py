@@ -4,7 +4,9 @@ from pathlib import Path
 from corsheaders.defaults import default_headers
 import dotenv
 import json
+import smtplib
 
+smtplib.SMTP.debuglevel = 1
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
