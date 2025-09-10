@@ -4,9 +4,6 @@ from pathlib import Path
 from corsheaders.defaults import default_headers
 import dotenv
 import json
-import smtplib
-
-smtplib.SMTP.debuglevel = 1
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -207,36 +204,6 @@ VONAGE_TOKEN = os.environ.get('VONAGE_TOKEN')
 CACHE_TTL = 60 * 15
 SMART_INSIGHTS_CACHE = 60 * 10
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-        },
-    },
-    'root': {
-        'handlers': ['console'],
-        'level': 'DEBUG',   # capture everything
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-        'django.request': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-        'django.core.mail': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-    },
-}
 
 CACHES = {
     "default": {
@@ -296,9 +263,8 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-RESEND_API_KEY = os.environ.get('RESEND_API_KEY')
 
-# email configs
+# # email configs
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.privateemail.com'
 EMAIL_USE_TLS = True
@@ -326,6 +292,7 @@ CELERY_ENABLE_UTC = False
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
 USE_TZ = True
+
 
 DEFAULT_FROM_EMAIL = 'support@sendperplane.com'
 

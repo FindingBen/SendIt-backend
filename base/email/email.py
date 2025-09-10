@@ -1,13 +1,17 @@
+from django.http import JsonResponse
 from djoser.email import PasswordResetEmail, ActivationEmail
 from django.core.mail import send_mail
 from base.models import CustomUser
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
+from django.core.mail import EmailMessage, get_connection
 import logging
+import resend
+import os
 
 logger = logging.getLogger(__name__)
-resend_key = settings.RESEND_API_KEY
+
 
 class CustomPasswordResetConfirmationEmail(PasswordResetEmail):
     template_name = 'email/password_reset_email.html'
@@ -17,36 +21,28 @@ class CustomPasswordResetConfirmationEmail(PasswordResetEmail):
         context['domain'] = 'spplane.app'
         # context['domain'] = 'localhost:3000'
         context['protocol'] = 'https'
-        print('AAAAAA')
+
         return context
 
     def send(self, to, *args, **kwargs):
         context = self.get_context_data()
         subject = "SPP | Password reset request"
         from_email = self.from_email
-        print(context)
+
         to_email = to
 
         text_content = "Error contact support"  # fallback plain text
         html_content = render_to_string(self.template_name, context)
-        print('ddd')
+
         msg = EmailMultiAlternatives(
             subject, text_content, from_email, to_email)
-        print('eee')
         msg.attach_alternative(html_content, "text/html")
-        print('fff')
         try:
-            result = resend.Emails.send({
-                "from": from_email,
-                "to": [to_email],
-                "subject": subject,
-                "html": html_content,
-                "text": text_content,
-            })
-            logger.info("✅ Resend email sent to %s (id=%s)", to_email, result["id"])
-        except Exception:
-            logger.exception("❌ Failed to send email via Resend")
-            raise
+            msg.send()
+
+            print("✅ Email sent successfully")
+        except Exception as e:
+            print("❌ Error sending email:", e)
 
         
             
