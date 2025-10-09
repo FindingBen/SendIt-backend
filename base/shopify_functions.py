@@ -343,3 +343,15 @@ class ShopifyFactoryFunction:
         )
 
         return response
+    
+    def cancel_recurring_charge(self, variable):
+        headers = {
+            "X-Shopify-Access-Token": self._token,
+            "Content-Type": "application/json",
+        }
+        response = requests.post(
+            self._url,
+            headers=headers,
+            json={"query": self._query, "variables": variable},
+        )
+        return response

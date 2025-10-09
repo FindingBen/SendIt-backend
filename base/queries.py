@@ -354,6 +354,22 @@ CURRENT_CHARGE = """query {
   }
 }"""
 
+CANCEL_CHARGE = """
+mutation AppSubscriptionCancel($id: ID!, $prorate: Boolean) {
+    appSubscriptionCancel(id: $id, prorate: $prorate) {
+      userErrors {
+        field
+        message
+      }
+      appSubscription {
+        id
+        status
+        currentPeriodEnd
+      }
+    }
+  }
+"""
+
 GET_SHOPIFY_CHARGE = """query {
   currentAppInstallation {
     appSubscriptions(first: 10) {

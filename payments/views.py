@@ -21,15 +21,16 @@ from django.views.decorators.http import require_http_methods
 from django.core.mail import send_mail
 from notification.models import Notification
 from base.shopify_functions import ShopifyFactoryFunction
-from base.queries import CREATE_CHARGE, CURRENT_CHARGE
+from base.queries import CREATE_CHARGE, CURRENT_CHARGE, CANCEL_CHARGE
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 util = Utils()
 logger = logging.getLogger(__name__)
 
+environment = settings.ENVIRONMENT
 
-class StripeCheckoutVIew(APIView):
+class StripeCheckoutView(APIView):
     def post(self, request):
         data_package = [package for package in settings.ACTIVE_PRODUCTS]
         print("DATA", request.data)
@@ -141,6 +142,80 @@ def cancel_stripe_subscription(request):
         #     user.save()
         return Response({'message': 'Subscription cancellation scheduled.', 'subscription': subscription_obj}, status=status.HTTP_200_OK)
 
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def cancel_shopify_subscription(request):
+    try:
+        util = Utils()
+        user_id = request.user.id
+
+        user = CustomUser.objects.get(id=user_id)
+
+        user_payment = UserPayment.objects.get(user=user_id)
+        trial_package = PackagePlan.objects.get(id=1)
+        shopify_domain = request.headers.get('shopify-domain', None)
+        if shopify_domain is None:
+            return Response({'error': 'Shopify domain header is required'}, status=status.HTTP_400_BAD_REQUEST)
+        url = f"https://{shopify_domain}/admin/api/{settings.SHOPIFY_API_VERSION}/graphql.json"
+        shopify_token = request.headers['Authorization'].split(' ')[1]
+        shopify_factory = ShopifyFactoryFunction(
+                shopify_domain, shopify_token, url, request=request, query=CURRENT_CHARGE, headers=request.headers
+            )
+        response = shopify_factory.get_users_charge()
+        data = response.json()
+        if data.get("errors", {}):
+                return Response(
+                    {"error": "Url doesn't exist",
+                        "details": data["errors"]["message"]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        plan_data = data.get('data', {}).get(
+                'currentAppInstallation', {}
+        ).get('activeSubscriptions', [])
+        print("CURRENT_PLAN",plan_data)
+        end_period = datetime.fromisoformat(
+            plan_data[0].get('currentPeriodEnd').replace('Z', '+00:00'))
+        subscription_id = plan_data[0]["id"] if plan_data and "id" in plan_data[0] else None
+        
+        if not plan_data:
+            return Response({"error": "No active subscription found to cancel."}, status=status.HTTP_404_NOT_FOUND)
+
+
+        shopify_factory = ShopifyFactoryFunction(
+            shopify_domain, shopify_token, url, request=request, query=CANCEL_CHARGE, headers=request.headers
+        )
+
+        variable = {
+            "id": subscription_id,
+            "prorate": True
+        }
+        response = shopify_factory.cancel_recurring_charge(variable=variable)
+        data = response.json()
+        print("CANCEL", data)
+        if data.get("errors", {}):
+            return Response(
+                {"error": "Url doesn't exist",
+                    "details": data["errors"]["message"]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        cancel_data = data.get('data', {}).get('appSubscriptionCancel', {})
+        if cancel_data.get('userErrors'):
+            return Response({'error': cancel_data['userErrors']}, status=status.HTTP_400_BAD_REQUEST)
+        print('CANCELLED!!!')
+        subscription_obj = cancel_data.get('appSubscription', {})
+
+        # if subscription_obj.get('status') == 'CANCELLED':
+        #     return Response({'message': 'Subscription already cancelled!', 'subscription': subscription_obj}, status=status.HTTP_204_NO_CONTENT)
+
+        user.scheduled_subscription = None
+        user.scheduled_package = None
+        user.scheduled_cancel = end_period
+        user.save()
+        return Response({'message': 'Subscription cancellation scheduled.', 'subscription': subscription_obj}, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -416,6 +491,7 @@ def get_shopify(request):
     try:
         print(request.headers)
         shopify_domain = request.headers.get('shopify-domain', None)
+        print('DOMAIN',shopify_domain)
         if shopify_domain:
             shopify_token = request.headers['Authorization'].split(' ')[1]
             shopify_obj = ShopifyStore.objects.get(
@@ -437,9 +513,8 @@ def create_shopify_charge(request):
     plan = request.data.get("plan")  # e.g., basic, silver, gold
     # Define plan logic
     # data_package = [package for package in settings.ACTIVE_PRODUCTS_SHOPIFY]
-
     packages = settings.PROD_PRODUCTS_SHOPIFY
-
+    return_url = "https://spplane.app" if environment == "production" else "http://localhost:3000"
     if packages is None:
         return Response({"error": "Invalid package name"}, status=status.HTTP_400_BAD_REQUEST)
     package_lookup = {pkg['plan_type']: pkg for pkg in packages}
@@ -447,7 +522,7 @@ def create_shopify_charge(request):
     package = package_lookup.get(plan)
 
     charge_data = {"name": package["plan_type"],
-                   "returnUrl": f"https://spplane.app/shopify/charge/confirmation?shop={shop}",
+                   "returnUrl": f"{return_url}/shopify/charge/confirmation?shop={shop}",
                    "lineItems": [
         {
             "plan": {
