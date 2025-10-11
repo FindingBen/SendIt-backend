@@ -115,13 +115,17 @@ class ShopifyFactoryFunction:
             "X-Shopify-Access-Token": self._token,
             "Content-Type": "application/json",
         }
+        sms_opt_in = self._request.data.get("sms_opt_in", "NOT_SUBSCRIBED")
+        sms_opt_in = sms_opt_in.upper() if sms_opt_in else "NOT_SUBSCRIBED"
+        if sms_opt_in not in ["SUBSCRIBED", "NOT_SUBSCRIBED", "PENDING"]:
+            sms_opt_in = "NOT_SUBSCRIBED"
         customer_data = {
             "firstName": self._request.data.get("firstName"),
             "lastName": self._request.data.get("lastName"),
             "email": self._request.data.get("email"),
             "phone": self._request.data.get("phone"),
             "smsMarketingConsent": {
-                    "marketingState": self._request.data.get("sms_opt_in"),
+                    "marketingState": sms_opt_in,
                     "marketingOptInLevel": "SINGLE_OPT_IN"
                 }
         }

@@ -744,7 +744,7 @@ def create_contact(request, id):
                 data = request.data.copy()
                 data['custom_id'] = random_custom_id
 
-                required_fields = ['firstName', 'lastName', 'phone', 'email', 'sms_opt_in']
+                required_fields = ['firstName', 'lastName', 'phone', 'email']
                 missing_fields = [
                     f for f in required_fields if not data.get(f)]
                 if missing_fields:
