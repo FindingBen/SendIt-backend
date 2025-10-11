@@ -940,6 +940,18 @@ def create_contact_via_qr(request, id):
         users = contact_list.users
 
         analytic = AnalyticsData.objects.get(custom_user=users)
+        serializer = ContactSerializer(
+                data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            if not request.data.get('firstName') or not request.data.get('phone'):
+                return Response({'error': 'Empty form submission.'}, status=status.HTTP_400_BAD_REQUEST)
+            with transaction.atomic():
+                analytic.tota_subscribed += 1
+                analytic.save()
+                # Save the contact, linking it to the existing contact_list
+                # Only pass contact_list, no need for users here.
+            serializer.save(contact_list=contact_list, users=users)
+
         if contact_list.shopify_list:
             shopify_obj = utils.get_shopify_token(users)
 
@@ -948,10 +960,9 @@ def create_contact_via_qr(request, id):
                 shopify_obj.shop_domain, shopify_obj.access_token, url, request=request, query=CREATE_CUSTOMER_QUERY)
 
             response = shopify_factory.create_customers(source='QR Code')
-            print(response)
+
             if response.status_code == 200:
                 data = response.json()
-                print(data)
                 if data.get("data", {}).get("customerCreate", {}).get("userErrors"):
                     return Response(
                         {"error": "Failed to create customer",
@@ -971,20 +982,8 @@ def create_contact_via_qr(request, id):
                     status=response.status_code,
                 )
 
-        else:
-            serializer = ContactSerializer(
-                data=request.data)
-            if serializer.is_valid(raise_exception=True):
-                if not request.data.get('firstName') or not request.data.get('phone'):
-                    return Response({'error': 'Empty form submission.'}, status=status.HTTP_400_BAD_REQUEST)
-                with transaction.atomic():
-                    analytic.tota_subscribed += 1
-                    analytic.save()
-                # Save the contact, linking it to the existing contact_list
-                # Only pass contact_list, no need for users here.
-                serializer.save(contact_list=contact_list, users=users)
 
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response(f'There has been some error: {e}', status=status.HTTP_400_BAD_REQUEST)
 
