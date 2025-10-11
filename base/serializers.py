@@ -124,7 +124,7 @@ class ContactSerializer(ModelSerializer):
     class Meta:
         model = Contact
         fields = ['id', 'custom_id', 'firstName', 'lastName',
-                  'email', 'phone', 'contact_list', 'users', 'allowed']
+                  'email', 'phone', 'contact_list', 'users', 'allowed','sms_opt_in','email_opt_in']
         extra_kwargs = {
             # Ensure this field is not created/updated through the serializer.
             'contact_list': {'read_only': True},

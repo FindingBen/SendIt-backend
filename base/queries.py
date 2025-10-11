@@ -9,6 +9,9 @@ query getCustomers($first: Int, $after: String, $query: String) {
         email
         phone
         createdAt
+        defaultPhoneNumber{
+        marketingState
+        }
       }
     }
     pageInfo {
@@ -28,6 +31,10 @@ mutation createCustomer($input: CustomerInput!) {
       lastName
       phone
       createdAt
+      smsMarketingConsent {
+        marketingState
+        marketingOptInLevel
+      }
     }
     userErrors {
       field
@@ -36,6 +43,7 @@ mutation createCustomer($input: CustomerInput!) {
   }
 }
 """
+
 
 
 DELETE_CUSTOMER_QUERY = """
@@ -316,7 +324,7 @@ query getOrders($first: Int = 10, $after: String) {
 """
 
 
-CREATE_CHARGE = """mutation AppSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean = false) {
+CREATE_CHARGE = """mutation AppSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean = true) {
     appSubscriptionCreate(name: $name, returnUrl: $returnUrl, lineItems: $lineItems, test: $test) {
       userErrors {
         field

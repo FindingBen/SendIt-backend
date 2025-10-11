@@ -54,7 +54,7 @@ def send_scheduled_sms(unique_tracking_id: None):
 
             # Use self.contact_list to get the related ContactList instance
             contact_obj = Contact.objects.filter(
-                contact_list=contact_list, allowed=True)
+                contact_list=contact_list, allowed=True, sms_opt_in__in=['SUBSCRIBED'])
             # Get value for total sms sends based on contact list length
             query_params = {
                 "api_key": settings.VONAGE_ID,
@@ -186,7 +186,7 @@ def send_sms(unique_tracking_id: None, user: None):
                     key=settings.VONAGE_ID, secret=settings.VONAGE_TOKEN)
                 sms = vonage.Sms(client)
                 contact_obj = Contact.objects.filter(
-                    contact_list=contact_list, allowed=True)
+                    contact_list=contact_list, allowed=True, sms_opt_in__in=['SUBSCRIBED'])
                 # Get value for total sms sends based on contact list length
                 query_params = {
                     "api_key": settings.VONAGE_ID,

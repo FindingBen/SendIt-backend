@@ -184,6 +184,7 @@ class ContactList(models.Model):
     @receiver(post_save, sender='base.Contact')
     @receiver(post_delete, sender='base.Contact')
     def update_contact_list_count(sender, instance, **kwargs):
+        """Update contact count in ContactList when a Contact is added or removed."""
         # Replace 'yourappname' with your actual app name
         Contact = apps.get_model('base', 'Contact')
 
@@ -218,6 +219,8 @@ class Contact(models.Model):
     is_shopify_contact = models.BooleanField(default=False)
     email = models.EmailField(blank=True, null=True)
     allowed = models.BooleanField(default=True)
+    sms_opt_in = models.CharField(max_length=25, default='None')
+    email_opt_in = models.CharField(max_length=25, default='None')
     created_at = models.DateField(
         auto_now_add=True)
 

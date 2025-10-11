@@ -110,7 +110,7 @@ class ShopifyFactoryFunction:
 
         return all_customers
 
-    def create_customers(self):
+    def create_customers(self, source='standard'):
         headers = {
             "X-Shopify-Access-Token": self._token,
             "Content-Type": "application/json",
@@ -120,12 +120,18 @@ class ShopifyFactoryFunction:
             "lastName": self._request.data.get("lastName"),
             "email": self._request.data.get("email"),
             "phone": self._request.data.get("phone"),
+            "smsMarketingConsent": {
+                    "marketingState": self._request.data.get("sms_opt_in"),
+                    "marketingOptInLevel": "SINGLE_OPT_IN"
+                }
+        }
+        
+        variables = {
+            "input": {
+                **customer_data
+            }
         }
 
-        # GraphQL variables
-        variables = {
-            "input": customer_data
-        }
 
         response = requests.post(
             self._url,

@@ -744,7 +744,7 @@ def create_contact(request, id):
                 data = request.data.copy()
                 data['custom_id'] = random_custom_id
 
-                required_fields = ['firstName', 'lastName', 'phone', 'email']
+                required_fields = ['firstName', 'lastName', 'phone', 'email', 'sms_opt_in']
                 missing_fields = [
                     f for f in required_fields if not data.get(f)]
                 if missing_fields:
@@ -916,7 +916,7 @@ def bulk_create_contacts(request):
                         "lastName": node.get("lastName"),
                         "email": node.get("email"),
                         "phone": node.get("phone"),
-                        # YYYY-MM-DD
+                        "sms_opt_in": node.get('defaultPhoneNumber',{}).get('marketingState','None'),
                         "created_at": node.get("createdAt", None)[:10] if node.get("createdAt") else None,
                     }
                     serializer = ContactSerializer(
@@ -947,10 +947,11 @@ def create_contact_via_qr(request, id):
             shopify_factory = ShopifyFactoryFunction(
                 shopify_obj.shop_domain, shopify_obj.access_token, url, request=request, query=CREATE_CUSTOMER_QUERY)
 
-            response = shopify_factory.create_customers()
-
+            response = shopify_factory.create_customers(source='QR Code')
+            print(response)
             if response.status_code == 200:
                 data = response.json()
+                print(data)
                 if data.get("data", {}).get("customerCreate", {}).get("userErrors"):
                     return Response(
                         {"error": "Failed to create customer",
@@ -964,7 +965,6 @@ def create_contact_via_qr(request, id):
                     analytic.save()
                 return Response(customer, status=status.HTTP_201_CREATED)
             else:
-
                 return Response(
                     {"error": "Failed to create customer",
                         "details": data['details']},
