@@ -1,3 +1,5 @@
+from django.conf import settings
+
 GET_CUSTOMERS_QUERY = """
 query getCustomers($first: Int, $after: String, $query: String) {
   customers(first: $first, after: $after, query: $query) {
@@ -314,6 +316,7 @@ query getOrders($first: Int = 10, $after: String) {
           }
         }
       }
+
     }
     pageInfo {
       hasNextPage
@@ -324,18 +327,22 @@ query getOrders($first: Int = 10, $after: String) {
 """
 
 
-CREATE_CHARGE = """mutation AppSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean = true) {
-    appSubscriptionCreate(name: $name, returnUrl: $returnUrl, lineItems: $lineItems, test: $test) {
-      userErrors {
+# Default $test for CREATE_CHARGE: false in production, true otherwise
+env = getattr(settings, 'ENVIRONMENT', '') or ''
+default_test_literal = 'false' if str(env).lower() == 'production' else 'true'
+
+CREATE_CHARGE = f"""mutation AppSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean = {default_test_literal}) {{
+    appSubscriptionCreate(name: $name, returnUrl: $returnUrl, lineItems: $lineItems, test: $test) {{
+      userErrors {{
         field
         message
-      }
-      appSubscription {
+      }}
+      appSubscription {{
         id
-      }
+      }}
       confirmationUrl
-    }
-  }"""
+    }}
+  }}"""
 
 CURRENT_CHARGE = """query {
   currentAppInstallation {
