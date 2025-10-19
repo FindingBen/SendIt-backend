@@ -169,7 +169,7 @@ def activate_scheduled_packages_from_stripe():
 def cancel_subscription_monitor():
     today = timezone.now().date()
     users = CustomUser.objects.filter(
-        scheduled_cancel=today, is_shopify_user=False)
+        scheduled_cancel=today)
     package_obj = PackagePlan.objects.get(
         id=1)
     for user in users:
@@ -189,26 +189,3 @@ def cancel_subscription_monitor():
 
         return f"Cancelled subscription plan for {user.first_name}"
     
-@shared_task
-def cancel_shopify_subscription_monitor():
-    today = timezone.now().date()
-    users = CustomUser.objects.filter(
-        scheduled_cancel=today, is_shopify_user=True)
-    package_obj = PackagePlan.objects.get(
-        id=1)
-    for user in users:
-        user.package_plan = package_obj
-        recipients_qs = Contact.objects.filter(users=user)
-        flag_recipients = util.flag_recipients(user, recipients_qs)
-        if flag_recipients.get('was_downgraded', None) is True:
-            user.downgraded = True
-        user.save()
-
-        Notification.objects.create(
-            user=user,
-            title=f"Subscription cancelled",
-            message=f"Your subscription plan has been cancelled successfully. We hope you enjoyed our services and hope to see you back!",
-            notif_type="success"
-        )
-
-        return f"Cancelled subscription plan for {user.first_name}"

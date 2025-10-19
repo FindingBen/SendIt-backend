@@ -205,7 +205,6 @@ def cancel_shopify_subscription(request):
         cancel_data = data.get('data', {}).get('appSubscriptionCancel', {})
         if cancel_data.get('userErrors'):
             return Response({'error': cancel_data['userErrors']}, status=status.HTTP_400_BAD_REQUEST)
-        print('CANCELLED!!!')
         subscription_obj = cancel_data.get('appSubscription', {})
 
         # if subscription_obj.get('status') == 'CANCELLED':
