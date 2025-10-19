@@ -357,9 +357,12 @@ STATICFILES_FINDERS = [
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+
 # Package list
 
 TRIAL_PLAN = 'Trial Plan'
 BASIC_PLAN = 'Basic package'
 SILVER_PLAN = 'Silver package'
 GOLD_PLAN = 'Gold package'
+
+

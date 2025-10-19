@@ -890,12 +890,14 @@ def bulk_create_contacts(request):
                 shopify_domain, shopify_token, url, request=request, query=GET_CUSTOMERS_QUERY)
 
             customers = shopify_factory.get_customers()
-            # if response.status_code == 200:
-            # data = response.json()
-            print(customers)
-            # customers = data.get("data", {}).get(
-            #         "customers", {}).get("edges", [])
-            # print(data)
+            # Handle error object if returned instead of customer list
+            if isinstance(customers, dict) and customers.get('status_code'):
+                return Response(customers.get('error', 'Unknown error occurred'), 
+                             status=customers.get('status_code', status.HTTP_400_BAD_REQUEST))
+            if not isinstance(customers, list):
+                return Response({'error': 'Invalid response from Shopify API'}, 
+                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
             with transaction.atomic():
                 custom_user = CustomUser.objects.get(id=request.user.id)
                 custom_user.shopify_connect = True
@@ -904,7 +906,7 @@ def bulk_create_contacts(request):
                     id=request.data['list_id'])
                 contact_list.shopify_list = True
                 contact_list.save()
-
+                print('OKKKK')
                 for customer in customers:
                     node = customer.get('node', {})
 
@@ -930,6 +932,7 @@ def bulk_create_contacts(request):
 
         return Response({"data": contacts_response}, status=status.HTTP_201_CREATED)
     except Exception as e:
+
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 

@@ -53,7 +53,7 @@ class CustomUser(User):
         # Implement custom serialization logic here
         if self.package_plan:
             list_limit = 5 # Default value
-            recipients_limit = 5 # Default value
+            recipients_limit = 20 # Default value
             if self.package_plan.plan_type == settings.TRIAL_PLAN:
                 list_limit = 2
                 recipients_limit = 20

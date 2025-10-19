@@ -64,6 +64,7 @@ class ShopifyFactoryFunction:
         user_package = user.serialize_package_plan()
         recipients_limit = user_package['recipients_limit']
         shopify_limit = 250
+
         headers = {
             "X-Shopify-Access-Token": self._token,
         }
@@ -71,9 +72,10 @@ class ShopifyFactoryFunction:
         all_customers = []
         cursor = None
         total_fetched = 0
+
         unlimited = recipients_limit == "Unlimited"
         limit = float('inf') if unlimited else int(recipients_limit)
-
+        print("LIMIT:", limit)
         while total_fetched < limit:
             variables = {
                 "first": min(shopify_limit, limit - total_fetched),
@@ -89,26 +91,29 @@ class ShopifyFactoryFunction:
             )
 
             if response.status_code != 200:
-                break  # Fail fast if Shopify API error
+                raise Exception(f"Shopify API error: {response.text}")
 
             data = response.json()
-
-            # Extract data safely
+            # Extract safely
             try:
                 edges = data['data']['customers']['edges']
                 page_info = data['data']['customers']['pageInfo']
-            except (KeyError, TypeError):
-                break  # Shopify response is malformed
 
+            except (KeyError, TypeError):
+                raise Exception("Invalid Shopify API response format")
+            
             all_customers.extend(edges)
             total_fetched += len(edges)
 
             if not page_info.get('hasNextPage') or not edges:
                 break  # No more pages
-
-            cursor = edges[-1]['cursor']
+            #
+            # 🚨 Check if limit reached mid-loop
+            if not unlimited and total_fetched >= limit:
+                return all_customers
 
         return all_customers
+
 
     def create_customers(self, source='standard'):
         headers = {

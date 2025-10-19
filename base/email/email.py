@@ -7,7 +7,6 @@ from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.core.mail import EmailMessage, get_connection
 import logging
-import resend
 import os
 
 logger = logging.getLogger(__name__)
