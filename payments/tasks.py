@@ -22,11 +22,11 @@ def activate_scheduled_packages():
     today = timezone.now().date()
     users = CustomUser.objects.filter(
         scheduled_subscription=today, is_shopify_user=True)
-
+    logger.info(f"Found {users.count()} users to process for scheduled packages")
     for user in users:
         shopify_store = ShopifyStore.objects.get(
             email=user.custom_email)
-
+        logger.info(f"Found Shopify store for {user.custom_email}")
         shopify_domain = shopify_store.shop_domain
         token = shopify_store.access_token
         url = f"https://{shopify_domain}/admin/api/{settings.SHOPIFY_API_VERSION}/graphql.json"
@@ -51,7 +51,7 @@ def activate_scheduled_packages():
         next_billing_date = datetime.fromisoformat(
             next_billing_date_str.replace('Z', '+00:00')).date()
         shopify_charge_id = latest_plan.get("id").split('/')[-1]
-
+        logger.info(f"Processing user {user.id} with plan {plan_name}, status {plan_status}, next billing date {next_billing_date}, charge ID {shopify_charge_id}")
         # Validate subscription is ACTIVE
         if plan_status != "ACTIVE":
             continue
@@ -78,14 +78,14 @@ def activate_scheduled_packages():
             analytics.save()
             logger.info(f'DONE {next_billing_date}')
             send_plan_renewal_email(user.id, package_obj)
-
+            logger.info('BBBBBBBB')
             Notification.objects.create(
                 user=user,
                 title=f"{package_obj.plan_type} Activated",
                 message=f"Your plan '{package_obj.plan_type}' has been activated successfully.",
                 notif_type="success"
             )
-
+        
         logger.info(f"Fetfhing all customers for user {user.id}")
         recipients_qs = Contact.objects.filter(users=user)
         flag_result = util.flag_recipients(user, recipients_qs)
@@ -178,14 +178,18 @@ def cancel_subscription_monitor():
         flag_recipients = util.flag_recipients(user, recipients_qs)
         if flag_recipients.get('was_downgraded', None) is True:
             user.downgraded = True
+        user.scheduled_cancel = None
+        user.scheduled_subscription = None
+        user.scheduled_package = None
         user.save()
 
         Notification.objects.create(
             user=user,
-            title=f"Subscription cancelled",
-            message=f"Your subscription plan has been cancelled successfully. We hope you enjoyed our services and hope to see you back!",
+            title="Subscription cancelled",
+            message="Your subscription plan has been cancelled successfully. We hope you enjoyed our services and hope to see you back!",
             notif_type="success"
         )
+        logger.info(f"Cancelled subscription for user {user.id}")
 
-        return f"Cancelled subscription plan for {user.first_name}"
+    return f"Cancelled subscription process completed for {users.count()} users"
     

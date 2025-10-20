@@ -154,7 +154,7 @@ def cancel_shopify_subscription(request):
 
         user = CustomUser.objects.get(id=user_id)
 
-        user_payment = UserPayment.objects.get(user=user_id)
+        
         trial_package = PackagePlan.objects.get(id=1)
         shopify_domain = request.headers.get('shopify-domain', None)
         if shopify_domain is None:
@@ -176,14 +176,12 @@ def cancel_shopify_subscription(request):
         plan_data = data.get('data', {}).get(
                 'currentAppInstallation', {}
         ).get('activeSubscriptions', [])
-        print("CURRENT_PLAN",plan_data)
-        end_period = datetime.fromisoformat(
-            plan_data[0].get('currentPeriodEnd').replace('Z', '+00:00'))
-        subscription_id = plan_data[0]["id"] if plan_data and "id" in plan_data[0] else None
-        
         if not plan_data:
             return Response({"error": "No active subscription found to cancel."}, status=status.HTTP_404_NOT_FOUND)
 
+        end_period = datetime.fromisoformat(
+            plan_data[0].get('currentPeriodEnd').replace('Z', '+00:00'))
+        subscription_id = plan_data[0]["id"] if plan_data and "id" in plan_data[0] else None
 
         shopify_factory = ShopifyFactoryFunction(
             shopify_domain, shopify_token, url, request=request, query=CANCEL_CHARGE, headers=request.headers
@@ -195,7 +193,7 @@ def cancel_shopify_subscription(request):
         }
         response = shopify_factory.cancel_recurring_charge(variable=variable)
         data = response.json()
-        print("CANCEL", data)
+
         if data.get("errors", {}):
             return Response(
                 {"error": "Url doesn't exist",
@@ -211,7 +209,7 @@ def cancel_shopify_subscription(request):
         #     return Response({'message': 'Subscription already cancelled!', 'subscription': subscription_obj}, status=status.HTTP_204_NO_CONTENT)
 
         user.scheduled_subscription = None
-        user.scheduled_package = None
+        user.scheduled_package = trial_package.plan_type
         user.scheduled_cancel = end_period
         user.save()
         return Response({'message': 'Subscription cancellation scheduled.', 'subscription': subscription_obj}, status=status.HTTP_200_OK)
