@@ -1456,8 +1456,8 @@ def get_shopify_products_orders(request):
             shopify_factory = ShopifyFactoryFunction(
                 shopify_domain, shopify_token, url, request=request, query=None)
             products_response = shopify_factory.get_products(
-                {"first": 10, "query": search_query})
-            orders_response = shopify_factory.get_shop_orders({"first": 10})
+                {"first": 50, "query": search_query})
+            orders_response = shopify_factory.get_shop_orders({"first": 50})
             logger.info('---Shopify Products Response---')
 
             product_data = products_response.json()
