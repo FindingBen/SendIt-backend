@@ -285,7 +285,7 @@ class ShopifyFactoryFunction:
 
         body_request = {
             "id": shopify_id,
-            "first": 10
+            "first": 50
         }
 
         response = requests.post(
