@@ -10,6 +10,7 @@ urlpatterns = [
     path('auth/', include('djoser.urls')),
     path('auth/', include('djoser.urls.jwt')),
     path('stripe/', include('payments.urls')),
+    path('products/', include('products.urls')),
     path('notifications/', include('notification.urls')),
 ]
 

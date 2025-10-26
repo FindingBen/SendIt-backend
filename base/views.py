@@ -1498,7 +1498,7 @@ def get_shop_orders(request):
         # Shopify GraphQL endpoint
         url = f"https://{shopify_domain}/admin/api/{settings.SHOPIFY_API_VERSION}/graphql.json"
         shopify_factory = ShopifyFactoryFunction(
-            GET_SHOP_ORDERS, shopify_domain, shopify_token, url, request=request)
+            query=GET_SHOP_ORDERS, domain=shopify_domain, token=shopify_token, url=url, request=request)
         response = shopify_factory.get_shop_orders()
 
         if response.status_code == 200:

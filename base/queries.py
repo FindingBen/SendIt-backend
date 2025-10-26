@@ -102,10 +102,9 @@ GET_TOTAL_CUSTOMERS_NR = """
 }
     """
 
-
 GET_ALL_PRODUCTS = """
-    query getProducts($first: Int, $after: String, $query:String) {
-      products(first: $first, after: $after,query:$query) {
+    query getProducts($first: Int, $after: String) {
+      products(first: $first, after: $after, query: "status:ACTIVE") {
         edges {
           node {
             id
@@ -128,8 +127,14 @@ GET_ALL_PRODUCTS = """
                 node {
                   id
                   title
+                  sku
                   price
                   inventoryQuantity
+                  image {
+                    id
+                    src
+                    altText
+                  }
                 }
               }
             }
@@ -137,6 +142,7 @@ GET_ALL_PRODUCTS = """
               edges {
                 node {
                   src
+                  altText
                 }
               }
             }
@@ -174,7 +180,9 @@ query getProductById($id: ID!) {
           id
           title
           price
-          sku
+          color
+          size
+          sku 
           inventoryQuantity
         }
       }
@@ -185,6 +193,29 @@ query getProductById($id: ID!) {
           src
         }
       }
+    }
+  }
+}
+"""
+
+# ...existing code...
+
+UPDATE_PRODUCT_VARIANTS_BULK = """
+mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!,$allowPartialUpdates: Boolean) {
+  productVariantsBulkUpdate(productId: $productId, variants: $variants, allowPartialUpdates: $allowPartialUpdates) {
+    product {
+      id
+    }
+    productVariants {
+      id
+      barcode
+      inventoryItem {
+      sku
+      }
+    }
+    userErrors {
+      field
+      message
     }
   }
 }
@@ -235,7 +266,7 @@ query getProductInventory($id: ID!) {
 
 
 GET_CUSTOMERS_ORDERS = """
-query getCustomerOrders($customerId: ID!, $first: Int = 10) {
+query getCustomerOrders($customerId: ID!, $first: Int = 50) {
   customer(id: $customerId) {
     id
     firstName
@@ -284,7 +315,7 @@ query {
 
 
 GET_SHOP_ORDERS = """
-query getOrders($first: Int = 10, $after: String) {
+query getOrders($first: Int = 50, $after: String) {
   orders(first: $first, after: $after) {
     edges {
       node {

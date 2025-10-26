@@ -8,6 +8,7 @@ from .queries import (
     GET_TOTAL_CUSTOMERS_NR,
     GET_CUSTOMERS_ORDERS,
     GET_PRODUCT,
+    UPDATE_PRODUCT_VARIANTS_BULK,
     CREATE_CUSTOMER_QUERY,
     GET_ALL_PRODUCTS,
     DELETE_CUSTOMER_QUERY,
@@ -296,8 +297,14 @@ class ShopifyFactoryFunction:
         # Return the response from Shopify's API
         return response
 
+    def get_product(self, variable):
+        return self.run_query(GET_PRODUCT, variable)
+
     def get_products(self, variable):
         return self.run_query(GET_ALL_PRODUCTS, variable)
+
+    def update_product_variants(self, variable):
+        return self.run_query(UPDATE_PRODUCT_VARIANTS_BULK, variable)
 
     def get_shop_orders(self, variable=None):
         return self.run_query(GET_SHOP_ORDERS, variable)
