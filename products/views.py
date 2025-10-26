@@ -6,6 +6,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from .models import Product
 from decimal import Decimal
+from typing import Optional, Dict, Any
 from django.db import transaction
 from base.models import ShopifyStore
 from base.shopify_functions import ShopifyFactoryFunction
@@ -286,7 +287,7 @@ def generate_unique_barcode() -> str:
             return barcode
 
 
-def generate_unique_sku(title: str = "", attributes: dict | None = None) -> str:
+def generate_unique_sku(title: str = "", attributes: Optional[Dict[str, Any]] | None = None) -> str:
     """
     Build SKU like: <TITLE_PREFIX>-<ATTRS>-<4hex>
     - TITLE_PREFIX: first letters of the first 3 words in the title (uppercased), e.g. "Shoulder Strap for Injury" -> "SSF"
