@@ -287,7 +287,7 @@ def generate_unique_barcode() -> str:
             return barcode
 
 
-def generate_unique_sku(title: str = "", attributes: Optional[Dict[str, Any]] | None = None) -> str:
+def generate_unique_sku(title: str = "", attributes: Optional[Dict[str, Any]] = None) -> str:
     """
     Build SKU like: <TITLE_PREFIX>-<ATTRS>-<4hex>
     - TITLE_PREFIX: first letters of the first 3 words in the title (uppercased), e.g. "Shoulder Strap for Injury" -> "SSF"
