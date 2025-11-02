@@ -32,7 +32,6 @@ import uuid
 import logging
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-
 from reportlab.lib import colors
 import requests
 from reportlab.platypus import Table, TableStyle
@@ -227,10 +226,34 @@ class CallbackAuthView(APIView):
                     access_token=access_token,
                     first_name=shop_data.get('shopOwnerName')
                 )
-                success = register_webhooks(shop, access_token)
-                if not success:
-                    # Log the failure but don't block installation
-                    print(f"Failed to register webhooks for {shop}")
+                client = ShopifyFactoryFunction(
+                domain=shop,
+                token=access_token,
+                url=f"https://{shop}/admin/api/{settings.SHOPIFY_API_VERSION}/graphql.json",
+                )
+                webhook_url = f"{settings.BACKEND}/products/product_webhook"
+    
+                variables = {
+                    "topic": "PRODUCTS_CREATE",
+                    "webhookSubscription": {
+                        "callbackUrl": webhook_url,
+                        "format": "JSON"
+                    }
+                }
+                response = client.run_query(variables=variables,query=CREATE_WEBHOOK)
+                if response.status_code != 200:
+                    print(f"Failed to create webhook: {response.text}")
+                    return Response({"message": "Webhook not registered!"}, status=status.HTTP_400_BAD_REQUEST)
+            
+                data = response.json()
+                print(data)
+                user_errors = data.get('data', {}).get('webhookSubscriptionCreate', {}).get('userErrors', [])
+                
+                if user_errors:
+                    print(f"Webhook creation errors: {user_errors}")
+                    return Response({"message": "Webhook not registered!"}, status=status.HTTP_400_BAD_REQUEST)
+                    
+                return Response({"message": "Webhook registered successfully!"}, status=status.HTTP_201_CREATED)
             else:
                 # Update the access token if the store already exists
                 shopify_store.access_token = access_token
