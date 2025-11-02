@@ -72,7 +72,6 @@ urlpatterns = [
     path('shop_info/', views.get_shop_shopify),
     # Shopify orders
     path('shopify_orders/', views.get_shop_orders),
-
     # Webhooks
     path('customer_data_webhook', views.customer_data_request_webhook),
     path('customer_redact_data_webhook', views.customer_redact_request_webhook),

@@ -4,21 +4,15 @@ from pathlib import Path
 from corsheaders.defaults import default_headers
 import dotenv
 import json
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 dotenv_file = os.path.join(BASE_DIR, ".env")
 if os.path.isfile(dotenv_file):
     dotenv.load_dotenv(dotenv_file)
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ['SECRET_KEY']
 
-
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = ['*']
@@ -40,7 +34,6 @@ INSTALLED_APPS = [
     "django_celery_beat",
     'djoser',
     'storages',
-    # apps
     'base',
     'sms',
     'payments',
@@ -63,10 +56,18 @@ MIDDLEWARE = [
 ]
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+
 ROOT_URLCONF = 'backend.urls'
 
 CORS_ALLOW_ALL_ORIGINS = False
 ENVIRONMENT = os.environ.get('DJANGO_ENV', 'development')
+BACKEND_URL = os.environ.get("BACKEND_URL", "")
+
+
+if ENVIRONMENT == "production":
+    BACKEND = BACKEND_URL
+else:
+    BACKEND = "http://localhost:8000"
 
 CORS_ALLOWED_ORIGINS = os.environ.get('ORIGINS', '').split(',')
 

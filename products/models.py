@@ -19,3 +19,12 @@ class Product(models.Model):
 
     def __str__(self):
         return self.title
+    
+class ShopifyWebhookLog(models.Model):
+    shopify_store = models.ForeignKey('base.ShopifyStore', on_delete=models.CASCADE)
+    webhook_topic = models.CharField(max_length=255)
+    webhook_id = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Webhook {self.webhook_topic} for {self.shopify_store.shop_domain} at {self.created_at}"

@@ -55,7 +55,8 @@ from .queries import (
     DELETE_CUSTOMER_QUERY,
     UPDATE_CUSTOMER_QUERY,
     GET_SHOP_ORDERS,
-    GET_SHOP_INFO
+    GET_SHOP_INFO,
+    CREATE_WEBHOOK
 )
 from .shopify_functions import ShopifyFactoryFunction
 from base.utils.calculations import calculate_avg_performance, format_number, clicks_rate, calculate_deliveribility
@@ -226,6 +227,10 @@ class CallbackAuthView(APIView):
                     access_token=access_token,
                     first_name=shop_data.get('shopOwnerName')
                 )
+                success = register_webhooks(shop, access_token)
+                if not success:
+                    # Log the failure but don't block installation
+                    print(f"Failed to register webhooks for {shop}")
             else:
                 # Update the access token if the store already exists
                 shopify_store.access_token = access_token
@@ -581,10 +586,10 @@ def get_product(request):
             orders = shopify_factory.get_shop_orders()
             if product.status_code == 200 and orders.status_code == 200:
                 product_data = product.json()
-                print(product_data)
+
                 product = product_data.get("data", {}).get("product", {})
                 orders_data = orders.json()
-                print(orders_data)
+
                 data_map = utils.map_single_product_with_orders(
                     product, orders_data)
 
@@ -1646,9 +1651,3 @@ def customer_shop_redact_request_webhook(request):
     except Exception as e:
         logger.exception("Unhandled error in shop redact webhook.")
         return JsonResponse({"error": str(e)}, status=500)
-
-
-@csrf_exempt
-def debug_webhook(request):
-    print("✅ Webhook dummy endpoint reached!")
-    return JsonResponse({"status": "ok"})
