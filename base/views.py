@@ -577,14 +577,14 @@ def get_product(request):
             shopify_token = request.headers['Authorization'].split(' ')[1]
             shopify_factory = ShopifyFactoryFunction(
                 shopify_domain, shopify_token, url, request=request, query=GET_PRODUCT)
-
             product = shopify_factory.get_products_insights()
             orders = shopify_factory.get_shop_orders()
             if product.status_code == 200 and orders.status_code == 200:
-
                 product_data = product.json()
+                print(product_data)
                 product = product_data.get("data", {}).get("product", {})
                 orders_data = orders.json()
+                print(orders_data)
                 data_map = utils.map_single_product_with_orders(
                     product, orders_data)
 
@@ -607,9 +607,11 @@ def get_product(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def get_insights(request):
+    print('AAA')
     try:
         logger.info('---Getting insights---')
         shopify_domain = request.headers.get('shopify-domain', None)
+        print(shopify_domain)
         if shopify_domain:
             cache_key = f"shopify_product_id:{shopify_domain}:{request.data['product_id']}"
             product_data = cache.get(cache_key)

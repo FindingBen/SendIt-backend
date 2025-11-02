@@ -1,4 +1,6 @@
 from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from backend import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -286,6 +288,11 @@ def generate_unique_barcode() -> str:
         if not Product.objects.filter(barcode=barcode).exists():
             return barcode
 
+
+@require_http_methods(['POST'])
+@csrf_exempt
+def webhook_add_product_detect(request):
+    pass
 
 def generate_unique_sku(title: str = "", attributes: Optional[Dict[str, Any]] = None) -> str:
     """

@@ -18,7 +18,6 @@ def assign_package(sender, instance, created, **kwargs):
         user_instance = instance
         user_instance.package_plan = package_plan
         user_instance.sms_count += package_plan.sms_count_pack
-        print("AAAAAAAAAAAAAAAAAAA")
         user_instance.save()
 
 

@@ -180,8 +180,6 @@ query getProductById($id: ID!) {
           id
           title
           price
-          color
-          size
           sku 
           inventoryQuantity
         }
