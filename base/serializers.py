@@ -117,9 +117,9 @@ class ContactListSerializer(ModelSerializer):
 
 
 class ContactSerializer(ModelSerializer):
-    phone = serializers.CharField(source='phone_number')
-    firstName = serializers.CharField(source='first_name')
-    lastName = serializers.CharField(source='last_name')
+    phone = serializers.CharField(source='phone_number', allow_blank=True, allow_null=True, required=False)
+    firstName = serializers.CharField(source='first_name', allow_blank=True, allow_null=True, required=False)
+    lastName = serializers.CharField(source='last_name', allow_blank=True, allow_null=True, required=False)
 
     class Meta:
         model = Contact

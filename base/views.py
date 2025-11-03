@@ -916,6 +916,7 @@ def bulk_create_contacts(request):
                 custom_user = CustomUser.objects.get(id=request.user.id)
                 custom_user.shopify_connect = True
                 custom_user.save()
+                
                 contact_list = ContactList.objects.get(
                     id=request.data['list_id'])
                 contact_list.shopify_list = True
@@ -923,23 +924,21 @@ def bulk_create_contacts(request):
                 print('OKKKK')
                 for customer in customers:
                     node = customer.get('node', {})
-
-                    if not node.get("phone") or not node.get("firstName"):
+                    if not node.get("phone") and not node.get("email"):
                         continue
                     contact_data = {
                         "custom_id": node.get("id"),
-                        "firstName": node.get("firstName"),
-                        "lastName": node.get("lastName"),
+                        "firstName": node.get("firstName",None),
+                        "lastName": node.get("lastName",None),
                         "email": node.get("email"),
-                        "phone": node.get("phone"),
+                        "phone": node.get("phone",None),
                         "sms_opt_in": node.get('defaultPhoneNumber',{}).get('marketingState','None'),
                         "created_at": node.get("createdAt", None)[:10] if node.get("createdAt") else None,
                     }
                     serializer = ContactSerializer(
                         data=contact_data)
-
                     if serializer.is_valid(raise_exception=True):
-
+                        
                         serializer.save(contact_list=contact_list,
                                         users=custom_user)
                         contacts_response.append(serializer.data)
