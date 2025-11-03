@@ -112,6 +112,7 @@ class ShopifyFactoryFunction:
             # 🚨 Check if limit reached mid-loop
             if not unlimited and total_fetched >= limit:
                 break
+            
         return all_customers
 
     def get_marketing_state(self,customer):

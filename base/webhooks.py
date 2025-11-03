@@ -1,10 +1,11 @@
 from django.http import HttpResponse, JsonResponse
-from base.models import ShopifyStore, CustomUser, Contact
+from base.models import ShopifyStore, CustomUser, Contact, ContactList
 from products.models import ShopifyWebhookLog
 from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.conf import settings
+from datetime import datetime
 import hmac
 import hashlib
 import base64
@@ -159,8 +160,37 @@ def create_customer_webhook(request):
     try:
         data = json.loads(request.body)
         print(data)
-        # Further processing can be done here as needed
-
+        customer_id = data.get("admin_graphql_api_id")
+        first_name = data.get("first_name") or ""
+        last_name = data.get("last_name") or ""
+        phone = data.get("phone")
+        sms_opt_in = "SUBSCRIBED" if phone else "NOT_SUBSCRIBED"
+        created_at = data.get("created_at")
+        created_date = None
+        print('sssaa')
+        user = CustomUser.objects.get(shopify_domain=shopify_domain)
+        if created_at:
+            try:
+                created_date = datetime.fromisoformat(created_at.replace("Z", "+00:00")).date()
+            except Exception:
+                created_date = datetime.strptime(created_at, "%Y-%m-%dT%H:%M:%S%z").date()
+        contact_list = ContactList.objects.filter(users=user, shopify_list=True).first()
+        if not contact_list:
+            contact_list = ContactList.objects.create(users=user, name="Shopify Contacts", shopify_list=True)
+        print('sss')
+        contact, created = Contact.objects.get_or_create(
+            custom_id=customer_id,
+            defaults={
+                "users": user,
+                "contact_list": contact_list,
+                "first_name": first_name,
+                "last_name": last_name,
+                "phone_number": phone,
+                "is_shopify_contact": True,
+                "sms_opt_in": sms_opt_in,
+                "created_at": created_date
+            },
+        )
         return HttpResponse({"message": "Customer webhook processed."}, status=200)
     except Exception as e:
         print("Error processing customer webhook:", str(e))
