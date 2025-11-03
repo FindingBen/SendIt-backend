@@ -76,7 +76,7 @@ class ShopifyFactoryFunction:
 
         unlimited = recipients_limit == "Unlimited"
         limit = float('inf') if unlimited else int(recipients_limit)
-        print("LIMIT:", limit)
+
         while total_fetched < limit:
             variables = {
                 "first": min(shopify_limit, limit - total_fetched),
@@ -95,10 +95,10 @@ class ShopifyFactoryFunction:
                 raise Exception(f"Shopify API error: {response.text}")
 
             data = response.json()
-            print(data)
             # Extract safely
             try:
                 edges = data['data']['customers']['edges']
+                #edges.sort(key=lambda c: self.get_marketing_state(c) != "SUBSCRIBED")
                 page_info = data['data']['customers']['pageInfo']
 
             except (KeyError, TypeError):
@@ -106,14 +106,12 @@ class ShopifyFactoryFunction:
             
             all_customers.extend(edges)
             total_fetched += len(edges)
-            #all_customers.sort(key=lambda c: self.get_marketing_state(c) != "SUBSCRIBED")
             if not page_info.get('hasNextPage') or not edges:
                 break  # No more pages
             #
             # 🚨 Check if limit reached mid-loop
             if not unlimited and total_fetched >= limit:
-                return all_customers
-
+                break
         return all_customers
 
     def get_marketing_state(self,customer):

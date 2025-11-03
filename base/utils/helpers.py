@@ -290,7 +290,7 @@ class Utils:
             'Gold package': {'contact_lists': 20, 'recipients': "Unlimited"},
             'Silver package': {'contact_lists': 10, 'recipients': 10000},
             'Basic package': {'contact_lists': 3, 'recipients': 5000},
-            'Trial Plan': {'contact_lists': 1, 'recipients': 100}
+            'Trial Plan': {'contact_lists': 1, 'recipients': 250}
         }
         if user_package.plan_type in package_limits:
             limits = package_limits[user_package.plan_type]

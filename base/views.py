@@ -1031,7 +1031,7 @@ def get_package_limits(request):
         'Gold': {'contact_lists': 20, 'recipients': 10000},
         'Silver': {'contact_lists': 8, 'recipients': 5000},
         'Basic': {'contact_lists': 5, 'recipients': 1000},
-        'Trial': {'contact_lists': 1, 'recipients': 5}
+        'Trial': {'contact_lists': 1, 'recipients': 50}
     }
 
     # Get the user's package plan
