@@ -49,7 +49,7 @@ class ProductView(ShopifyAuthMixin, APIView):
             shopify_store, shopify_token, url = self.resolve_shopify(request)
         except ValueError as e:
             return Response({"error": str(e)}, status=400)
-        products = Product.objects.filter(shopify_store=1).all()
+        products = Product.objects.filter(shopify_store=shopify_store).all()
         serializer = ProductSerializer(products, many=True)
         return Response(serializer.data)
     
