@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 from base.models import ShopifyStore
-
+from base.shopify_functions import ShopifyFactoryFunction
+from base.queries import CREATE_WEBHOOK
+from backend import settings
 
 class Utils:
     def __init__(self, shopify_domain=None):
@@ -368,3 +370,40 @@ class Utils:
             "was_downgraded": was_downgraded,
             "message": message
         }
+
+    def webhook_register(self,params):
+        obj_response = {}
+        domain = params.get("shopify_domain",None)
+        client = ShopifyFactoryFunction(
+        domain=domain,
+        token=params.get('shopify_token',None),
+        url=f"https://{domain}/admin/api/{settings.SHOPIFY_API_VERSION}/graphql.json",
+        )
+
+        data_topic = params.get('topic',None)
+        webhook_url = f"{settings.BACKEND}/products/product_webhook"
+        print("Registering webhook for topic:", params)
+        variables = {
+        "topic": data_topic,
+        "webhookSubscription": {
+            "callbackUrl": params.get('url',None),
+            "format": "JSON"
+        }
+        }
+        response = client.run_query(variables=variables,query=CREATE_WEBHOOK)
+
+        if response.status_code != 200:
+            print(f"Failed to create webhook: {response.text}")
+            obj_response = {"message": "Webhook not registered!","status":400}
+            return obj_response
+            
+        data = response.json()
+        print(data)
+        user_errors = data.get('data', {}).get('webhookSubscriptionCreate', {}).get('userErrors', [])
+        
+        if user_errors:
+            print(f"Webhook creation errors: {user_errors}")
+            obj_response = {"message": user_errors,"status":400}
+            return obj_response
+        obj_response = {"message": "Webhook registered successfully!","status":201} 
+        return obj_response

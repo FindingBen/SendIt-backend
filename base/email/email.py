@@ -167,3 +167,23 @@ def send_plan_renewal_email(user_id, plan):
     except Exception as e:
         print("Error sending plan renewal email:", str(e))
         return False
+
+
+def send_error_webhook_register_email(email, shop, topic):
+
+
+    subject = 'Webhook Registration Error'
+    from_email = settings.DEFAULT_FROM_EMAIL
+    to_email = [email]
+
+    context = {
+        'shop': shop,
+        'token_id': topic,
+    }
+
+    html_content = render_to_string('email/webhook_error.html', context)
+    text_content = "There was an error registering webhook. Please check the details and resend manually."
+
+    msg = EmailMultiAlternatives(subject, text_content, from_email, to_email)
+    msg.attach_alternative(html_content, "text/html")
+    msg.send()

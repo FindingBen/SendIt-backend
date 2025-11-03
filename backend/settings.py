@@ -67,7 +67,7 @@ BACKEND_URL = os.environ.get("BACKEND_URL", "")
 if ENVIRONMENT == "production":
     BACKEND = BACKEND_URL
 else:
-    BACKEND = "http://localhost:8000"
+    BACKEND = "https://a9aafbd588e9.ngrok-free.app"
 
 CORS_ALLOWED_ORIGINS = os.environ.get('ORIGINS', '').split(',')
 

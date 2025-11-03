@@ -15,7 +15,7 @@ from io import BytesIO
 from django.shortcuts import redirect
 from django.http import HttpResponse
 from .utils.googleAnalytics import sample_run_report
-from .email.email import send_confirmation_email, send_welcome_email, send_confirmation_email_account_close, send_email_notification
+from .email.email import send_confirmation_email, send_error_webhook_register_email,send_welcome_email, send_confirmation_email_account_close, send_email_notification
 from django.db.models import Sum
 from django.db import transaction
 from sms.models import Sms
@@ -213,47 +213,31 @@ class CallbackAuthView(APIView):
 
             shopify_store = ShopifyStore.objects.filter(
                 shop_domain=shop).first()
-            # url = f"https://{shopify_domain}/admin/api/2025-01/graphql.json"
-            # shopify_factory = ShopifyFactoryFunction(
-            #     GET_TOTAL_CUSTOMERS_NR, shop, access_token, url, request)
-            # customers = shopify_factory.get_total_customers()
 
             if not shopify_store:
-                # Create the ShopifyStore and associate it with the user
                 shopify_store = ShopifyStore.objects.create(
                     email=shop_data.get('email'),
                     shop_domain=shop,
                     access_token=access_token,
                     first_name=shop_data.get('shopOwnerName')
                 )
-                client = ShopifyFactoryFunction(
-                domain=shop,
-                token=access_token,
-                url=f"https://{shop}/admin/api/{settings.SHOPIFY_API_VERSION}/graphql.json",
-                )
-                webhook_url = f"{settings.BACKEND}/products/product_webhook"
-    
-                variables = {
-                    "topic": "PRODUCTS_CREATE",
-                    "webhookSubscription": {
-                        "callbackUrl": webhook_url,
-                        "format": "JSON"
+                webhook_urls = [{"url":"products/product_webhook","topic":"PRODUCTS_CREATE"},
+                                {"url":"api/customer_create_data_webhook","topic":"CUSTOMERS_CREATE"}]
+                for urls in webhook_urls:
+
+                    params = {
+                        "shopify_token": access_token,
+                        "shopify_domain": shop,
+                        "topic":urls['topic'],
+                        "url":f"{settings.BACKEND}/{urls['url']}"
                     }
-                }
-                response = client.run_query(variables=variables,query=CREATE_WEBHOOK)
-                if response.status_code != 200:
-                    print(f"Failed to create webhook: {response.text}")
-                    return Response({"message": "Webhook not registered!"}, status=status.HTTP_400_BAD_REQUEST)
-            
-                data = response.json()
-                print(data)
-                user_errors = data.get('data', {}).get('webhookSubscriptionCreate', {}).get('userErrors', [])
-                
-                if user_errors:
-                    print(f"Webhook creation errors: {user_errors}")
-                    return Response({"message": "Webhook not registered!"}, status=status.HTTP_400_BAD_REQUEST)
-                    
-                return Response({"message": "Webhook registered successfully!"}, status=status.HTTP_201_CREATED)
+                    result = utils.webhook_register(params=params)
+                    if result.get("status") != 201:
+                        send_error_webhook_register_email(
+                            email=shop_data.get("email"),
+                            token_id=shop,
+                            user_id=request.user.id
+                        )
             else:
                 # Update the access token if the store already exists
                 shopify_store.access_token = access_token
@@ -1551,126 +1535,3 @@ def get_shop_orders(request):
                     "details": data['details']},
                 status=response.status_code,
             )
-
-
-@require_http_methods(['POST'])
-@csrf_exempt
-def customer_data_request_webhook(request):
-
-    shopify_hmac = request.META.get('HTTP_X_SHOPIFY_HMAC_SHA256')
-    if shopify_hmac:
-
-        body = request.body
-        hashit = hmac.new(settings.SHOPIFY_API_SECRET.encode(
-            'utf-8'), body, hashlib.sha256)
-        calculated_hmac = base64.b64encode(hashit.digest()).decode()
-
-        if not hmac.compare_digest(calculated_hmac, shopify_hmac):
-            return HttpResponse(status=401)  # Unauthorized
-
-        data = json.loads(body)
-
-        print('Webhook triggered! We are not storing customers data with this webhook.')
-
-        return HttpResponse(status=200)
-    return Response({"error": "Missing shopify signature!"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-@require_http_methods(['POST'])
-@csrf_exempt
-def customer_redact_request_webhook(request):
-    shopify_hmac = request.META.get('HTTP_X_SHOPIFY_HMAC_SHA256', '').strip()
-    if not shopify_hmac:
-        logger.warning("Missing HMAC header in customer redact webhook.")
-        return HttpResponse("Missing signature", status=400)
-
-    try:
-        body = request.body  # read raw body once
-        computed_hmac = hmac.new(
-            settings.SHOPIFY_API_SECRET.encode(),
-            body,
-            hashlib.sha256
-        ).digest()
-
-        expected_hmac = base64.b64encode(computed_hmac)
-        received_hmac = shopify_hmac.encode()
-
-        if not hmac.compare_digest(expected_hmac, received_hmac):
-            logger.warning("Invalid HMAC signature.")
-            return HttpResponse("Unauthorized", status=401)
-
-        # HMAC passed, parse body
-        data = json.loads(body)
-        logger.info(f"Customer redact webhook payload: {data}")
-        shop_domain = data.get('shop_domain')
-        customer_id = data.get('customer', {}).get('id')
-        print(customer_id)
-
-        if not shop_domain:
-            logger.error("Shop domain missing in payload.")
-            return HttpResponse("Bad request", status=400)
-
-        with transaction.atomic():
-            deleted, _ = Contact.objects.filter(
-                custom_id=f'gid://shopify/Customer/{customer_id}'
-            ).delete()
-
-            if deleted:
-                logger.info(
-                    f"Customer with id {customer_id} redacted for shop: {shop_domain}")
-            else:
-                logger.info("Contact already deleted or not found — skipping.")
-
-        return HttpResponse(status=200)
-
-    except Exception as e:
-        logger.exception("Unhandled error in customer redact webhook.")
-        return JsonResponse({"error": str(e)}, status=500)
-
-
-@csrf_exempt
-@require_http_methods(['POST'])
-def customer_shop_redact_request_webhook(request):
-
-    shopify_hmac = request.META.get('HTTP_X_SHOPIFY_HMAC_SHA256')
-
-    if not shopify_hmac:
-        logger.warning("Missing HMAC header in shop redact webhook.")
-        return HttpResponse("Missing signature", status=400)
-    try:
-        body = request.body
-        expected_hmac = base64.b64encode(
-            hmac.new(settings.SHOPIFY_API_SECRET.encode(),
-                     body, hashlib.sha256).digest()
-        ).decode()
-
-        if not hmac.compare_digest(expected_hmac, shopify_hmac):
-            logger.warning("Invalid HMAC signature.")
-            return HttpResponse("Unauthorized", status=401)
-
-        data = json.loads(body)
-        shop_domain = data.get('shop_domain')
-        if not shop_domain:
-            logger.error("Shop domain missing in payload.")
-            return HttpResponse("Bad request", status=400)
-        try:
-            shop = ShopifyStore.objects.get(shop_domain=shop_domain)
-            user = CustomUser.objects.filter(custom_email=shop.email).first()
-
-            shop.delete()
-            if user:
-                user.is_active = False
-                user.shopify_connect = False
-                user.scheduled_package = None
-                user.package_plan = 1
-                user.save()
-
-            logger.info(f"Shopify store '{shop_domain}' deleted successfully.")
-            return HttpResponse(status=200)
-
-        except ShopifyStore.DoesNotExist:
-            logger.warning(f"ShopifyStore not found for domain: {shop_domain}")
-            return HttpResponse(status=404)
-    except Exception as e:
-        logger.exception("Unhandled error in shop redact webhook.")
-        return JsonResponse({"error": str(e)}, status=500)

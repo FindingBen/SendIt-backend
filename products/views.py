@@ -12,10 +12,13 @@ from decimal import Decimal
 from typing import Optional, Dict, Any
 from django.db import transaction
 from base.models import ShopifyStore
+from base.utils import helpers
 from base.shopify_functions import ShopifyFactoryFunction
 from base.queries import GET_ALL_PRODUCTS,UPDATE_PRODUCT_VARIANTS_BULK,CREATE_WEBHOOK
 from .serializers import ProductSerializer
 import json
+
+
 
 class ShopifyAuthMixin:
     """
@@ -291,103 +294,6 @@ def generate_unique_barcode() -> str:
             return barcode
 
 
-@csrf_exempt
-@require_http_methods(['POST'])
-def create_product_webhook(request):
-    print('Creating product webhook...',request)
-    shopify_webhook_id = request.META.get('HTTP_X_SHOPIFY_WEBHOOK_ID')
-    shopify_domain = request.META.get('HTTP_X_SHOPIFY_SHOP_DOMAIN')
-    shopify_topic = request.META.get('HTTP_X_SHOPIFY_TOPIC')
-    created_at = request.META.get('HTTP_X_SHOPIFY_TRIGGERED_AT')
-    print(shopify_webhook_id)
-    if ShopifyWebhookLog.objects.filter(webhook_id=shopify_webhook_id).exists():
-        print("⚠️ Duplicate webhook ignored:", shopify_webhook_id)
-        return HttpResponse(status=208)  # Acknowledge but skip
-
-    store_obj = ShopifyStore.objects.filter(shop_domain=shopify_domain).first()
-
-    ShopifyWebhookLog.objects.create(webhook_id=shopify_webhook_id, 
-        webhook_topic=shopify_topic, shopify_store=store_obj,created_at=created_at)
-
-    try:
-        data = json.loads(request.body)
-        print(data)
-        product_id = data.get("admin_graphql_api_id")
-        title = data.get("title", "Untitled Product")
-        category = (
-            data.get("category", {}).get("full_name")
-            or data.get("product_type", "")
-        )
-        img_field = data.get("image", {}).get("src")
-
-        variants = data.get("variants", [])
-
-        if not variants:
-            return HttpResponse({"message": "No variants found, nothing to create."}, status=200)
-
-        created_variants = []
-        skipped_variants = []
-        product_images = data.get("images", []) or []
-        image_map = {img.get("id"): img.get("src") for img in product_images if isinstance(img, dict)}
-
-        for variant in variants:
-            shopify_id = variant.get("admin_graphql_api_id")
-            variant_name = variant.get("title", None)
-            image_id = variant.get("image_id")
-            sku = variant.get("sku")
-            barcode = variant.get("barcode")
-            price = variant.get("price")
-            color = variant.get("option1",None)
-            size = variant.get("option2",None)
-            
-            variant_image = None
-
-            variant_image = None
-            if image_id and image_id in image_map:
-                variant_image = image_map[image_id]
-            else:
-                # Fallback: find via variant_ids list in images if image_id is missing
-                for img in product_images:
-                    variant_ids = img.get("variant_ids", [])
-                    if variant.get("id") in variant_ids:
-                        variant_image = img.get("src")
-                        break
-
-            # Final fallback to main product image if variant has none
-            variant_image = variant_image or (data.get("image") or {}).get("src")
-
-            Product.objects.create(
-                product_id=product_id,
-                shopify_id=shopify_id,
-                shopify_store=store_obj,
-                title=variant_name if variant_name else title,
-                sku=sku,
-                barcode=barcode,
-                color=color,
-                size=size,
-                category=category,
-                img_field=variant_image or img_field,
-                price=price if price else None,
-                variant=True if len(variants) > 1 else False,
-                synced_with_shopify=True,
-            )
-
-            created_variants.append(shopify_id)
-
-        return HttpResponse(
-            {
-                "message": "Product variants processed successfully.",
-                "created": created_variants,
-                "skipped": skipped_variants,
-            },
-            status=201,
-        )
-
-    except Exception as e:
-        print("Error processing product webhook:", str(e))
-        return HttpResponse({"error": str(e)}, status=500)
-    
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def register_webhooks(request):
@@ -396,44 +302,17 @@ def register_webhooks(request):
     shopify_token = None
     if shopify_domain:
         shopify_token = request.headers['Authorization'].split(' ')[1]
-    client = ShopifyFactoryFunction(
-        domain=shopify_domain,
-        token=shopify_token,
-        url=f"https://{shopify_domain}/admin/api/{settings.SHOPIFY_API_VERSION}/graphql.json",
-    )
-
-    # Your webhook endpoint URL
-    #webhook_url = f"{settings.APP_URL}/api/webhook/product/create/"
-    webhook_url = f"{settings.BACKEND}/products/product_webhook"
-    
-    variables = {
-        "topic": "PRODUCTS_CREATE",
-        "webhookSubscription": {
-            "callbackUrl": webhook_url,
-            "format": "JSON"
-        }
+    utils = helpers.Utils()
+    params = {
+        "shopify_token": shopify_token,
+        "shopify_domain": shopify_domain,
+        "topic":"PRODUCTS_CREATE",
+        "url":f"https://{settings.BACKEND}/products/product_webhook"
     }
-
-    try:
-        response = client.run_query(variables=variables,query=CREATE_WEBHOOK)
-        
-        if response.status_code != 200:
-            print(f"Failed to create webhook: {response.text}")
-            return Response({"message": "Webhook not registered!"}, status=status.HTTP_400_BAD_REQUEST)
-            
-        data = response.json()
-        print(data)
-        user_errors = data.get('data', {}).get('webhookSubscriptionCreate', {}).get('userErrors', [])
-        
-        if user_errors:
-            print(f"Webhook creation errors: {user_errors}")
-            return Response({"message": "Webhook not registered!"}, status=status.HTTP_400_BAD_REQUEST)
-            
-        return Response({"message": "Webhook registered successfully!"}, status=status.HTTP_201_CREATED)
     
-    except Exception as e:
-        print(f"Exception creating webhook: {str(e)}")
-        return Response({"message": "Webhook not registered!"}, status=status.HTTP_400_BAD_REQUEST)
+    register_webhooks = utils.webhook_register(params=params)
+    print(register_webhooks)
+    return Response(register_webhooks["message"], status=register_webhooks["status"])
 
 
 def generate_unique_sku(title: str = "", attributes: Optional[Dict[str, Any]] = None) -> str:

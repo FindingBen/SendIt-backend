@@ -1,5 +1,6 @@
 from django.urls import path, include
 from . import views
+from . import webhooks
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
@@ -73,9 +74,10 @@ urlpatterns = [
     # Shopify orders
     path('shopify_orders/', views.get_shop_orders),
     # Webhooks
-    path('customer_data_webhook', views.customer_data_request_webhook),
-    path('customer_redact_data_webhook', views.customer_redact_request_webhook),
+    path('customer_data_webhook', webhooks.customer_data_request_webhook),
+    path('customer_create_data_webhook',webhooks.create_customer_webhook),
+    path('customer_redact_data_webhook', webhooks.customer_redact_request_webhook),
     path('customer_shop_redact_webhook',
-         views.customer_shop_redact_request_webhook),
+         webhooks.customer_shop_redact_request_webhook),
 
 ]
