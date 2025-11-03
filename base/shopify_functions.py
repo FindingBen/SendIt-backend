@@ -106,7 +106,7 @@ class ShopifyFactoryFunction:
             
             all_customers.extend(edges)
             total_fetched += len(edges)
-            all_customers.sort(key=lambda c: self.get_marketing_state(c) != "SUBSCRIBED")
+            #all_customers.sort(key=lambda c: self.get_marketing_state(c) != "SUBSCRIBED")
             if not page_info.get('hasNextPage') or not edges:
                 break  # No more pages
             #
