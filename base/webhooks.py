@@ -168,7 +168,7 @@ def create_customer_webhook(request):
         created_at = data.get("created_at")
         created_date = None
         print('sssaa')
-        user = CustomUser.objects.get(shopify_domain=shopify_domain)
+        user = CustomUser.objects.get(email=store_obj.email)
         if created_at:
             try:
                 created_date = datetime.fromisoformat(created_at.replace("Z", "+00:00")).date()
