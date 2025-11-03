@@ -930,7 +930,7 @@ def bulk_create_contacts(request):
                         "custom_id": node.get("id"),
                         "firstName": node.get("firstName",None),
                         "lastName": node.get("lastName",None),
-                        "email": node.get("email"),
+                        "email": node.get("email",None),
                         "phone": node.get("phone",None),
                         "sms_opt_in": node.get('defaultPhoneNumber',{}).get('marketingState','None'),
                         "created_at": node.get("createdAt", None)[:10] if node.get("createdAt") else None,
