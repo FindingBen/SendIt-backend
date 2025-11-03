@@ -921,7 +921,7 @@ def bulk_create_contacts(request):
                     id=request.data['list_id'])
                 contact_list.shopify_list = True
                 contact_list.save()
-                print('OKKKK')
+                print('OKKKK',customers)
                 for customer in customers:
                     node = customer.get('node', {})
                     if not node.get("phone") and not node.get("email"):
