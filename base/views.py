@@ -924,13 +924,13 @@ def bulk_create_contacts(request):
                 print('OKKKK',customers)
                 for customer in customers:
                     node = customer.get('node', {})
-                    if not node.get("phone") and not node.get("email"):
+                    if not node.get("phone"):
                         continue
                     contact_data = {
                         "custom_id": node.get("id"),
                         "firstName": node.get("firstName",None),
                         "lastName": node.get("lastName",None),
-                        "email": node.get("email",None),
+                        #"email": node.get("email",None),
                         "phone": node.get("phone",None),
                         "sms_opt_in": node.get('defaultPhoneNumber',{}).get('marketingState','None'),
                         "created_at": node.get("createdAt", None)[:10] if node.get("createdAt") else None,

@@ -8,7 +8,6 @@ query getCustomers($first: Int, $after: String, $query: String) {
         id
         firstName
         lastName
-        email
         phone
         createdAt
         defaultPhoneNumber{
