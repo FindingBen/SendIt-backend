@@ -95,6 +95,7 @@ class ShopifyFactoryFunction:
                 raise Exception(f"Shopify API error: {response.text}")
 
             data = response.json()
+            print(data)
             # Extract safely
             try:
                 edges = data['data']['customers']['edges']
@@ -105,9 +106,7 @@ class ShopifyFactoryFunction:
             
             all_customers.extend(edges)
             total_fetched += len(edges)
-            all_customers.sort(
-                key=lambda c: c.get("node", {}).get("defaultPhoneNumber", {}).get("marketingState", "NONE") != "SUBSCRIBED"
-            )
+            all_customers.sort(key=lambda c: self.get_marketing_state(c) != "SUBSCRIBED")
             if not page_info.get('hasNextPage') or not edges:
                 break  # No more pages
             #
@@ -117,6 +116,14 @@ class ShopifyFactoryFunction:
 
         return all_customers
 
+    def get_marketing_state(self,customer):
+        """Safely extract the marketingState value."""
+        try:
+            node = customer.get("node") or {}
+            default_phone = node.get("defaultPhoneNumber") or {}
+            return default_phone.get("marketingState", "NONE")
+        except Exception:
+            return "NONE"
 
     def create_customers(self, source='standard'):
         headers = {
