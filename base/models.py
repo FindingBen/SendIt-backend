@@ -48,6 +48,7 @@ class CustomUser(User):
     scheduled_cancel = models.CharField(null=True, blank=True)
     downgraded = models.BooleanField(default=False)
     shopify_connect = models.BooleanField(default=False)
+    shopify_product_import = models.BooleanField(default=False)
 
     def serialize_package_plan(self):
         # Implement custom serialization logic here

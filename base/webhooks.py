@@ -138,7 +138,6 @@ def customer_data_request_webhook(request):
         return HttpResponse(status=200)
     return HttpResponse({"error": "Missing shopify signature!"}, status=500)
 
-
 @require_http_methods(['POST'])
 @csrf_exempt
 def create_customer_webhook(request):
@@ -167,7 +166,7 @@ def create_customer_webhook(request):
         sms_opt_in = "SUBSCRIBED" if phone else "NOT_SUBSCRIBED"
         created_at = data.get("created_at")
         created_date = None
-        print('sssaa')
+  
         user = CustomUser.objects.get(email=store_obj.email)
         if created_at:
             try:

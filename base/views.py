@@ -101,6 +101,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             token['scheduled_billing'] = str(
                 custom_user.scheduled_subscription) if custom_user.scheduled_subscription else "No subscription"
             token['user_type'] = custom_user.user_type
+            token['product_import'] = custom_user.shopify_product_import
             token['archived_state'] = custom_user.archived_state
             token['package_plan'] = serialized_data
             token['custom_email'] = custom_user.custom_email
@@ -124,7 +125,7 @@ class ShopifyAuthentication(BaseAuthentication):
         # Get the Authorization header
         authorization_header = request.headers.get('Authorization')
         if not authorization_header or not authorization_header.startswith('Shopify '):
-            return None  # No Shopify token, skip this authentication class
+            return None  #  No Shopify token, skip this authentication class
 
         # Extract the Shopify token
         shopify_token = authorization_header.split(' ')[1]
@@ -235,8 +236,8 @@ class CallbackAuthView(APIView):
                     if result.get("status") != 201:
                         send_error_webhook_register_email(
                             email=shop_data.get("email"),
-                            token_id=shop,
-                            user_id=request.user.id
+                            shop=shop,
+                            topic=urls['topic']
                         )
             else:
                 # Update the access token if the store already exists

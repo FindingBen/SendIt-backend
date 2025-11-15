@@ -11,7 +11,7 @@ from .models import Product,ShopifyWebhookLog
 from decimal import Decimal
 from typing import Optional, Dict, Any
 from django.db import transaction
-from base.models import ShopifyStore
+from base.models import ShopifyStore, CustomUser
 from base.utils import helpers
 from base.shopify_functions import ShopifyFactoryFunction
 from base.queries import GET_ALL_PRODUCTS,UPDATE_PRODUCT_VARIANTS_BULK,CREATE_WEBHOOK
@@ -183,9 +183,9 @@ def import_bulk_products(request):
         resp = shopify_factory.get_products({"first": 50, "query": None})
         if resp.status_code != 200:
             return Response({"error": "Failed to fetch products from Shopify", "details": resp.text}, status=502)
-        print(resp)
+        
         product_data = resp.json()
-        print(product_data)
+       
         edges = product_data.get("data", {}).get("products", {}).get("edges", [])
         if not edges:
             return Response({"message": "No products found"}, status=200)
@@ -248,7 +248,6 @@ def import_bulk_products(request):
 
                     variant_sku = v_node.get("sku") or None
                     variant_barcode = v_node.get("barcode") or None
-                    
 
                     v_obj, v_created = Product.objects.update_or_create(
                         shopify_id=variant_shopify_id,
@@ -271,8 +270,12 @@ def import_bulk_products(request):
                         created += 1
                     else:
                         updated += 1
+            custom_user = CustomUser.objects.get(custom_email=shopify_store_obj.email)
+            custom_user.shopify_product_import = True
+            custom_user.save()
 
-        return Response({"message": "Products imported successfully.", "created": created, "updated": updated}, status=200)
+
+        return Response({"message": "Products imported successfully.", "created": created, "updated": updated}, status=201)
 
     except Exception as e:
         print("Error in import_bulk_products:", str(e))
