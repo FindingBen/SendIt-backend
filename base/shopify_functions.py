@@ -14,7 +14,8 @@ from .queries import (
     DELETE_CUSTOMER_QUERY,
     UPDATE_CUSTOMER_QUERY,
     GET_SHOP_ORDERS,
-    GET_SHOP_INFO
+    GET_SHOP_INFO,
+    GET_SHOP_INFO_2
 )
 
 
@@ -304,6 +305,9 @@ class ShopifyFactoryFunction:
         )
         # Return the response from Shopify's API
         return response
+
+    def get_business_info(self):
+        return self.run_query(GET_SHOP_INFO_2)
 
     def get_product(self, variable):
         return self.run_query(GET_PRODUCT, variable)

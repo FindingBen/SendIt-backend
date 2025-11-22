@@ -167,6 +167,34 @@ class ProductView(ShopifyAuthMixin, APIView):
     
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def test_shopify_connection(request):
+    """Test Shopify connection by fetching basic shop info."""
+    try:
+        shopify_domain = request.headers.get('shopify-domain', None)
+        if shopify_domain is None:
+            return Response({"error": "Domain required from shopify!"}, status=400)
+
+        shopify_token = request.headers['Authorization'].split(' ')[1]
+        url = f"https://{shopify_domain}/admin/api/{settings.SHOPIFY_API_VERSION}/graphql.json"
+        shopify_factory = ShopifyFactoryFunction(
+            shopify_domain, shopify_token, url, request=request
+        )
+
+        resp = shopify_factory.get_business_info()
+        if resp.status_code != 200:
+            return Response({"error": "Failed to fetch shop info from Shopify", "details": resp.text}, status=502)
+        
+        shop_data = resp.json()
+        print(shop_data)
+        shop_info = shop_data.get("data", {}).get("shop", {})
+        return Response({"shop_info": shop_info}, status=200)
+
+    except Exception as e:
+        print("Error in test_shopify_connection:", str(e))
+        return Response({"error": str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def import_bulk_products(request):
     """Import products from Shopify in bulk (creates parent product + each variant as its own Product row)."""
     try:
@@ -189,7 +217,7 @@ def import_bulk_products(request):
         edges = product_data.get("data", {}).get("products", {}).get("edges", [])
         if not edges:
             return Response({"message": "No products found"}, status=200)
-        print(product_data)
+
         try:
             shopify_store_obj = ShopifyStore.objects.get(shop_domain=shopify_domain)
         except ShopifyStore.DoesNotExist:

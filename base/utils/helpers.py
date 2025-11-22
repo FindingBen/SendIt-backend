@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from base.models import ShopifyStore
+from products.models import RulesPattern
 from base.shopify_functions import ShopifyFactoryFunction
 from base.queries import CREATE_WEBHOOK
 from backend import settings
@@ -370,6 +371,22 @@ class Utils:
             "was_downgraded": was_downgraded,
             "message": message
         }
+
+    def create_ruleset(self, analysis):
+
+        rules = analysis["recommended_seo_ruleset"]
+
+        business_ruleset = RulesPattern.objects.create(
+            product_name_rule=rules["product_name_rule"],
+            product_description_rule=rules["product_description_rule"],
+            product_image_rule=rules["product_image_rule"],
+            product_variant_rule=rules["product_variant_rule"],
+            product_tag_rule=rules["product_tag_rule"],
+            product_alt_image_rule=rules["product_alt_image_rule"],
+        )
+
+        return business_ruleset
+
 
     def webhook_register(self,params):
         obj_response = {}

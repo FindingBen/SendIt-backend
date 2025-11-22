@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "corsheaders",
     'django_rest_passwordreset',
     "django_celery_beat",
+    'django_extensions',
     'djoser',
     'storages',
     'base',
@@ -70,6 +71,15 @@ else:
     BACKEND = "https://a9aafbd588e9.ngrok-free.app"
 
 CORS_ALLOWED_ORIGINS = os.environ.get('ORIGINS', '').split(',')
+
+GRAPH_MODELS = {
+  'all_applications': True,
+  'group_models': True,
+}
+
+GRAPH_MODELS = {
+  'app_labels': ["products", "base", "sms", "payments", "notification", "auth"],
+}
 
 CORS_ALLOW_CREDENTIALS = True
 

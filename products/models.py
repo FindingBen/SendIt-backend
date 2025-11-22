@@ -1,6 +1,14 @@
 from django.db import models
 
-# Create your models here.
+
+class RulesPattern(models.Model):
+    """Rule pattern for product filling information"""
+    product_name_rule = models.CharField(max_length=255, blank=True, null=True)
+    product_description_rule = models.CharField(max_length=255, blank=True, null=True)
+    product_image_rule = models.CharField(max_length=255, blank=True, null=True)
+    product_variant_rule = models.CharField(max_length=255, blank=True, null=True)
+    product_tag_rule = models.CharField(max_length=255, null=True, blank=True)
+    product_alt_image_rule = models.CharField(max_length=255, null=True, blank=True)
 
 class Product(models.Model):
     product_id=models.CharField(max_length=255, unique=False)
@@ -20,6 +28,14 @@ class Product(models.Model):
     def __str__(self):
         return self.title
     
+
+class ProductScore(models.Model):
+    product_id = models.ForeignKey(Product, on_delete=models.CASCADE)
+    seo_score = models.DecimalField(default=0.0,decimal_places=2,max_digits=5)
+    completeness = models.DecimalField(default=0.0,decimal_places=2,max_digits=5)
+
+
+
 class ShopifyWebhookLog(models.Model):
     shopify_store = models.ForeignKey('base.ShopifyStore', on_delete=models.CASCADE)
     webhook_topic = models.CharField(max_length=255)

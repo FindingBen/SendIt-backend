@@ -9,4 +9,5 @@ urlpatterns = [
     # product webhooks
     path('product_webhook', webhooks.create_product_webhook),
     path('shopify_webhooks/', views.register_webhooks),
+    path('test_shop/', views.test_shopify_connection),
 ]

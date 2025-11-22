@@ -195,7 +195,6 @@ query getProductById($id: ID!) {
 }
 """
 
-# ...existing code...
 
 UPDATE_PRODUCT_VARIANTS_BULK = """
 mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!,$allowPartialUpdates: Boolean) {
@@ -309,6 +308,46 @@ query {
   }
 }
 """
+
+# ...existing code...
+GET_SHOP_INFO_2 = """
+query {
+  shop {
+    id
+    name
+    email
+    myshopifyDomain
+    description
+    primaryDomain {
+      url
+      host
+    }
+    metafields(namespace: "global", first: 10) {
+      edges {
+        node {
+          id
+          namespace
+          key
+          value
+          type
+        }
+      }
+    }
+  }
+
+  # Collections act as "categories" for many stores; adjust first if you need more
+  collections(first: 50) {
+    edges {
+      node {
+        id
+        title
+        handle
+      }
+    }
+  }
+}
+"""
+# ...existing code...
 
 
 GET_SHOP_ORDERS = """

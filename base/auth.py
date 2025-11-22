@@ -1,9 +1,20 @@
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from .models import CustomUser, ShopifyStore
+import os
+from openai import OpenAI
 import requests
-from .queries import GET_SHOPIFY_DATA
+from .queries import GET_SHOPIFY_DATA, GET_SHOP_INFO_2
 
+
+class OpenAiAuthInit:
+    def clientAuth(self):
+        client = OpenAI(
+            # This is the default and can be omitted
+            api_key=os.environ.get("OPENAI_API_KEY"),
+        )
+        return client
+        
 
 class ShopifyAuthentication(BaseAuthentication):
     def authenticate(self, request):
@@ -45,6 +56,20 @@ def get_shop_info(shop, access_token):
 
     response = requests.post(url, headers=headers, json={
                              "query": GET_SHOPIFY_DATA})
+    data = response.json()
+
+    return data.get('data').get('shop')
+
+def get_business_info(shop, access_token):
+
+    url = f"https://{shop}/admin/api/2025-01/graphql.json"
+    headers = {
+        "X-Shopify-Access-Token": access_token,
+        "Content-Type": "application/json",
+    }
+
+    response = requests.post(url, headers=headers, json={
+                             "query": GET_SHOP_INFO_2})
     data = response.json()
 
     return data.get('data').get('shop')

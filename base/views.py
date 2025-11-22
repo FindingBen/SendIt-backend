@@ -10,6 +10,7 @@ from rest_framework.permissions import IsAuthenticated
 from .serializers import MessageSerializer, RegisterSerializer, CustomUserSerializer, ContactListSerializer, ContactSerializer, ElementSerializer, PackageSerializer, SurveySerializer, QRSerializer
 from .models import Message, ContactList, Contact, Element, PackagePlan, CustomUser, EmailConfirmationToken, SurveyResponse, AnalyticsData, QRCode, ShopifyStore
 from rest_framework import generics
+from .analyzers import Prompting
 from sms.models import Sms, CampaignStats
 from io import BytesIO
 from django.shortcuts import redirect
@@ -43,7 +44,7 @@ from reportlab.pdfgen import canvas
 from .utils import helpers
 from .permissions import HasPackageLimit
 import stripe
-from .auth import get_shop_info
+from .auth import get_shop_info, get_business_info, OpenAiAuthInit
 from .queries import (
     GET_CUSTOMERS_QUERY,
     GET_TOTAL_CUSTOMERS_NR,
@@ -55,6 +56,7 @@ from .queries import (
     UPDATE_CUSTOMER_QUERY,
     GET_SHOP_ORDERS,
     GET_SHOP_INFO,
+    GET_SHOP_INFO_2,
     CREATE_WEBHOOK
 )
 from .shopify_functions import ShopifyFactoryFunction
@@ -211,38 +213,43 @@ class CallbackAuthView(APIView):
             request.session["shopify_access_token"] = access_token
 
             shop_data = get_shop_info(shop, access_token)
+            
+            with transaction.atomic():
+                business_info = get_business_info(shop, access_token)
+                client = OpenAiAuthInit().clientAuth()
+                prompt_response = Prompting.init_process(client,business_info)
+                shopify_store = ShopifyStore.objects.filter(
+                    shop_domain=shop).first()
+                business_ruleset = utils.create_ruleset(prompt_response)
+                logger.info("----Business rule created----")
+                if not shopify_store:
+                    shopify_store = ShopifyStore.objects.create(
+                        email=shop_data.get('email'),
+                        shop_domain=shop,
+                        access_token=access_token,
+                        first_name=shop_data.get('shopOwnerName')
+                    )
+                    webhook_urls = [{"url":"products/product_webhook","topic":"PRODUCTS_CREATE"},
+                                    {"url":"api/customer_create_data_webhook","topic":"CUSTOMERS_CREATE"}]
+                    for urls in webhook_urls:
 
-            shopify_store = ShopifyStore.objects.filter(
-                shop_domain=shop).first()
-
-            if not shopify_store:
-                shopify_store = ShopifyStore.objects.create(
-                    email=shop_data.get('email'),
-                    shop_domain=shop,
-                    access_token=access_token,
-                    first_name=shop_data.get('shopOwnerName')
-                )
-                webhook_urls = [{"url":"products/product_webhook","topic":"PRODUCTS_CREATE"},
-                                {"url":"api/customer_create_data_webhook","topic":"CUSTOMERS_CREATE"}]
-                for urls in webhook_urls:
-
-                    params = {
-                        "shopify_token": access_token,
-                        "shopify_domain": shop,
-                        "topic":urls['topic'],
-                        "url":f"{settings.BACKEND}/{urls['url']}"
-                    }
-                    result = utils.webhook_register(params=params)
-                    if result.get("status") != 201:
-                        send_error_webhook_register_email(
-                            email=shop_data.get("email"),
-                            shop=shop,
-                            topic=urls['topic']
-                        )
-            else:
-                # Update the access token if the store already exists
-                shopify_store.access_token = access_token
-                shopify_store.save()
+                        params = {
+                            "shopify_token": access_token,
+                            "shopify_domain": shop,
+                            "topic":urls['topic'],
+                            "url":f"{settings.BACKEND}/{urls['url']}"
+                        }
+                        result = utils.webhook_register(params=params)
+                        if result.get("status") != 201:
+                            send_error_webhook_register_email(
+                                email=shop_data.get("email"),
+                                shop=shop,
+                                topic=urls['topic']
+                            )
+                else:
+                    # Update the access token if the store already exists
+                    shopify_store.access_token = access_token
+                    shopify_store.save()
 
             return redirect(f"https://spplane.app/register?shop={shop}")
         else:
