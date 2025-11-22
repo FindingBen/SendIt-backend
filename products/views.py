@@ -7,12 +7,14 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
-from .models import Product,ShopifyWebhookLog
+from .models import Product,ShopifyWebhookLog, RulesPattern
 from decimal import Decimal
 from typing import Optional, Dict, Any
 from django.db import transaction
 from base.models import ShopifyStore, CustomUser
 from base.utils import helpers
+from base.analyzers import Prompting
+from base.auth import get_business_info, OpenAiAuthInit
 from base.shopify_functions import ShopifyFactoryFunction
 from base.queries import GET_ALL_PRODUCTS,UPDATE_PRODUCT_VARIANTS_BULK,CREATE_WEBHOOK
 from .serializers import ProductSerializer
@@ -165,6 +167,38 @@ class ProductView(ShopifyAuthMixin, APIView):
 
         return Response({"message": "Successfully generated!"}, status=201)
     
+class PromptAnalysis(ShopifyAuthMixin, APIView):
+
+    def get(self, request, format=None):
+        try:
+            shopify_store, shopify_token, url = self.resolve_shopify(request)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=400)
+        
+        try:
+            client = OpenAiAuthInit().clientAuth()
+            business_info = get_business_info(shopify_store, shopify_token)
+            prompt_response = Prompting.init_process(client,business_info)
+            
+            rules = prompt_response["recommended_seo_ruleset"]
+
+            business_ruleset = RulesPattern.objects.create(
+                product_name_rule=rules["product_name_rule"],
+                product_description_rule=rules["product_description_rule"],
+                product_image_rule=rules["product_image_rule"],
+                product_variant_rule=rules["product_variant_rule"],
+                product_tag_rule=rules["product_tag_rule"],
+                product_alt_image_rule=rules["product_alt_image_rule"],
+            )
+
+            return Response({"Successfully created business analysis rules"}, status=200)
+        except Exception as e:
+            return Response({"error": "Exception during analysis", "details": str(e)}, status=500)
+
+
+
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def test_shopify_connection(request):

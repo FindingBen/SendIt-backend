@@ -215,12 +215,11 @@ class CallbackAuthView(APIView):
             shop_data = get_shop_info(shop, access_token)
             
             with transaction.atomic():
-                business_info = get_business_info(shop, access_token)
-                client = OpenAiAuthInit().clientAuth()
-                prompt_response = Prompting.init_process(client,business_info)
+                
+                
                 shopify_store = ShopifyStore.objects.filter(
                     shop_domain=shop).first()
-                business_ruleset = utils.create_ruleset(prompt_response)
+                
                 logger.info("----Business rule created----")
                 if not shopify_store:
                     shopify_store = ShopifyStore.objects.create(
