@@ -19,7 +19,7 @@ class Prompting:
         - Target audience
         - Brand tone/voice
         - Professionalism level (1-10)
-        - Recommended SEO ruleset for product info:
+        - Recommended SEO ruleset for product info(make sure to keep reccomended_seo_ruleset always the same name as column):
             - product_name_rule
             - product_description_rule
             - product_image_rule

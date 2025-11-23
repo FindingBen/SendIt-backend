@@ -2,6 +2,7 @@ from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from .models import CustomUser, ShopifyStore
 import os
+from backend import settings
 from openai import OpenAI
 import requests
 from .queries import GET_SHOPIFY_DATA, GET_SHOP_INFO_2
@@ -61,15 +62,14 @@ def get_shop_info(shop, access_token):
     return data.get('data').get('shop')
 
 def get_business_info(shop, access_token):
-
-    url = f"https://{shop}/admin/api/2025-01/graphql.json"
+    url = f"https://{shop.shop_domain}/admin/api/{settings.SHOPIFY_API_VERSION}/graphql.json"
     headers = {
         "X-Shopify-Access-Token": access_token,
         "Content-Type": "application/json",
     }
-
     response = requests.post(url, headers=headers, json={
                              "query": GET_SHOP_INFO_2})
     data = response.json()
+
 
     return data.get('data').get('shop')

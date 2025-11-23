@@ -30,7 +30,11 @@ class Product(models.Model):
     
 
 class ProductScore(models.Model):
-    product_id = models.ForeignKey(Product, on_delete=models.CASCADE)
+    product = models.OneToOneField(
+    Product,
+    on_delete=models.CASCADE,
+    related_name="score"
+    )
     seo_score = models.DecimalField(default=0.0,decimal_places=2,max_digits=5)
     completeness = models.DecimalField(default=0.0,decimal_places=2,max_digits=5)
 

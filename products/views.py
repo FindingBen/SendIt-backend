@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
-from .models import Product,ShopifyWebhookLog, RulesPattern
+from .models import Product,ShopifyWebhookLog, RulesPattern, ProductScore
 from decimal import Decimal
 from typing import Optional, Dict, Any
 from django.db import transaction
@@ -29,10 +29,13 @@ class ShopifyAuthMixin:
     """
     def resolve_shopify(self, request):
         shopify_domain = request.headers.get('shopify-domain', None)
+        print(shopify_domain)
         if not shopify_domain:
             raise ValueError("Domain required from shopify!")
         try:
+            print('HERE')
             shopify_store = ShopifyStore.objects.get(shop_domain=shopify_domain)
+            print('DDD')
         except ShopifyStore.DoesNotExist:
             raise ValueError("Shopify store not found in local DB")
         auth = request.headers.get('Authorization', '')
@@ -49,9 +52,10 @@ class ProductView(ShopifyAuthMixin, APIView):
         print(request)
         try:
             shopify_store, shopify_token, url = self.resolve_shopify(request)
+            print('sss')
         except ValueError as e:
             return Response({"error": str(e)}, status=400)
-        products = Product.objects.filter(shopify_store=shopify_store).all()
+        products = Product.objects.filter(shopify_store=shopify_store).select_related("score")
         serializer = ProductSerializer(products, many=True)
         return Response(serializer.data)
     
@@ -77,7 +81,7 @@ class ProductView(ShopifyAuthMixin, APIView):
         variants_qs = Product.objects.filter(shopify_store=shopify_store, shopify_id__in=products_ids)
 
         variants = []
-        print('VARIANTS', variants_qs)
+
         try:
             from collections import defaultdict
             with transaction.atomic():
@@ -171,15 +175,19 @@ class PromptAnalysis(ShopifyAuthMixin, APIView):
 
     def get(self, request, format=None):
         try:
+
             shopify_store, shopify_token, url = self.resolve_shopify(request)
+
         except ValueError as e:
             return Response({"error": str(e)}, status=400)
         
         try:
             client = OpenAiAuthInit().clientAuth()
-            business_info = get_business_info(shopify_store, shopify_token)
-            prompt_response = Prompting.init_process(client,business_info)
             
+            business_info = get_business_info(shopify_store, shopify_token)
+            
+            prompt_response = Prompting.init_process(client,business_info)
+            print(prompt_response)
             rules = prompt_response["recommended_seo_ruleset"]
 
             business_ruleset = RulesPattern.objects.create(
@@ -194,8 +202,6 @@ class PromptAnalysis(ShopifyAuthMixin, APIView):
             return Response({"Successfully created business analysis rules"}, status=200)
         except Exception as e:
             return Response({"error": "Exception during analysis", "details": str(e)}, status=500)
-
-
 
 
 
@@ -270,7 +276,6 @@ def import_bulk_products(request):
                 if not gid:
                     continue
 
-
                 title = node.get("title") or ""
 
                 # variants and price
@@ -279,7 +284,7 @@ def import_bulk_products(request):
                 # create/update each variant as its own Product row
                 for v_edge in variants_edges:
                     v_node = v_edge.get("node", {})
-                    print("Variant Node:", v_node)
+
                     v_gid = v_node.get("id")
                     v_image_obj = v_node.get("image")
                     v_color = v_node.get("color")
@@ -289,7 +294,6 @@ def import_bulk_products(request):
                         variant_img_src = v_image_obj.get("src")
                     # fallback to parent image when variant image is not present
                     variant_img = variant_img_src or parent_img_src
-                    print("Variant image used:", v_node)
                     if not v_gid:
                         continue
                     try:
@@ -302,7 +306,6 @@ def import_bulk_products(request):
                     full_title = title
                     if variant_title and variant_title.lower() != "default title":
                         full_title = f"{title} - {variant_title}"
-
                     try:
                         variant_price = Decimal(v_node.get("price")) if v_node.get("price") is not None else None
                     except Exception:
@@ -329,13 +332,13 @@ def import_bulk_products(request):
                         },
                     )
                     if v_created:
+                        ProductScore.objects.create(product=v_obj)
                         created += 1
                     else:
                         updated += 1
             custom_user = CustomUser.objects.get(custom_email=shopify_store_obj.email)
             custom_user.shopify_product_import = True
             custom_user.save()
-
 
         return Response({"message": "Products imported successfully.", "created": created, "updated": updated}, status=201)
 
