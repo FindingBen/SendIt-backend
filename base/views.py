@@ -99,6 +99,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             token['shopify_id'] = shop_id if shopify_obj else None
             token['shopify_domain'] = shopify_obj.shop_domain if shopify_obj else None
             token['shopify_connect'] = custom_user.shopify_connect if custom_user else None
+            token['business_analysis'] = custom_user.shopify_business_ruleset if custom_user else None
             token['sms_count'] = custom_user.sms_count
             token['scheduled_billing'] = str(
                 custom_user.scheduled_subscription) if custom_user.scheduled_subscription else "No subscription"

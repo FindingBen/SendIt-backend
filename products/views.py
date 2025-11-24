@@ -191,7 +191,8 @@ class PromptAnalysis(ShopifyAuthMixin, APIView):
 
             rules = prompt_response["recommended_seo_ruleset"]
 
-            business_ruleset = RulesPattern.objects.create(
+            with transaction.atomic():
+                business_ruleset = RulesPattern.objects.create(
                 store=shopify_store,
                 product_name_rule=rules["product_name_rule"],
                 product_description_rule=rules["product_description_rule"],
@@ -199,7 +200,12 @@ class PromptAnalysis(ShopifyAuthMixin, APIView):
                 product_variant_rule=rules["product_variant_rule"],
                 product_tag_rule=rules["product_tag_rule"],
                 product_alt_image_rule=rules["product_alt_image_rule"],
-            )
+                )
+
+                custom_user = CustomUser.objects.get(custom_email=shopify_store.email)
+                custom_user.shopify_business_ruleset = True
+                custom_user.save()
+
 
             return Response({"Successfully created business analysis rules"}, status=200)
         except Exception as e:
@@ -279,7 +285,7 @@ def import_bulk_products(request):
                 if not gid:
                     continue
                 title = node.get("title") or ""
-                print("parent images",parent_images)
+
                 # variants and price
                 variants_edges = node.get("variants", {}).get("edges", [])
                 variant_images = []
@@ -311,7 +317,7 @@ def import_bulk_products(request):
                         variant_price = Decimal(v_node.get("price")) if v_node.get("price") is not None else None
                     except Exception:
                         variant_price = None
-                    print('Variant images',v_image_obj)
+
                     variant_sku = v_node.get("sku") or None
                     variant_barcode = v_node.get("barcode") or None
 
@@ -335,7 +341,7 @@ def import_bulk_products(request):
                     if v_created:
                         product_score = ProductScore.objects.create(product=v_obj)
                         rules = RulesPattern.objects.get(store=shopify_store_obj)
-                        print('HEY',rules)
+                        
                         variables = {
                             "product": v_obj,
                             "rules": rules,
@@ -344,7 +350,7 @@ def import_bulk_products(request):
                             "variant_images": variant_images
                         }
                         product_analysis = ProductAnalyzer.analyze_product(variables)
-                        print('ANALYSIS',v_obj)
+
                         if product_analysis:
                             product_score.seo_score = Decimal(product_analysis["seo_score"])
                             product_score.completeness = Decimal(product_analysis["completeness"])
@@ -352,9 +358,9 @@ def import_bulk_products(request):
                         created += 1
                     else:
                         updated += 1
-            # custom_user = CustomUser.objects.get(custom_email=shopify_store_obj.email)
-            # custom_user.shopify_product_import = True
-            # custom_user.save()
+            custom_user = CustomUser.objects.get(custom_email=shopify_store_obj.email)
+            custom_user.shopify_product_import = True
+            custom_user.save()
 
         return Response({"message": "Products imported successfully.", "created": created, "updated": updated}, status=201)
 
