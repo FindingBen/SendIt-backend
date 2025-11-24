@@ -3,12 +3,22 @@ from django.db import models
 
 class RulesPattern(models.Model):
     """Rule pattern for product filling information"""
+    store = models.ForeignKey('base.ShopifyStore', on_delete=models.CASCADE)
     product_name_rule = models.CharField(max_length=255, blank=True, null=True)
     product_description_rule = models.CharField(max_length=255, blank=True, null=True)
     product_image_rule = models.CharField(max_length=255, blank=True, null=True)
     product_variant_rule = models.CharField(max_length=255, blank=True, null=True)
     product_tag_rule = models.CharField(max_length=255, null=True, blank=True)
     product_alt_image_rule = models.CharField(max_length=255, null=True, blank=True)
+    
+    min_title_length = models.IntegerField(default=20)
+    max_title_length = models.IntegerField(default=70)
+
+    min_description_length = models.IntegerField(default=120)
+    max_description_length = models.IntegerField(default=300)
+
+    min_images = models.IntegerField(default=1)
+    requires_alt_text = models.BooleanField(default=True)
 
 class Product(models.Model):
     product_id=models.CharField(max_length=255, unique=False)

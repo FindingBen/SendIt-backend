@@ -248,24 +248,6 @@ class ShopifyFactoryFunction:
 
         return response
 
-    # def get_products(self):
-    #     headers = {
-    #         "X-Shopify-Access-Token": self._token,
-    #         "Content-Type": "application/json",
-    #     }
-
-    #     variables = {
-    #         "first": 10,
-    #     }
-
-    #     response = requests.post(
-    #         self._url,
-    #         headers=headers,
-    #         json={"query": self._query, "variables": variables},
-    #     )
-
-    #     return response
-
     def get_single_product(self):
         url = f"https://{self._domain}/admin/api/2025-01/graphql.json"
         headers = {
@@ -309,8 +291,10 @@ class ShopifyFactoryFunction:
     def get_business_info(self):
         return self.run_query(GET_SHOP_INFO_2)
 
-    def get_product(self, variable):
-        return self.run_query(GET_PRODUCT, variable)
+    def get_product(self, product):
+        variables = {
+            "id": product.id}
+        return self.run_query(GET_PRODUCT, variables)
 
     def get_products(self, variable):
         return self.run_query(GET_ALL_PRODUCTS, variable)

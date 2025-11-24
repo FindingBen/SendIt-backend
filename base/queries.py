@@ -184,10 +184,11 @@ query getProductById($id: ID!) {
         }
       }
     }
-    images(first: 5) {
+    images(first: 10) {
       edges {
         node {
           src
+          altText
         }
       }
     }

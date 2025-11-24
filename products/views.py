@@ -18,6 +18,7 @@ from base.auth import get_business_info, OpenAiAuthInit
 from base.shopify_functions import ShopifyFactoryFunction
 from base.queries import GET_ALL_PRODUCTS,UPDATE_PRODUCT_VARIANTS_BULK,CREATE_WEBHOOK
 from .serializers import ProductSerializer
+from .analyzers import ProductAnalyzer
 import json
 
 
@@ -187,10 +188,11 @@ class PromptAnalysis(ShopifyAuthMixin, APIView):
             business_info = get_business_info(shopify_store, shopify_token)
             
             prompt_response = Prompting.init_process(client,business_info)
-            print(prompt_response)
+
             rules = prompt_response["recommended_seo_ruleset"]
 
             business_ruleset = RulesPattern.objects.create(
+                store=shopify_store,
                 product_name_rule=rules["product_name_rule"],
                 product_description_rule=rules["product_description_rule"],
                 product_image_rule=rules["product_image_rule"],
@@ -217,10 +219,10 @@ def test_shopify_connection(request):
         shopify_token = request.headers['Authorization'].split(' ')[1]
         url = f"https://{shopify_domain}/admin/api/{settings.SHOPIFY_API_VERSION}/graphql.json"
         shopify_factory = ShopifyFactoryFunction(
-            shopify_domain, shopify_token, url, request=request
+            shopify_domain, shopify_token, url, request=request, query=GET_ALL_PRODUCTS
         )
 
-        resp = shopify_factory.get_business_info()
+        resp = shopify_factory.get_product()
         if resp.status_code != 200:
             return Response({"error": "Failed to fetch shop info from Shopify", "details": resp.text}, status=502)
         
@@ -245,7 +247,7 @@ def import_bulk_products(request):
         shopify_token = request.headers['Authorization'].split(' ')[1]
         url = f"https://{shopify_domain}/admin/api/{settings.SHOPIFY_API_VERSION}/graphql.json"
         shopify_factory = ShopifyFactoryFunction(
-            shopify_domain, shopify_token, url, request=request, query=GET_ALL_PRODUCTS
+            shopify_domain, shopify_token, url, request=request
         )
 
         resp = shopify_factory.get_products({"first": 50, "query": None})
@@ -269,22 +271,21 @@ def import_bulk_products(request):
             for edge in edges:
                 node = edge.get("node", {})
                 gid = node.get("id")
+                
                 parent_images = node.get("images", {}).get("edges", [])
                 parent_img_src = None
                 if parent_images:
                     parent_img_src = parent_images[0].get("node", {}).get("src")
                 if not gid:
                     continue
-
                 title = node.get("title") or ""
-
+                print("parent images",parent_images)
                 # variants and price
                 variants_edges = node.get("variants", {}).get("edges", [])
-                
+                variant_images = []
                 # create/update each variant as its own Product row
                 for v_edge in variants_edges:
                     v_node = v_edge.get("node", {})
-
                     v_gid = v_node.get("id")
                     v_image_obj = v_node.get("image")
                     v_color = v_node.get("color")
@@ -300,7 +301,7 @@ def import_bulk_products(request):
                         variant_shopify_id = v_gid
                     except Exception:
                         continue
-
+                    variant_images.append(v_image_obj)
                     variant_title = v_node.get("title") or ""
                     # If variant has a descriptive title other than "Default Title" append it
                     full_title = title
@@ -310,7 +311,7 @@ def import_bulk_products(request):
                         variant_price = Decimal(v_node.get("price")) if v_node.get("price") is not None else None
                     except Exception:
                         variant_price = None
-
+                    print('Variant images',v_image_obj)
                     variant_sku = v_node.get("sku") or None
                     variant_barcode = v_node.get("barcode") or None
 
@@ -332,13 +333,28 @@ def import_bulk_products(request):
                         },
                     )
                     if v_created:
-                        ProductScore.objects.create(product=v_obj)
+                        product_score = ProductScore.objects.create(product=v_obj)
+                        rules = RulesPattern.objects.get(store=shopify_store_obj)
+                        print('HEY',rules)
+                        variables = {
+                            "product": v_obj,
+                            "rules": rules,
+                            "product_id": gid,
+                            "parent_images": parent_images,
+                            "variant_images": variant_images
+                        }
+                        product_analysis = ProductAnalyzer.analyze_product(variables)
+                        print('ANALYSIS',v_obj)
+                        if product_analysis:
+                            product_score.seo_score = Decimal(product_analysis["seo_score"])
+                            product_score.completeness = Decimal(product_analysis["completeness"])
+                            product_score.save()
                         created += 1
                     else:
                         updated += 1
-            custom_user = CustomUser.objects.get(custom_email=shopify_store_obj.email)
-            custom_user.shopify_product_import = True
-            custom_user.save()
+            # custom_user = CustomUser.objects.get(custom_email=shopify_store_obj.email)
+            # custom_user.shopify_product_import = True
+            # custom_user.save()
 
         return Response({"message": "Products imported successfully.", "created": created, "updated": updated}, status=201)
 
