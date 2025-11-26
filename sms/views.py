@@ -433,8 +433,6 @@ def get_outbound_pricing(request):
 
 def schedule_archive_task(sms_id, scheduled_time):
     try:
-        print("SSS", scheduled_time, type(scheduled_time))
-
         # Ensure scheduled_time is timezone-aware in Europe/Copenhagen
         copenhagen_tz = pytz.timezone('Europe/Copenhagen')
         if not is_aware(scheduled_time):

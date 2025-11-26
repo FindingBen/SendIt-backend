@@ -86,6 +86,34 @@ class CustomUser(User):
                 'list_limit': 0,
                 'recipients_limit': 0,
             }
+    
+    def get_recipients_limit(self):
+        """Get the recipient limit for this user's package plan."""
+        if self.package_plan:
+            if self.package_plan.plan_type == settings.TRIAL_PLAN:
+                return 150
+            elif self.package_plan.plan_type == settings.BASIC_PLAN:
+                return 1000
+            elif self.package_plan.plan_type == settings.SILVER_PLAN:
+                return 10000
+            elif self.package_plan.plan_type == settings.GOLD_PLAN:
+                return None  # Unlimited
+        return 0
+
+    def get_total_contacts_count(self):
+        """Count total contacts across all contact lists for this user."""
+        return Contact.objects.filter(users=self).count()
+
+    def can_add_contact(self):
+        """Check if user can add more contacts based on package limit."""
+        limit = self.get_recipients_limit()
+        if limit is None:  # Unlimited
+            return True, None
+        
+        current_count = self.get_total_contacts_count()
+        if current_count >= limit:
+            return False, f"Recipient limit of {limit} reached"
+        return True, None
 
 
 class ShopifyStore(models.Model):

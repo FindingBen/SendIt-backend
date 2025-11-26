@@ -146,7 +146,7 @@ def create_customer_webhook(request):
     shopify_domain = request.META.get('HTTP_X_SHOPIFY_SHOP_DOMAIN')
     shopify_topic = request.META.get('HTTP_X_SHOPIFY_TOPIC')
     created_at = request.META.get('HTTP_X_SHOPIFY_TRIGGERED_AT')
-    print(shopify_webhook_id)
+
     if ShopifyWebhookLog.objects.filter(webhook_id=shopify_webhook_id).exists():
         print("⚠️ Duplicate webhook ignored:", shopify_webhook_id)
         return HttpResponse(status=208)  # Acknowledge but skip
@@ -176,7 +176,15 @@ def create_customer_webhook(request):
         contact_list = ContactList.objects.filter(users=user, shopify_list=True).first()
         if not contact_list:
             contact_list = ContactList.objects.create(users=user, name="Shopify Contacts", shopify_list=True)
-        print('sss')
+        can_add, error_msg = user.can_add_contact()
+        print(can_add, error_msg)
+        if not can_add:
+            print(f"Contact limit reached: {error_msg}")
+            return HttpResponse(
+                json.dumps({"error": error_msg}),
+                content_type="application/json",
+                status=400
+            )
         contact, created = Contact.objects.get_or_create(
             custom_id=customer_id,
             defaults={
