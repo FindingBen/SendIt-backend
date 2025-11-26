@@ -62,7 +62,6 @@ class createSms(generics.GenericAPIView):
         query_params = {
             "api_key": settings.VONAGE_ID,
             "api_secret": settings.VONAGE_TOKEN,
-
         }
         pricing_info = price_util.get_price_per_segment(
             contact_obj, request.data['sms_text'], query_params)

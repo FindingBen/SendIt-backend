@@ -58,10 +58,10 @@ class CustomUser(User):
             recipients_limit = 20 # Default value
             if self.package_plan.plan_type == settings.TRIAL_PLAN:
                 list_limit = 2
-                recipients_limit = 50
+                recipients_limit = 150
             elif self.package_plan.plan_type == settings.BASIC_PLAN:
                 list_limit = 3
-                recipients_limit = 20
+                recipients_limit = 1000
             elif self.package_plan.plan_type == settings.SILVER_PLAN:
                 list_limit = 10
                 recipients_limit = 10000
