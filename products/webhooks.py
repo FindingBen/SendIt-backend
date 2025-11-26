@@ -3,7 +3,9 @@ from django.views.decorators.http import require_http_methods
 from backend import settings
 from django.http import HttpResponse
 from base.models import ShopifyStore
-from .models import ShopifyWebhookLog, Product
+from decimal import Decimal
+from .analyzers import ProductAnalyzer
+from .models import ShopifyWebhookLog, Product, ProductScore, RulesPattern
 import json
 
 
@@ -11,12 +13,12 @@ import json
 @csrf_exempt
 @require_http_methods(['POST'])
 def create_product_webhook(request):
-    print('Creating product webhook...',request)
+    print('Creating product webhook...')
     shopify_webhook_id = request.META.get('HTTP_X_SHOPIFY_WEBHOOK_ID')
     shopify_domain = request.META.get('HTTP_X_SHOPIFY_SHOP_DOMAIN')
     shopify_topic = request.META.get('HTTP_X_SHOPIFY_TOPIC')
     created_at = request.META.get('HTTP_X_SHOPIFY_TRIGGERED_AT')
-    print(shopify_webhook_id)
+
     if ShopifyWebhookLog.objects.filter(webhook_id=shopify_webhook_id).exists():
         print("⚠️ Duplicate webhook ignored:", shopify_webhook_id)
         return HttpResponse(status=208)  # Acknowledge but skip
@@ -28,17 +30,17 @@ def create_product_webhook(request):
 
     try:
         data = json.loads(request.body)
-        print(data)
+
         product_id = data.get("admin_graphql_api_id")
         title = data.get("title", "Untitled Product")
         category = (
             data.get("category", {}).get("full_name")
             or data.get("product_type", "")
         )
-        img_field = data.get("image", {}).get("src")
+        img_field = (data.get("image") or {}).get("src")
 
         variants = data.get("variants", [])
-
+   
         if not variants:
             return HttpResponse({"message": "No variants found, nothing to create."}, status=200)
 
@@ -48,14 +50,16 @@ def create_product_webhook(request):
         image_map = {img.get("id"): img.get("src") for img in product_images if isinstance(img, dict)}
 
         for variant in variants:
+
             shopify_id = variant.get("admin_graphql_api_id")
             variant_name = variant.get("title", None)
-            image_id = variant.get("image_id")
-            sku = variant.get("sku")
-            barcode = variant.get("barcode")
-            price = variant.get("price")
+            image_id = variant.get("image_id",None)
+            sku = variant.get("sku",None)
+            barcode = variant.get("barcode",None)
+            price = variant.get("price",None)
             color = variant.get("option1",None)
             size = variant.get("option2",None)
+            #v_image = variant.get("image") or []
             
             variant_image = None
 
@@ -65,14 +69,15 @@ def create_product_webhook(request):
             else:
                 # Fallback: find via variant_ids list in images if image_id is missing
                 for img in product_images:
-                    variant_ids = img.get("variant_ids", [])
+                    variant_ids = img.get("variant_ids", []) or []
                     if variant.get("id") in variant_ids:
                         variant_image = img.get("src")
                         break
 
             variant_image = variant_image or (data.get("image") or {}).get("src")
 
-            Product.objects.create(
+            #variant_images = v_image
+            obj, created = Product.objects.get_or_create(
                 product_id=product_id,
                 shopify_id=shopify_id,
                 shopify_store=store_obj,
@@ -87,6 +92,25 @@ def create_product_webhook(request):
                 variant=True if len(variants) > 1 else False,
                 synced_with_shopify=True,
             )
+
+            if created:
+                product_score = ProductScore.objects.create(product=obj)
+                rules = RulesPattern.objects.get(store=store_obj)
+
+                variables = {
+                            "product": obj,
+                            "rules": rules,
+                            "product_id": product_id,
+                            "parent_images": product_images,
+                            "variant_images": []
+                        }
+
+                product_analysis = ProductAnalyzer.analyze_product(variables)
+
+                if product_analysis:
+                    product_score.seo_score = Decimal(product_analysis["seo_score"])
+                    product_score.completeness = Decimal(product_analysis["completeness"])
+                    product_score.save()
 
             created_variants.append(shopify_id)
 
