@@ -63,6 +63,7 @@ CORS_ALLOW_ALL_ORIGINS = False
 ENVIRONMENT = os.environ.get('DJANGO_ENV', 'development')
 BACKEND_URL = os.environ.get("BACKEND_URL", "")
 
+VONAGE_NR = os.environ.get('VONAGE_NUMBER', '')
 
 if ENVIRONMENT == "production":
     BACKEND = BACKEND_URL

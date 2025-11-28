@@ -87,7 +87,7 @@ def send_scheduled_sms(unique_tracking_id: None):
                         encoded_price = int(total_cost * 10000)
                         client_ref = f"{country_code}-{encoded_price:04}-{unique_tracking_id}"
                         sms_kwargs = {
-                            "from": '+13164166008',
+                            "from": settings.VONAGE_NR,
                             "to": phone_number,
                             "text": message_text,
                             "client-ref": client_ref  # includes price + country
@@ -217,7 +217,7 @@ def send_sms(unique_tracking_id: None, user: None):
                     encoded_price = int(total_cost * 10000)
                     client_ref = f"{country_code}-{encoded_price:04}-{unique_tracking_id}"
                     sms_kwargs = {
-                        "from": '+13164166008',
+                        "from": settings.VONAGE_NR,
                         "to": phone_number,
                         "text": message_text,
                         "client-ref": client_ref  # includes price + country
@@ -235,7 +235,7 @@ def send_sms(unique_tracking_id: None, user: None):
                             logger.info("Delivered/sent to %s", phone_number)
                     except Exception as e:
                         logger.exception("Malformed response for %s: %s", phone_number, e)
-                        
+
                 smsObj.sms_sends = len(contact_obj)
                 smsObj.is_sent = True
 
