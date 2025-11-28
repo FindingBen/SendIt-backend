@@ -224,7 +224,18 @@ def send_sms(unique_tracking_id: None, user: None):
                     }
 
                     responseData = sms.send_message(sms_kwargs)
-                logger.info("VONAGE RESPONSE", responseData)
+                    logger.info("Vonage response for %s: %s", phone_number, responseData)
+                    try:
+                        msg = responseData["messages"][0]
+                        status = msg.get("status")
+                        if status != "0":
+                            err = msg.get("error-text", "Unknown")
+                            logger.warning("Failed to send to %s: %s", phone_number, err)
+                        else:
+                            logger.info("Delivered/sent to %s", phone_number)
+                    except Exception as e:
+                        logger.exception("Malformed response for %s: %s", phone_number, e)
+                        
                 smsObj.sms_sends = len(contact_obj)
                 smsObj.is_sent = True
 
