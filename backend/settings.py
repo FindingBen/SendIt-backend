@@ -68,7 +68,7 @@ VONAGE_NR = os.environ.get('VONAGE_NUMBER', '')
 if ENVIRONMENT == "production":
     BACKEND = BACKEND_URL
 else:
-    BACKEND = "https://a9aafbd588e9.ngrok-free.app"
+    BACKEND = "0c8bdea7fb21.ngrok-free.app"
 
 CORS_ALLOWED_ORIGINS = os.environ.get('ORIGINS', '').split(',')
 

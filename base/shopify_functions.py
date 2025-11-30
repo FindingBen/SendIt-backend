@@ -14,7 +14,8 @@ from .queries import (
     DELETE_CUSTOMER_QUERY,
     UPDATE_CUSTOMER_QUERY,
     GET_SHOP_ORDERS,
-    GET_SHOP_INFO,
+    UPDATE_IMAGE,
+    UPDATE_PRODUCT_WITH_SEO,
     GET_SHOP_INFO_2
 )
 
@@ -295,6 +296,29 @@ class ShopifyFactoryFunction:
         variables = {
             "id": product.id}
         return self.run_query(GET_PRODUCT, variables)
+    
+    def get_product_for_opt(self, product):
+        variables = {
+            "id": product.get('product_id')}
+        response = self.run_query(GET_PRODUCT, variables)
+        
+        data = response.json()
+        print(data)
+        data = data.get("data", {}).get("product", {})
+        images_edges = (data.get("images") or {}).get("edges", []) or []
+        images = []
+        for edge in images_edges:
+            node = edge.get("node") if isinstance(edge, dict) else None
+            if not node:
+                continue
+            images.append({
+                "id": node.get("id"),
+                "src": node.get("src"),
+                "altText": node.get("altText") or ""
+            })
+            # convenience: just the URL list
+        # images = [img["src"] for img in images if img.get("src")]
+        return data, images
 
     def get_products(self, variable):
         return self.run_query(GET_ALL_PRODUCTS, variable)
@@ -362,6 +386,13 @@ class ShopifyFactoryFunction:
 
         return response
     
+    def product_update(self, variable):
+        
+        return self.run_query(UPDATE_PRODUCT_WITH_SEO,variable)
+
+    def product_image_update(self, variable):
+        return self.run_query(UPDATE_IMAGE, variable)
+
     def cancel_recurring_charge(self, variable):
         headers = {
             "X-Shopify-Access-Token": self._token,

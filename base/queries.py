@@ -137,10 +137,11 @@ GET_ALL_PRODUCTS = """
                 }
               }
             }
-            images(first: 1) {
+            images(first: 10) {
               edges {
                 node {
                   src
+                  id
                   altText
                 }
               }
@@ -154,6 +155,45 @@ GET_ALL_PRODUCTS = """
       }
     }
     """
+
+UPDATE_IMAGE = """mutation ProductImageUpdate($id: ID!) {
+  productUpdateMedia(productId: $id, media: [{id: "gid://shopify/MediaImage/853695510", alt: "Updated alt text."}]) {
+    media {
+      id
+      alt
+      status
+      ... on MediaImage {
+        image {
+          url
+        }
+      }
+    }
+    mediaUserErrors {
+      field
+      message
+    }
+  }
+}"""
+
+UPDATE_PRODUCT_WITH_SEO = """
+mutation productUpdate($input: ProductInput!) {
+  productUpdate(input: $input) {
+    product {
+      id
+      title
+      descriptionHtml
+      seo {
+        title
+        description
+      }
+    }
+    userErrors {
+      field
+      message
+    }
+  }
+}
+"""
 
 GET_PRODUCT = """
 query getProductById($id: ID!) {
@@ -187,6 +227,7 @@ query getProductById($id: ID!) {
     images(first: 10) {
       edges {
         node {
+          id
           src
           altText
         }

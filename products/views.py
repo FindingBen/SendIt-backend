@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
-from .models import Product,ShopifyWebhookLog, RulesPattern, ProductScore
+from .models import Product,ShopifyWebhookLog, RulesPattern, ProductScore, ProductMedia
 from decimal import Decimal
 from typing import Optional, Dict, Any
 from django.db import transaction
@@ -19,6 +19,7 @@ from base.shopify_functions import ShopifyFactoryFunction
 from base.queries import GET_ALL_PRODUCTS,UPDATE_PRODUCT_VARIANTS_BULK,CREATE_WEBHOOK
 from .serializers import ProductSerializer
 from .analyzers import ProductAnalyzer
+from .generatorAi import AiPromptGenerator
 import json
 
 
@@ -212,35 +213,48 @@ class PromptAnalysis(ShopifyAuthMixin, APIView):
             return Response({"error": "Exception during analysis", "details": str(e)}, status=500)
 
 
+class ProductOptimizeView(ShopifyAuthMixin, APIView):
+    def post(self, request, format=None):
+        try:
+            shopify_store, shopify_token, url = ShopifyAuthMixin().resolve_shopify(request)
+            shopify_factory = ShopifyFactoryFunction(
+                domain=shopify_store.shop_domain,
+                token=shopify_token,
+                url=url,
+                request=request
+            )
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def test_shopify_connection(request):
-    """Test Shopify connection by fetching basic shop info."""
-    try:
-        shopify_domain = request.headers.get('shopify-domain', None)
-        if shopify_domain is None:
-            return Response({"error": "Domain required from shopify!"}, status=400)
+            product = request.data.get("product", [])
+            rules = RulesPattern.objects.get(store=shopify_store)
 
-        shopify_token = request.headers['Authorization'].split(' ')[1]
-        url = f"https://{shopify_domain}/admin/api/{settings.SHOPIFY_API_VERSION}/graphql.json"
-        shopify_factory = ShopifyFactoryFunction(
-            shopify_domain, shopify_token, url, request=request, query=GET_ALL_PRODUCTS
-        )
+            product, images = shopify_factory.get_product_for_opt(product)
 
-        resp = shopify_factory.get_product()
-        if resp.status_code != 200:
-            return Response({"error": "Failed to fetch shop info from Shopify", "details": resp.text}, status=502)
-        
-        shop_data = resp.json()
-        print(shop_data)
-        shop_info = shop_data.get("data", {}).get("shop", {})
-        return Response({"shop_info": shop_info}, status=200)
+            
+           
+            init_ai = AiPromptGenerator(rules,image_data=images)
+            alt_response = init_ai.generate_alt_text()
+            print('alt text',alt_response)
+            media_updates = [
+                {"id": "gid://shopify/MediaImage/853695510", "alt": "Updated alt text."}
+            ]
+            variables = {"productId": product.product_id, "media": media_updates}
 
-    except Exception as e:
-        print("Error in test_shopify_connection:", str(e))
-        return Response({"error": str(e)}, status=500)
+            resp = shopify_factory.product_image_update(variables)
+            if getattr(resp, "status_code", None) != 200:
+                return Response({"error": "Shopify media update failed", "details": getattr(resp, "text", str(resp))}, status=502)
 
+            resp_json = resp.json()
+            errors = resp_json.get("data", {}).get("productUpdateMedia", {}).get("mediaUserErrors", [])
+            if errors:
+                return Response({"error": "Shopify returned media errors", "details": errors}, status=400)
+
+            return Response({"message": "Media update requested", "response": resp_json}, status=200)
+
+        except Exception as e:
+            print("Error in optimize_product:", str(e))
+            return Response({"error": str(e)}, status=500)
+
+    
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def import_bulk_products(request):
@@ -277,7 +291,7 @@ def import_bulk_products(request):
             for edge in edges:
                 node = edge.get("node", {})
                 gid = node.get("id")
-                
+                all_images = []
                 parent_images = node.get("images", {}).get("edges", [])
                 parent_img_src = None
                 if parent_images:
@@ -285,7 +299,7 @@ def import_bulk_products(request):
                 if not gid:
                     continue
                 title = node.get("title") or ""
-
+                
                 # variants and price
                 variants_edges = node.get("variants", {}).get("edges", [])
                 variant_images = []
@@ -320,12 +334,13 @@ def import_bulk_products(request):
 
                     variant_sku = v_node.get("sku") or None
                     variant_barcode = v_node.get("barcode") or None
-
+                    print(parent_images)
                     v_obj, v_created = Product.objects.update_or_create(
                         shopify_id=variant_shopify_id,
                         
                         defaults={
                             "product_id": gid,
+                            "parent_product_id":gid,
                             "shopify_store": shopify_store_obj,
                             "title": full_title,
                             "sku": variant_sku,
@@ -338,7 +353,32 @@ def import_bulk_products(request):
                             "synced_with_shopify": True,
                         },
                     )
+                    
+                    
                     if v_created:
+                        for parent_img in parent_images:
+                            img_node = parent_img.get("node", {})
+                            print(img_node)
+                            ProductMedia.objects.update_or_create(
+                                shopify_media_id=img_node.get("id"),
+                                defaults={
+                                    "product": v_obj,
+                                    "src": img_node.get("src"),
+                                    "shopify_media_id": img_node.get("id"),
+                                    "alt_text": img_node.get("altText") or "",
+                                }
+                            )
+                        if v_image_obj:
+                            ProductMedia.objects.update_or_create(
+                                shopify_media_id=v_image_obj.get("id"),
+                                defaults={
+                                    "product": v_obj,
+                                    "src": v_image_obj.get("src"),
+                                    "shopify_media_id": v_image_obj.get("id"),
+                                    "alt_text": v_image_obj.get("altText") or "",
+                                }
+                            )
+
                         product_score = ProductScore.objects.create(product=v_obj)
                         rules = RulesPattern.objects.get(store=shopify_store_obj)
                         
@@ -358,6 +398,8 @@ def import_bulk_products(request):
                         created += 1
                     else:
                         updated += 1
+            
+
             custom_user = CustomUser.objects.get(custom_email=shopify_store_obj.email)
             custom_user.shopify_product_import = True
             custom_user.save()

@@ -10,18 +10,21 @@ class RulesPattern(models.Model):
     product_variant_rule = models.CharField(max_length=255, blank=True, null=True)
     product_tag_rule = models.CharField(max_length=255, null=True, blank=True)
     product_alt_image_rule = models.CharField(max_length=255, null=True, blank=True)
-    
+    keywords = models.CharField(max_length=255, blank=True, null=True)
     min_title_length = models.IntegerField(default=20)
     max_title_length = models.IntegerField(default=70)
 
     min_description_length = models.IntegerField(default=120)
     max_description_length = models.IntegerField(default=300)
 
+    max_alt_desc_length = models.IntegerField(default=30)
+
     min_images = models.IntegerField(default=1)
     requires_alt_text = models.BooleanField(default=True)
 
 class Product(models.Model):
     product_id=models.CharField(max_length=255, unique=False)
+    parent_product_id=models.CharField(max_length=255, blank=True, null=True)
     shopify_id = models.CharField(max_length=255, unique=True)
     shopify_store = models.ForeignKey('base.ShopifyStore', on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
@@ -38,6 +41,11 @@ class Product(models.Model):
     def __str__(self):
         return self.title
     
+class ProductMedia(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    shopify_media_id = models.CharField(max_length=255, unique=True)
+    src = models.URLField(max_length=500, blank=True, null=True)
+    alt_text = models.TextField(blank=True, null=True)
 
 class ProductScore(models.Model):
     product = models.OneToOneField(

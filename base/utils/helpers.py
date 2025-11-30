@@ -398,7 +398,7 @@ class Utils:
         )
 
         data_topic = params.get('topic',None)
-        webhook_url = f"{settings.BACKEND}/products/product_webhook"
+
         print("Registering webhook for topic:", params)
         variables = {
         "topic": data_topic,

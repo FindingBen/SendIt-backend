@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import ProductView, PromptAnalysis
+from .views import ProductView, PromptAnalysis, ProductOptimizeView
 from . import views
 from . import webhooks
 
@@ -9,6 +9,6 @@ urlpatterns = [
     # product webhooks
     path('product_webhook', webhooks.create_product_webhook),
     path('shopify_webhooks/', views.register_webhooks),
-    path('shopify_test/', views.test_shopify_connection),
+    path('product_optimize/', ProductOptimizeView.as_view()),
     path('business_analysis/', PromptAnalysis.as_view()),
 ]

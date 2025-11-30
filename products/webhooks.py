@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from base.models import ShopifyStore
 from decimal import Decimal
 from .analyzers import ProductAnalyzer
-from .models import ShopifyWebhookLog, Product, ProductScore, RulesPattern
+from .models import ShopifyWebhookLog, Product, ProductScore, RulesPattern, ProductMedia
 import json
 
 
@@ -30,7 +30,6 @@ def create_product_webhook(request):
 
     try:
         data = json.loads(request.body)
-
         product_id = data.get("admin_graphql_api_id")
         title = data.get("title", "Untitled Product")
         category = (
@@ -43,7 +42,7 @@ def create_product_webhook(request):
    
         if not variants:
             return HttpResponse({"message": "No variants found, nothing to create."}, status=200)
-
+        print('sssaaaaaa')
         created_variants = []
         skipped_variants = []
         product_images = data.get("images", []) or []
@@ -75,13 +74,17 @@ def create_product_webhook(request):
                         break
 
             variant_image = variant_image or (data.get("image") or {}).get("src")
-
+            final_title = title
+            if variant:
+                vn = variant_name.strip()
+                if vn and vn.lower() != "default title":
+                    final_title = f'{final_title}-{vn}'
             #variant_images = v_image
             obj, created = Product.objects.get_or_create(
                 product_id=product_id,
                 shopify_id=shopify_id,
                 shopify_store=store_obj,
-                title=variant_name if variant_name else title,
+                title=final_title,
                 sku=sku,
                 barcode=barcode,
                 color=color,
@@ -94,6 +97,18 @@ def create_product_webhook(request):
             )
 
             if created:
+                for parent_img in product_images:
+
+                    ProductMedia.objects.update_or_create(
+                        shopify_media_id=parent_img.get("id"),
+                                defaults={
+                                    "product": obj,
+                                    "src": parent_img.get("src"),
+                                    "shopify_media_id": parent_img.get("id"),
+                                    "alt_text": parent_img.get("alt") or "",
+                        }
+                    )
+                    
                 product_score = ProductScore.objects.create(product=obj)
                 rules = RulesPattern.objects.get(store=store_obj)
 

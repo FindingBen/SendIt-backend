@@ -1,0 +1,153 @@
+import json
+import re
+from openai import OpenAI
+from base.auth import OpenAiAuthInit
+
+
+class AiPromptGenerator:
+    def __init__(self, rules, image_data):
+        self.client = OpenAiAuthInit().clientAuth()
+        self.rules = rules
+        self.image_data = image_data
+
+
+    def generate_alt_text(self):
+        """
+        Generates optimized alt text for ALL product images at once.
+        Returns a list of objects: [{"id": "...", "alt": "..."}]
+        """
+
+        # First classify all images
+        image_info = self.classify_images(self.image_data)
+
+        # Prepare prompt
+        prompt = f"""
+        You are an expert Shopify SEO image optimizer.
+        Generate ALTERNATIVE TEXT for EACH image separately.
+
+        Follow these rules:
+        - Use the image description + detected objects/colors
+        - Include relevant keywords: {self.rules.keywords}
+        - Recommended length: 5–20 words
+        - {self.rules.product_alt_image_rule}
+        - Max length: {self.rules.max_alt_desc_length} characters
+        - Alt text MUST describe what is visually in the image
+        - Do NOT output explanations. Output ONLY pure JSON.
+
+        Input image analysis:
+        {json.dumps(image_info, indent=2)}
+
+        Return a JSON array where EACH element is:
+        {{
+        "id": "<image_gid>",
+        "alt": "<generated alt text>"
+        }}
+        """
+
+        response = self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "Return ONLY valid JSON. No markdown. No code fences."},
+                {"role": "user", "content": prompt},
+            ]
+        )
+
+        raw = response.choices[0].message.content
+        print("RAW ALT OUTPUT:", raw)
+
+        # Extract + validate JSON
+        alt_list = self.extract_json(raw)
+
+        # Final validation: ensure list of {id, alt}
+        final = []
+        for img in alt_list:
+            if "id" in img and "alt" in img:
+                final.append({"id": img["id"], "alt": img["alt"].strip()})
+
+        return final
+
+
+    def classify_images(self, images: list):
+        """
+        Accepts a list of image dicts:
+        [
+            { "id": "gid/.../123", "src": "...", "altText": "" },
+            ...
+        ]
+
+        Returns list of classification JSONs for each image.
+        """
+
+        # Build message content for ALL images at once
+        content_blocks = [
+            {
+                "type": "text",
+                "text": (
+                    "Analyze each product image and return a JSON array. "
+                    "For every image include: id, description, objects, colors, "
+                    "material, background, detected_features."
+                ),
+            }
+        ]
+
+        # Attach every image
+        for img in images:
+            content_blocks.append({
+                "type": "text",
+                "text": f"Image ID: {img['id']}"
+            })
+            content_blocks.append({
+                "type": "image_url",
+                "image_url": {"url": img["src"]}
+            })
+
+        # Make a single GPT request
+        response = self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are an expert product image classifier."},
+                {"role": "user", "content": content_blocks}
+            ]
+        )
+
+        raw = response.choices[0].message.content
+        
+        # Expect a JSON array
+        try:
+            return self.extract_json(raw)
+        except:
+            print("FAILED TO PARSE JSON:", raw)
+            raise
+
+    
+    def extract_json(self, raw):
+        """
+        Extract clean JSON from GPT output safely.
+        Handles:
+        - ```json ... ```
+        - ``` ... ```
+        - Backticks with spaces
+        - Extra text before/after JSON
+        """
+
+        if not raw:
+            raise ValueError("Empty GPT response")
+
+        # 1. Extract JSON between fences if they exist
+        fenced = re.search(r"```(?:json)?\s*(.*?)```", raw, re.DOTALL)
+        if fenced:
+            raw = fenced.group(1).strip()
+
+        # 2. Remove any stray backticks
+        raw = raw.replace("```", "").strip()
+
+        # 3. Ensure it's pure JSON (no leading/trailing text)
+        raw = raw.strip()
+
+        # 4. Attempt to parse JSON
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            print("---- RAW CLEANED JSON FAILED ----")
+            print(raw)
+            raise
