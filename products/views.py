@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
-from .models import Product,ShopifyWebhookLog, RulesPattern, ProductScore, ProductMedia
+from .models import Product,ShopifyWebhookLog, RulesPattern, ProductDraft,ProductMediaDraft,ProductScore, ProductMedia
 from decimal import Decimal
 from typing import Optional, Dict, Any
 from django.db import transaction
@@ -20,6 +20,8 @@ from base.queries import GET_ALL_PRODUCTS,UPDATE_PRODUCT_VARIANTS_BULK,CREATE_WE
 from .serializers import ProductSerializer
 from .analyzers import ProductAnalyzer
 from .generatorAi import AiPromptGenerator
+from .optimizers import ProductOptimizer
+from .helpers import create_product_draft
 import json
 
 
@@ -50,17 +52,32 @@ class ShopifyAuthMixin:
 
 class ProductView(ShopifyAuthMixin, APIView):
 
-    def get(self, request, format=None):
-        print(request)
+    def get(self, request, id=None, format=None):
         try:
             shopify_store, shopify_token, url = self.resolve_shopify(request)
-            print('sss')
         except ValueError as e:
             return Response({"error": str(e)}, status=400)
-        products = Product.objects.filter(shopify_store=shopify_store).select_related("score")
-        serializer = ProductSerializer(products, many=True)
-        return Response(serializer.data)
+
+        if id:
+            # Get a single product by ID
+            try:
+                product = Product.objects.select_related("score").get(
+                    shopify_store=shopify_store,
+                    id=id
+                )
+                serializer = ProductSerializer(product)
+                print(serializer.data)
+                return Response(serializer.data)
+            except Product.DoesNotExist:
+                return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            # Return all products
+            products = Product.objects.filter(shopify_store=shopify_store).select_related("score")
+            serializer = ProductSerializer(products, many=True)
+            return Response(serializer.data)
     
+
+
     def put(self, request, format=None):
         try:
             shopify_store, shopify_token, url = self.resolve_shopify(request)
@@ -228,33 +245,161 @@ class ProductOptimizeView(ShopifyAuthMixin, APIView):
             rules = RulesPattern.objects.get(store=shopify_store)
 
             product, images = shopify_factory.get_product_for_opt(product)
+            print('product fetched',product)
+            product_obj = Product.objects.get(product_id=product['id'])
 
-            
+            product_draft = create_product_draft(product_obj)
+
+            #create draft product here
            
-            init_ai = AiPromptGenerator(rules,image_data=images)
-            alt_response = init_ai.generate_alt_text()
-            print('alt text',alt_response)
-            media_updates = [
-                {"id": "gid://shopify/MediaImage/853695510", "alt": "Updated alt text."}
-            ]
-            variables = {"productId": product.product_id, "media": media_updates}
-
-            resp = shopify_factory.product_image_update(variables)
-            if getattr(resp, "status_code", None) != 200:
-                return Response({"error": "Shopify media update failed", "details": getattr(resp, "text", str(resp))}, status=502)
-
-            resp_json = resp.json()
-            errors = resp_json.get("data", {}).get("productUpdateMedia", {}).get("mediaUserErrors", [])
-            if errors:
-                return Response({"error": "Shopify returned media errors", "details": errors}, status=400)
-
-            return Response({"message": "Media update requested", "response": resp_json}, status=200)
+            #init_ai = AiPromptGenerator(rules,image_data=images)
+            #alt_response = init_ai.generate_alt_text()
+            alt_response = [{'id': 'gid://shopify/ProductImage/79160975130999', 'alt': 'Black shoulder support brace workout'}, {'id': 'gid://shopify/ProductImage/79160975065463', 'alt': 'Detailed black shoulder support workout'}, {'id': 'gid://shopify/ProductImage/79160975098231', 'alt': 'Comfortable shoulder support workout'}]
+            print('Optimize please...')
+            optimizer = ProductOptimizer(product_draft=product_draft,images=alt_response)
+            results, status_code = optimizer.run()
+            print(results)
+            if status_code == 200:
+                return Response({"message": results["message"]}, status=200)
+            else:
+                return Response({"error": results["message"], "details": results["errors"]}, status=500)
 
         except Exception as e:
             print("Error in optimize_product:", str(e))
             return Response({"error": str(e)}, status=500)
 
-    
+
+class MerchantApprovalProductOptimization(ShopifyAuthMixin, APIView):
+    def post(self, request, format=None):
+        try:
+            # ---------------------------
+            # Resolve Shopify store
+            # ---------------------------
+            shopify_store, shopify_token, url = ShopifyAuthMixin().resolve_shopify(request)
+            shopify_factory = ShopifyFactoryFunction(
+                domain=shopify_store.shop_domain,
+                token=shopify_token,
+                url=url,
+                request=request
+            )
+
+            # ---------------------------
+            # Extract request
+            # ---------------------------
+            request_approval = request.data.get("approval", False)
+            product_data = request.data.get("product", None)
+
+            if not product_data:
+                return Response({"error": "Product data missing"}, status=400)
+
+            product_obj = Product.objects.get(product_id=product_data["id"])
+            product_draft = ProductDraft.objects.filter(shopify_id=product_obj.shopify_id).first()
+
+            if not product_draft:
+                return Response({"error": "Draft not found for this product"}, status=404)
+
+            # ---------------------------
+            # Merchant REJECTED – delete draft
+            # ---------------------------
+            if not request_approval:
+                ProductMediaDraft.objects.filter(product=product_draft).delete()
+                product_draft.delete()
+
+                return Response(
+                    {"message": "Product optimization rejected. Draft deleted."},
+                    status=200
+                )
+
+            # ---------------------------
+            # Merchant APPROVED – apply updates to Shopify
+            # ---------------------------
+
+            # Prepare ProductInput for Shopify mutation
+            product_input = {
+                "id": product_obj.shopify_id,
+                "title": product_draft.title,
+                "descriptionHtml": product_draft.category,     # adjust if you have HTML desc separately
+                "seo": {
+                    "title": product_draft.title,
+                    "description": product_draft.category
+                }
+            }
+
+            # 1) Update product title / desc / SEO
+            product_update_resp = shopify_factory.product_update({"input": product_input})
+
+            product_update_json = product_update_resp.json()
+            product_errors = product_update_json.get("data", {}).get("productUpdate", {}).get("userErrors", [])
+
+            if product_errors:
+                return Response({
+                    "error": "Shopify product update failed",
+                    "details": product_errors
+                }, status=400)
+
+            # ---------------------------
+            # 2) Update ALL image alt texts
+            # ---------------------------
+            media_drafts = ProductMediaDraft.objects.filter(product=product_draft)
+
+            for draft_media in media_drafts:
+                variables = {
+                    "id": product_obj.shopify_id,
+                    "media": [
+                        {
+                            "id": draft_media.shopify_media_id,
+                            "alt": draft_media.alt_text or ""
+                        }
+                    ]
+                }
+
+                media_resp = shopify_factory.product_image_update(variables)
+                media_json = media_resp.json()
+
+                media_errors = (
+                    media_json.get("data", {})
+                        .get("productUpdateMedia", {})
+                        .get("mediaUserErrors", [])
+                )
+
+                if media_errors:
+                    return Response({
+                        "error": "Shopify media update failed",
+                        "details": media_errors
+                    }, status=400)
+
+            # -------------------------------------
+            # Success → sync draft → delete draft
+            # -------------------------------------
+            product_obj.title = product_draft.title
+            product_obj.category = product_draft.category
+            product_obj.save()
+
+            # Update real ProductMedia records
+            for draft_media in media_drafts:
+                ProductMedia.objects.update_or_create(
+                    shopify_media_id=draft_media.shopify_media_id,
+                    defaults={
+                        "product": product_obj,
+                        "src": draft_media.src,
+                        "alt_text": draft_media.alt_text
+                    }
+                )
+
+            # Cleanup drafts
+            ProductMediaDraft.objects.filter(product=product_draft).delete()
+            product_draft.delete()
+
+            return Response(
+                {"message": "Product optimization successfully applied to Shopify."},
+                status=200
+            )
+
+        except Exception as e:
+            print("Error approving optimized product:", str(e))
+            return Response({"error": str(e)}, status=500)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def import_bulk_products(request):

@@ -5,6 +5,7 @@ from . import webhooks
 
 urlpatterns = [
     path('shopify_products/', ProductView.as_view()),
+    path('shopify_products/<str:id>/', ProductView.as_view()), 
     path('import_bulk_products/', views.import_bulk_products),
     # product webhooks
     path('product_webhook', webhooks.create_product_webhook),

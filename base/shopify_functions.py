@@ -303,7 +303,7 @@ class ShopifyFactoryFunction:
         response = self.run_query(GET_PRODUCT, variables)
         
         data = response.json()
-        print(data)
+
         data = data.get("data", {}).get("product", {})
         images_edges = (data.get("images") or {}).get("edges", []) or []
         images = []
@@ -316,8 +316,7 @@ class ShopifyFactoryFunction:
                 "src": node.get("src"),
                 "altText": node.get("altText") or ""
             })
-            # convenience: just the URL list
-        # images = [img["src"] for img in images if img.get("src")]
+
         return data, images
 
     def get_products(self, variable):
