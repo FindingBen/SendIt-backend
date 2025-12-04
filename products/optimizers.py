@@ -75,6 +75,7 @@ class ProductOptimizer:
 
 
     def optimize_product_title(self):
+        changed = []
         new_title = self.titles
 
         self.product_draft.title = new_title
@@ -83,11 +84,7 @@ class ProductOptimizer:
         msg = f"Generated new title: {new_title}"
         logger.info(msg)
 
-        self.response.append({
-            "type": "title_optimization",
-            "title": new_title,
-            "status": msg
-        })
+        self.results["changed_fields"]["title"] = changed
 
 
     def optimize_product_description(self):

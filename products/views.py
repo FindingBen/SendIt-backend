@@ -37,9 +37,9 @@ class ShopifyAuthMixin:
         if not shopify_domain:
             raise ValueError("Domain required from shopify!")
         try:
-            print('HERE')
+
             shopify_store = ShopifyStore.objects.get(shop_domain=shopify_domain)
-            print('DDD')
+
         except ShopifyStore.DoesNotExist:
             raise ValueError("Shopify store not found in local DB")
         auth = request.headers.get('Authorization', '')
@@ -231,6 +231,76 @@ class PromptAnalysis(ShopifyAuthMixin, APIView):
 
 
 class ProductOptimizeView(ShopifyAuthMixin, APIView):
+
+    def get(self, request, format=None):
+        try:
+            shopify_store, shopify_token, url = ShopifyAuthMixin().resolve_shopify(request)
+            
+            product_id = request.query_params.get("product_id")
+            print('PARAM',product_id)
+            if not product_id:
+                return Response({"error": "product_id query parameter is required"}, status=400)
+
+            try:
+                product_draft = ProductDraft.objects.get(product_id=product_id, shopify_store=shopify_store)
+            except ProductDraft.DoesNotExist:
+                return Response({"error": "Draft for this product does not exist"}, status=404)
+
+            media_drafts = ProductMediaDraft.objects.filter(product=product_draft)
+
+            try:
+                original_product = Product.objects.get(shopify_id=product_draft.shopify_id)
+            except Product.DoesNotExist:
+                original_product = None
+
+            response = {
+                "draft": {
+                    "product": {
+                        "id": product_draft.product_id,
+                        "title": product_draft.title,
+                        "description": getattr(product_draft, "description", None),
+                        "category": product_draft.category,
+                        "price": str(product_draft.price) if product_draft.price else None,
+                        "img_field": product_draft.img_field,
+                        "variant": product_draft.variant,
+                    },
+                    "images": [
+                        {
+                            "id": media.shopify_media_id,
+                            "src": media.src,
+                            "alt_text": media.alt_text,
+                        } for media in media_drafts
+                    ]
+                },
+                "original": None
+            }
+            if original_product:
+                response["original"] = {
+                    "product": {
+                        "id": original_product.product_id,
+                        "title": original_product.title,
+                        "description": getattr(original_product, "description", None),
+                        "category": original_product.category,
+                        "price": str(original_product.price) if original_product.price else None,
+                        "img_field": original_product.img_field,
+                        "variant": original_product.variant,
+                    },
+                    "images": [
+                        {
+                            "id": img.shopify_media_id,
+                            "src": img.src,
+                            "alt_text": img.alt_text,
+                        }
+                        for img in ProductMedia.objects.filter(product=original_product)
+                    ]
+                }
+
+            return Response(response, status=200)
+
+        except Exception as e:
+            print("Error in get product for optimization:", str(e))
+            return Response({"error": str(e)}, status=500)
+
     def post(self, request, format=None):
         try:
             shopify_store, shopify_token, url = ShopifyAuthMixin().resolve_shopify(request)
@@ -241,15 +311,15 @@ class ProductOptimizeView(ShopifyAuthMixin, APIView):
                 request=request
             )
 
-            product = request.data.get("product", [])
+            product_id = request.data.get("product_id", [])
             rules = RulesPattern.objects.get(store=shopify_store)
 
-            product, images = shopify_factory.get_product_for_opt(product)
-            print('product fetched',product)
+            product, images = shopify_factory.get_product_for_opt(product_id)
+            
             product_obj = Product.objects.get(product_id=product['id'])
 
             product_draft = create_product_draft(product_obj)
-
+            print('DRAFT CREATED')
             #create draft product here
            
             #init_ai = AiPromptGenerator(rules,image_data=images)
