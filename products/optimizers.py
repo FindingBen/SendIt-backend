@@ -8,12 +8,12 @@ from .models import ProductDraft
 logger = logging.getLogger(__name__)
 
 class ProductOptimizer:
-    def __init__(self, product_draft: ProductDraft,images=None, titles=None, descriptions=None, categories=None):
+    def __init__(self, product_draft: ProductDraft,request_body):
         self.product_draft = product_draft
-        self.images = images
-        self.titles = titles
-        self.descriptions = descriptions
-        self.categories = categories
+        self.images = request_body['images']
+        self.titles = request_body['titles']
+        self.descriptions = request_body['descriptions']
+        self.static = request_body['static']
 
         self.results = {
             "status": "pending",
@@ -35,7 +35,12 @@ class ProductOptimizer:
             # Run modules
             if self.images:
                 self.optimize_image_alt_text()
+            
+            if self.titles:
+                self.optimize_product_title()
 
+            if self.descriptions:
+                self.optimize_descritpion()
             # other optimizers coming soon...
             # if self.titles: self.optimize_product_title()
             # if self.descriptions: self.optimize_product_description()
@@ -50,12 +55,26 @@ class ProductOptimizer:
             self.results["errors"].append(str(e))
             return self.results, 500
             
+    def optimize_descritpion(self):
+        changed = []
+        
+       
+        new_desc = self.descriptions
 
+        self.product_draft.description = new_desc
+        self.product_draft.static_desc = self.static
+        self.product_draft.save()
+
+        msg = f"Generated new desc: {new_desc}"
+        logger.info(msg)
+
+        self.results["changed_fields"]["description"] = changed
 
     def optimize_image_alt_text(self):
         changed = []
 
         for image in self.images:
+            print('IMM',image)
             draft_media, created = ProductMediaDraft.objects.update_or_create(
                 shopify_media_id=image["id"],
                 defaults={
@@ -76,7 +95,9 @@ class ProductOptimizer:
 
     def optimize_product_title(self):
         changed = []
-        new_title = self.titles
+        for title_obj in self.titles:
+            print(title_obj)
+            new_title = title_obj['title']
 
         self.product_draft.title = new_title
         self.product_draft.save()

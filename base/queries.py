@@ -156,24 +156,21 @@ GET_ALL_PRODUCTS = """
     }
     """
 
-UPDATE_IMAGE = """mutation ProductImageUpdate($id: ID!) {
-  productUpdateMedia(productId: $id, media: [{id: "gid://shopify/MediaImage/853695510", alt: "Updated alt text."}]) {
-    media {
+UPDATE_IMAGE = """mutation fileUpdate($files: [FileUpdateInput!]!) {
+  fileUpdate(files: $files) {
+    files {
       id
       alt
-      status
-      ... on MediaImage {
-        image {
-          url
-        }
-      }
+      fileStatus
     }
-    mediaUserErrors {
+    userErrors {
       field
       message
+      code
     }
   }
-}"""
+}
+"""
 
 UPDATE_PRODUCT_WITH_SEO = """
 mutation productUpdate($input: ProductInput!) {

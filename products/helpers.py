@@ -43,3 +43,4 @@ def create_product_draft(product: Product):
             )
 
     return draft
+

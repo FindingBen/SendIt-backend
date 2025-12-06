@@ -345,7 +345,7 @@ else:
 
 SHOPIFY_API_KEY = os.environ.get("SHOPIFY_API_KEY")
 SHOPIFY_API_SECRET = os.environ.get("SHOPIFY_API_SECRET")
-SHOPIFY_SCOPES = "read_products,write_products,write_orders,read_customers,write_customers"
+SHOPIFY_SCOPES = "read_products,write_products,write_orders,read_customers,write_customers,write_files"
 SHOPIFY_REDIRECT_URI = os.environ.get("SHOPIFY_REDIRECT_URI")
 SHOPIFY_API_VERSION = os.environ.get("SHOPIFY_API_VERSION")
 

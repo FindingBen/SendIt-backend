@@ -5,11 +5,45 @@ from base.auth import OpenAiAuthInit
 
 
 class AiPromptGenerator:
-    def __init__(self, rules, image_data):
+    def __init__(self, rules, image_data,product_id,title=None,description=None):
         self.client = OpenAiAuthInit().clientAuth()
         self.rules = rules
         self.image_data = image_data
+        self.title = title
+        self.product_id = product_id
+        self.description = description
 
+    def generate_title(self):
+        prompt = f"""
+        You are an expert Shopify SEO title optimizer.
+        Generate new or modify this Product title {self.title} for product.
+
+        Follow these rules:
+        - Include relevant keywords: {self.rules.keywords}
+        - Recommended length: between {self.rules.min_title_length} and {self.rules.max_title_length}
+       
+        - Do NOT output explanations. Output ONLY pure JSON.
+
+        Return a JSON array where EACH element is:
+        {{
+        "product_id": "{self.product_id}",
+        "title": "<generated/modified title>"
+        }}
+        """
+
+        response = self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "Return ONLY valid JSON. No markdown. No code fences."},
+                {"role": "user", "content": prompt},
+            ]
+        )
+        raw = response.choices[0].message.content
+        print("RAW TITLE OUTPUT:", raw)
+
+        # Extract + validate JSON
+        new_title = self.extract_json(raw)
+        return new_title
 
     def generate_alt_text(self):
         """
@@ -65,6 +99,40 @@ class AiPromptGenerator:
                 final.append({"id": img["id"], "alt": img["alt"].strip()})
 
         return final
+
+    def generate_description(self):
+        template = self.rules.product_description_template
+        static = False
+        if template and template.strip():
+            static = True
+            return template, static
+        
+        prompt = f"""
+        Generate a product description following these rules:
+
+        - SEO best practices
+        - Length between {self.rules.min_description_length} and {self.rules.max_description_length} characters
+        - Use keywords: {self.rules.keywords or "None"}
+        - The product title is: "{self.title}"
+
+        Return a JSON object where description is:
+        {{
+        "product_id": "{self.product_id}",
+        "description": "<generated/modified description>"
+        }}
+        """
+
+        response = self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You generate Shopify HTML product descriptions with clean formatting."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+  
+        raw = response.choices[0].message.content
+        description = self.extract_json(raw)
+        return description, static
 
 
     def classify_images(self, images: list):
