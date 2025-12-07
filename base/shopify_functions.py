@@ -11,8 +11,7 @@ from .queries import (
     UPDATE_PRODUCT_VARIANTS_BULK,
     CREATE_CUSTOMER_QUERY,
     GET_ALL_PRODUCTS,
-    DELETE_CUSTOMER_QUERY,
-    UPDATE_CUSTOMER_QUERY,
+    GET_PRODUCT_W_MEDIA,
     UPDATE_IMAGE,
     GET_SHOP_ORDERS,
     UPDATE_PRODUCT_WITH_SEO,
@@ -300,12 +299,12 @@ class ShopifyFactoryFunction:
     def get_product_for_opt(self, product):
         variables = {
             "id": product.get('product_id')}
-        response = self.run_query(GET_PRODUCT, variables)
+        response = self.run_query(GET_PRODUCT_W_MEDIA, variables)
         
         data = response.json()
 
         data = data.get("data", {}).get("product", {})
-        images_edges = (data.get("images") or {}).get("edges", []) or []
+        images_edges = (data.get("media") or {}).get("edges", []) or []
         images = []
         for edge in images_edges:
             node = edge.get("node") if isinstance(edge, dict) else None
@@ -313,8 +312,9 @@ class ShopifyFactoryFunction:
                 continue
             images.append({
                 "id": node.get("id"),
-                "src": node.get("src"),
-                "altText": node.get("altText") or ""
+                "file_id":node.get("image").get('id'),
+                "src": node.get("image").get('url'),
+                "altText": node.get("image").get('altText') or ""
             })
 
         return data, images

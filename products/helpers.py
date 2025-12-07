@@ -1,5 +1,6 @@
-from .models import Product, ProductDraft, ProductMedia, ProductMediaDraft
 from django.db import transaction
+from .models import Product, ProductDraft, ProductMedia, ProductMediaDraft
+from typing import Optional, Dict, Any
 
 def create_product_draft(product: Product):
     """
@@ -38,9 +39,84 @@ def create_product_draft(product: Product):
                 defaults={
                     "product": draft,
                     "src": media.src,
+                    "field_id":media.field_id,
                     "alt_text": media.alt_text,
                 }
             )
 
     return draft
 
+
+
+def generate_unique_sku(title: str = "", attributes: Optional[Dict[str, Any]] = None) -> str:
+    """
+    Build SKU like: <TITLE_PREFIX>-<ATTRS>-<4hex>
+    - TITLE_PREFIX: first letters of the first 3 words in the title (uppercased), e.g. "Shoulder Strap for Injury" -> "SSF"
+    - ATTRS: optional parts derived from attributes dict (color -> first 3 letters upper, size -> mapped code)
+    - unique 4 char hex suffix (lowercase), e.g. "f231"
+
+    Usage:
+      generate_unique_sku("Shoulder Strap for Injury", {"color": "Blue", "size": "Medium"})
+      -> "SSF-BLU-M-f231"
+    """
+    import re
+    import secrets
+
+    attributes = attributes or {}
+
+    # Title prefix: first letter of up to first 3 words
+    words = re.findall(r"\w+", (title or "").strip())
+    prefix_letters = [w[0].upper() for w in words[:3]]
+    prefix = "".join(prefix_letters) if prefix_letters else "PRD"
+
+    # Attributes part
+    parts = []
+    color = attributes.get("color") or attributes.get("colour")
+    if color:
+        # use first 3 alpha chars of color uppercased (pad/truncate)
+        col = re.sub(r"[^A-Za-z0-9]", "", str(color)).upper()
+        parts.append(col[:3] if len(col) >= 3 else col)
+
+    size = attributes.get("size")
+    if size:
+        s = str(size).strip().lower()
+        size_map = {
+            "xs": "XS", "extra small": "XS",
+            "s": "S", "small": "S",
+            "m": "M", "medium": "M",
+            "l": "L", "large": "L",
+            "xl": "XL", "extra large": "XL",
+            "xxl": "XXL",
+        }
+        code = size_map.get(s, None)
+        if not code:
+            # if single-letter provided (e.g. "M") or unknown, use upcased first 2 chars
+            code = s.upper()[:2] if s else ""
+        if code:
+            parts.append(code)
+
+    # unique 4 hex chars
+    uniq = secrets.token_hex(2)
+
+    sku_parts = [prefix]
+    if parts:
+        sku_parts.extend(parts)
+    sku_parts.append(uniq)
+
+    return "-".join(p for p in sku_parts if p)
+
+
+def generate_unique_barcode() -> str:
+    """
+    Generate a unique barcode for the given product variant.
+    This is a placeholder implementation and should be replaced with actual logic
+    to ensure uniqueness across all products in the database.
+    """
+    import random
+
+    while True:
+        # Generate a random 12-digit numeric barcode
+        barcode = ''.join([str(random.randint(0, 9)) for _ in range(12)])
+        # Check if barcode is unique
+        if not Product.objects.filter(barcode=barcode).exists():
+            return barcode

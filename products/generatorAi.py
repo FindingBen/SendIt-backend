@@ -5,13 +5,15 @@ from base.auth import OpenAiAuthInit
 
 
 class AiPromptGenerator:
-    def __init__(self, rules, image_data,product_id,title=None,description=None):
+    def __init__(self, rules, image_data,product_id,title=None,description=None,seo_desc = None):
         self.client = OpenAiAuthInit().clientAuth()
         self.rules = rules
         self.image_data = image_data
         self.title = title
         self.product_id = product_id
         self.description = description
+        self.seo_desc = seo_desc
+
 
     def generate_title(self):
         prompt = f"""
@@ -134,6 +136,33 @@ class AiPromptGenerator:
         description = self.extract_json(raw)
         return description, static
 
+    def generate_meta_description(self):
+        prompt = f"""
+        Generate a product description following these rules:
+
+        - SEO best practices
+        - Length up to 160 characters no more!
+        - Use keywords: {self.rules.keywords or "None"}
+        - The product title is: "{self.title}"
+
+        Return a JSON object where description is:
+        {{
+        "product_id": "{self.product_id}",
+        "description": "<generated/modified meta description>"
+        }}
+        """
+
+        response = self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You generate Shopify HTML product meta descriptions with clean formatting."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+  
+        raw = response.choices[0].message.content
+        description = self.extract_json(raw)
+        return description
 
     def classify_images(self, images: list):
         """

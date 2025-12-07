@@ -13,6 +13,7 @@ class ProductOptimizer:
         self.images = request_body['images']
         self.titles = request_body['titles']
         self.descriptions = request_body['descriptions']
+        self.seo_desc = request_body['seo_desc']
         self.static = request_body['static']
 
         self.results = {
@@ -41,6 +42,9 @@ class ProductOptimizer:
 
             if self.descriptions:
                 self.optimize_descritpion()
+
+            if self.seo_desc:
+                self.optimize_meta_description()
             # other optimizers coming soon...
             # if self.titles: self.optimize_product_title()
             # if self.descriptions: self.optimize_product_description()
@@ -107,11 +111,17 @@ class ProductOptimizer:
 
         self.results["changed_fields"]["title"] = changed
 
+    def optimize_meta_description(self):
+        changed = []
+       
+        new_seo_desc = self.seo_desc
 
-    def optimize_product_description(self):
-        pass
+        self.product_draft.seo_description = new_seo_desc
+        self.product_draft.save()
 
-    def optimize_product_category(self):
-        pass
+        msg = f"Generated new desc: {new_seo_desc}"
+        logger.info(msg)
+
+        self.results["changed_fields"]["meta description"] = changed
         
     

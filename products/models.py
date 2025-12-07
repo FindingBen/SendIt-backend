@@ -30,6 +30,7 @@ class Product(models.Model):
     shopify_store = models.ForeignKey('base.ShopifyStore', on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
+    seo_description = models.TextField(max_length=161,blank=True, null=True)
     static_desc = models.BooleanField(default=False)
     sku = models.CharField(max_length=50, blank=True, null=True)
     barcode = models.CharField(max_length=50, blank=True, null=True)
@@ -44,6 +45,20 @@ class Product(models.Model):
     def __str__(self):
         return self.title
     
+class ProductVariant(models.Model):
+    parent_product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    name = models.CharField(max_length=255, blank=True, null=True)
+    sku = models.CharField(max_length=50, blank=True, null=True)
+    barcode = models.CharField(max_length=50, blank=True, null=True)
+    img_field = models.URLField(max_length=500, blank=True, null=True)
+
+class ProductVariantDraft(models.Model):
+    parent_product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    name = models.CharField(max_length=255, blank=True, null=True)
+    sku = models.CharField(max_length=50, blank=True, null=True)
+    barcode = models.CharField(max_length=50, blank=True, null=True)
+    img_field = models.URLField(max_length=500, blank=True, null=True)
+
 class ProductDraft(models.Model):
     product_id=models.CharField(max_length=255, unique=False)
     parent_product_id=models.CharField(max_length=255, blank=True, null=True)
@@ -51,6 +66,7 @@ class ProductDraft(models.Model):
     shopify_store = models.ForeignKey('base.ShopifyStore', on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
+    seo_description = models.TextField(max_length=161,blank=True, null=True)
     static_desc = models.BooleanField(default=False)
     sku = models.CharField(max_length=50, blank=True, null=True)
     barcode = models.CharField(max_length=50, blank=True, null=True)
@@ -68,14 +84,18 @@ class ProductDraft(models.Model):
 class ProductMediaDraft(models.Model):
     product = models.ForeignKey(ProductDraft, on_delete=models.CASCADE)
     shopify_media_id = models.CharField(max_length=255, unique=True)
+    field_id = models.CharField(max_length=255, null=True, blank=True)
     src = models.URLField(max_length=500, blank=True, null=True)
     alt_text = models.TextField(blank=True, null=True)
     
 class ProductMedia(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     shopify_media_id = models.CharField(max_length=255, unique=True)
+    field_id = models.CharField(max_length=255, null=True, blank=True)
     src = models.URLField(max_length=500, blank=True, null=True)
     alt_text = models.TextField(blank=True, null=True)
+
+
 
 class ProductScore(models.Model):
     product = models.OneToOneField(

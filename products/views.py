@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
-from .models import Product,ShopifyWebhookLog, RulesPattern, ProductDraft,ProductMediaDraft,ProductScore, ProductMedia
+from .models import Product,ShopifyWebhookLog, RulesPattern, ProductVariant,ProductVariantDraft,ProductDraft,ProductMediaDraft,ProductScore, ProductMedia
 from decimal import Decimal
 from typing import Optional, Dict, Any
 from django.db import transaction
@@ -21,7 +21,7 @@ from .serializers import ProductSerializer
 from .analyzers import ProductAnalyzer
 from .generatorAi import AiPromptGenerator
 from .optimizers import ProductOptimizer
-from .helpers import create_product_draft
+from .helpers import create_product_draft, generate_unique_barcode, generate_unique_sku
 import json
 
 
@@ -319,25 +319,28 @@ class ProductOptimizeView(ShopifyAuthMixin, APIView):
             product, images = shopify_factory.get_product_for_opt(product_id)
             
             product_obj = Product.objects.get(product_id=product['id'])
-
+            print("PRODUCT",product)
+            print("IMAGES",images)
             product_draft = create_product_draft(product_obj)
             #print('DRAFT CREATED',product['title'])
             #create draft product here
            
             init_ai = AiPromptGenerator(rules,image_data=images,title=product['title'],product_id=product['id'])
-            #alt_response = init_ai.generate_alt_text()
-            #text_response = init_ai.generate_title()
+            alt_response = init_ai.generate_alt_text()
+            title_response = init_ai.generate_title()
+            seo_desc = init_ai.generate_meta_description()
             #descr, static = init_ai.generate_description()
             
             
-            alt_response = [{'id': 'gid://shopify/ProductImage/79160975130999', 'alt': 'Black shoulder support brace workout'}, {'id': 'gid://shopify/ProductImage/79160975065463', 'alt': 'Detailed black shoulder support workout'}, {'id': 'gid://shopify/ProductImage/79160975098231', 'alt': 'Comfortable shoulder support workout'}]
-            title_response = [{'product_id': 'gid://shopify/Product/15132834529655', 'title': 'Workout Shoulder Strap for Injury Recovery and Support'}]
+            # alt_response = [{'id': 'gid://shopify/ProductImage/79160975130999', 'alt': 'Black shoulder support brace workout'}, {'id': 'gid://shopify/ProductImage/79160975065463', 'alt': 'Detailed black shoulder support workout'}, {'id': 'gid://shopify/ProductImage/79160975098231', 'alt': 'Comfortable shoulder support workout'}]
+            # title_response = [{'product_id': 'gid://shopify/Product/15132834529655', 'title': 'Workout Shoulder Strap for Injury Recovery and Support'}]
             descr = {'product_id': 'gid://shopify/Product/15132834529655', 'description': 'Optimize your workout recovery with our Shoulder Strap for Injury. Designed to provide support and stability, it helps alleviate pain while allowing you to maintain your exercise routine. Perfect for athletes and fitness enthusiasts looking to prevent further injury.'}
             static = False
-            print('Optimize please...')
+            print('Optimize please...',seo_desc)
             optimization_body = {
                 "titles":title_response,
                 "images":alt_response,
+                "seo_desc": seo_desc['description'],
                 "descriptions":descr['description'],
                 "static": static
             }
@@ -364,16 +367,17 @@ class MerchantApprovalProductOptimization(ShopifyAuthMixin, APIView):
                 url=url,
                 request=request
             )
-            print('HERE1')
+
             request_approval = request.data.get("approval")
             product_id = request.data.get("product")
-            print('HERE',product_id)
+
             product_obj = Product.objects.get(parent_product_id=product_id)
             product_draft = ProductDraft.objects.get(parent_product_id=product_obj.parent_product_id)
-            print('sss')
+
             if not request_approval:
                 product_draft.delete()
                 return Response({"message": "Merchant declined optimization"}, status=200)
+
 
             # ---------------------------------------------------------
             # 1. PRODUCT UPDATE (Title, description, SEO)
@@ -385,14 +389,13 @@ class MerchantApprovalProductOptimization(ShopifyAuthMixin, APIView):
                     "descriptionHtml": getattr(product_draft, "description", ""),
                     "seo": {
                         "title": product_draft.title,
-                        "description": getattr(product_draft, "description", "")
+                        "description": product_draft.seo_description
                     }
                 }
             }
-            print('KNOWW')
             product_resp = shopify_factory.product_update(product_vars)
             product_json = product_resp.json()
-            print(product_json)
+
 
             product_errors = product_json.get("data", {}).get("productUpdate", {}).get("userErrors", [])
             if product_errors:
@@ -405,11 +408,14 @@ class MerchantApprovalProductOptimization(ShopifyAuthMixin, APIView):
 
             file_payload = []
             for media in media_drafts:
-                file_payload.append({
-                    "id": media.shopify_media_id,  # gid://shopify/MediaImage/xxx
-                    "alt": media.alt_text or ""
-                })
-
+                print(media)
+                # Only send payload if ImageSource ID exists
+                if media.field_id:
+                    file_payload.append({
+                        "id": media.shopify_media_id,     # ✔ correct
+                        "alt": media.alt_text or ""
+                    })
+            file_payload = [f for f in file_payload if "MediaImage" in f["id"]]
             if file_payload:
                 file_vars = { "files": file_payload }
                 file_resp = shopify_factory.product_image_update(file_vars)
@@ -453,7 +459,7 @@ def import_bulk_products(request):
             return Response({"error": "Failed to fetch products from Shopify", "details": resp.text}, status=502)
         
         product_data = resp.json()
-       
+        print("SSENAAA",product_data)
         edges = product_data.get("data", {}).get("products", {}).get("edges", [])
         if not edges:
             return Response({"message": "No products found"}, status=200)
@@ -465,122 +471,183 @@ def import_bulk_products(request):
 
         created = 0
         updated = 0
+        # ...existing code...
         with transaction.atomic():
             for edge in edges:
                 node = edge.get("node", {})
                 gid = node.get("id")
-                all_images = []
-                parent_images = node.get("images", {}).get("edges", [])
-                parent_img_src = None
-                if parent_images:
-                    parent_img_src = parent_images[0].get("node", {}).get("src")
+                seo_title = node.get("seo", {}).get("title", None)
+                seo_meta = node.get("seo", {}).get("description", None)
                 if not gid:
                     continue
+
                 title = node.get("title") or ""
-                
-                # variants and price
-                variants_edges = node.get("variants", {}).get("edges", [])
-                variant_images = []
-                # create/update each variant as its own Product row
+
+                # ---------------------------------------------------------------------
+                # EXTRACT MEDIA IMAGES (media edges -> list of media dicts)
+                # ---------------------------------------------------------------------
+                parent_images_raw = node.get("media", {}).get("edges", []) or []
+                parent_images = []
+                for img_edge in parent_images_raw:
+                    media_node = img_edge.get("node")
+                    if not media_node:
+                        continue
+                    image_obj = media_node.get("image", {}) or {}
+                    parent_images.append({
+                        "media_id": media_node.get("id"),      # MediaImage ID (gid)
+                        "file_id": image_obj.get("id"),        # ImageSource ID (gid)
+                        "url": image_obj.get("url"),
+                        "alt": image_obj.get("altText") or "",
+                    })
+
+                # Parent fallback image (src)
+                parent_img_src = parent_images[0]["url"] if parent_images else None
+
+                # ---------------------------------------------------------------------
+                # DETERMINE VARIANT STATE
+                # ---------------------------------------------------------------------
+                variants_edges = node.get("variants", {}).get("edges", []) or []
+                variants_count = node.get("variantsCount", {}).get("count", 0)
+
+                has_variants = False
+                if variants_count and int(variants_count) > 1:
+                    has_variants = True
+                elif len(variants_edges) > 1:
+                    has_variants = True
+                else:
+                    # single variant: check its title for "Default Title"
+                    v0 = variants_edges[0].get("node") if variants_edges else {}
+                    v0_title = (v0.get("title") or "").strip().lower() if v0 else ""
+                    if v0_title and v0_title != "default title":
+                        has_variants = True
+
+                # ---------------------------------------------------------------------
+                # CREATE / UPDATE PARENT PRODUCT
+                # ---------------------------------------------------------------------
+                parent_defaults = {
+                    "product_id": gid,
+                    "parent_product_id": gid,
+                    "shopify_store": shopify_store_obj,
+                    "title": title,
+                    "description": node.get("descriptionHtml") or "",
+                    "seo_description": seo_meta,
+                    "img_field": parent_img_src,
+                    "variant": bool(has_variants),
+                    "synced_with_shopify": True,
+                }
+
+                parent_obj, parent_created = Product.objects.update_or_create(
+                    shopify_id=gid,
+                    defaults=parent_defaults,
+                )
+
+                # ---------------------------------------------------------------------
+                # CREATE/UPDATE PRODUCT MEDIA (attach to parent product)
+                # ---------------------------------------------------------------------
+                for media in parent_images:
+                    try:
+                        ProductMedia.objects.update_or_create(
+                            shopify_media_id=media["media_id"],
+                            defaults={
+                                "product": parent_obj,
+                                "field_id": media["file_id"],
+                                "src": media["url"],
+                                "alt_text": media["alt"] or "",
+                            },
+                        )
+                    except Exception as e:
+                        # Log the failure and continue with other media
+                        print("Failed to upsert ProductMedia", media.get("media_id"), str(e))
+
+                # ---------------------------------------------------------------------
+                # CREATE VARIANTS OR APPLY SINGLE VARIANT TO PARENT
+                # ---------------------------------------------------------------------
+                # Track whether we created or updated any variant rows for metrics
                 for v_edge in variants_edges:
-                    v_node = v_edge.get("node", {})
+                    v_node = v_edge.get("node", {}) or {}
                     v_gid = v_node.get("id")
-                    v_image_obj = v_node.get("image")
-                    v_color = v_node.get("color")
-                    v_size = v_node.get("size")
-                    variant_img_src = None
-                    if isinstance(v_image_obj, dict):
-                        variant_img_src = v_image_obj.get("src")
-                    # fallback to parent image when variant image is not present
-                    variant_img = variant_img_src or parent_img_src
                     if not v_gid:
                         continue
+
+                    v_title = (v_node.get("title") or "").strip()
+                    v_image = v_node.get("image") or {}
+                    variant_img_src = v_image.get("url") if isinstance(v_image, dict) else None
+                    img_src_to_use = variant_img_src or parent_img_src
+
                     try:
-                        variant_shopify_id = v_gid
-                    except Exception:
-                        continue
-                    variant_images.append(v_image_obj)
-                    variant_title = v_node.get("title") or ""
-                    # If variant has a descriptive title other than "Default Title" append it
-                    full_title = title
-                    if variant_title and variant_title.lower() != "default title":
-                        full_title = f"{title} - {variant_title}"
-                    try:
-                        variant_price = Decimal(v_node.get("price")) if v_node.get("price") is not None else None
+                        variant_price = Decimal(v_node.get("price")) if v_node.get("price") else None
                     except Exception:
                         variant_price = None
 
-                    variant_sku = v_node.get("sku") or None
-                    variant_barcode = v_node.get("barcode") or None
-                    print(parent_images)
-                    v_obj, v_created = Product.objects.update_or_create(
-                        shopify_id=variant_shopify_id,
-                        
-                        defaults={
-                            "product_id": gid,
-                            "parent_product_id":gid,
-                            "shopify_store": shopify_store_obj,
-                            "title": full_title,
-                            "sku": variant_sku,
-                            "barcode": variant_barcode,
-                            "img_field": variant_img,
-                            "color": v_color,
-                            "size": v_size,
-                            "variant": True,
-                            "price": variant_price,
-                            "synced_with_shopify": True,
-                        },
-                    )
-                    
-                    
-                    if v_created:
-                        for parent_img in parent_images:
-                            img_node = parent_img.get("node", {})
-                            print(img_node)
-                            ProductMedia.objects.update_or_create(
-                                shopify_media_id=img_node.get("id"),
-                                defaults={
-                                    "product": v_obj,
-                                    "src": img_node.get("src"),
-                                    "shopify_media_id": img_node.get("id"),
-                                    "alt_text": img_node.get("altText") or "",
-                                }
+                    # Case A: product has no real variants -> store variant fields on parent product
+                    if not has_variants and (v_title.lower() == "default title" or v_title == ""):
+                        updated_fields = {}
+                        if v_node.get("sku"):
+                            parent_obj.sku = v_node.get("sku")
+                            updated_fields["sku"] = v_node.get("sku")
+                        if v_node.get("barcode"):
+                            parent_obj.barcode = v_node.get("barcode")
+                            updated_fields["barcode"] = v_node.get("barcode")
+                        if variant_price is not None:
+                            parent_obj.price = variant_price
+                            updated_fields["price"] = variant_price
+                        # ensure parent is marked synced
+                        parent_obj.synced_with_shopify = True
+                        save_fields = list(updated_fields.keys()) + ["synced_with_shopify"]
+                        try:
+                            parent_obj.save(update_fields=save_fields if save_fields else None)
+                            if parent_created:
+                                created += 1
+                            else:
+                                updated += 1
+                        except Exception as e:
+                            print("Failed to update parent product with implicit variant data:", str(e))
+                    else:
+                        # Case B: real variant(s) exist -> create/update ProductVariant rows
+                        pv_defaults = {
+                            "sku": v_node.get("sku"),
+                            "barcode": v_node.get("barcode"),
+                            "img_field": img_src_to_use,
+                        }
+                        # Use name (title) as identifying attribute for update_or_create
+                        pv_name = v_title if v_title and v_title.lower() != "default title" else v_gid
+                        try:
+                            pv_obj, pv_created = ProductVariant.objects.update_or_create(
+                                parent_product=parent_obj,
+                                name=pv_name,
+                                defaults=pv_defaults,
                             )
-                        if v_image_obj:
-                            ProductMedia.objects.update_or_create(
-                                shopify_media_id=v_image_obj.get("id"),
-                                defaults={
-                                    "product": v_obj,
-                                    "src": v_image_obj.get("src"),
-                                    "shopify_media_id": v_image_obj.get("id"),
-                                    "alt_text": v_image_obj.get("altText") or "",
-                                }
-                            )
+                            if pv_created:
+                                created += 1
+                            else:
+                                updated += 1
+                        except Exception as e:
+                            print("Failed to create/update ProductVariant for", v_gid, str(e))
+                            continue
 
-                        product_score = ProductScore.objects.create(product=v_obj)
-                        rules = RulesPattern.objects.get(store=shopify_store_obj)
-                        
+                # Optionally create analysis/score for newly created parent
+                if parent_created:
+                    try:
+                        product_score = ProductScore.objects.create(product=parent_obj)
+                        rules = RulesPattern.objects.filter(store=shopify_store_obj).first()
                         variables = {
-                            "product": v_obj,
+                            "product": parent_obj,
                             "rules": rules,
                             "product_id": gid,
                             "parent_images": parent_images,
-                            "variant_images": variant_images
+                            "variant_images": [],  # analyzer can inspect ProductVariant if needed
                         }
-                        product_analysis = ProductAnalyzer.analyze_product(variables)
-
-                        if product_analysis:
-                            product_score.seo_score = Decimal(product_analysis["seo_score"])
-                            product_score.completeness = Decimal(product_analysis["completeness"])
+                        analysis = ProductAnalyzer.analyze_product(variables)
+                        if analysis:
+                            product_score.seo_score = Decimal(analysis.get("seo_score", 0))
+                            product_score.completeness = Decimal(analysis.get("completeness", 0))
                             product_score.save()
-                        created += 1
-                    else:
-                        updated += 1
-            
+                    except Exception as e:
+                        print("Product analysis failed for", gid, str(e))
 
-            custom_user = CustomUser.objects.get(custom_email=shopify_store_obj.email)
-            custom_user.shopify_product_import = True
-            custom_user.save()
+            # custom_user = CustomUser.objects.get(custom_email=shopify_store_obj.email)
+            # custom_user.shopify_product_import = True
+            # custom_user.save()
 
         return Response({"message": "Products imported successfully.", "created": created, "updated": updated}, status=201)
 
@@ -588,22 +655,6 @@ def import_bulk_products(request):
         print("Error in import_bulk_products:", str(e))
         return Response({"error": str(e)}, status=500)
     
-def generate_unique_barcode() -> str:
-    """
-    Generate a unique barcode for the given product variant.
-    This is a placeholder implementation and should be replaced with actual logic
-    to ensure uniqueness across all products in the database.
-    """
-    import random
-
-    while True:
-        # Generate a random 12-digit numeric barcode
-        barcode = ''.join([str(random.randint(0, 9)) for _ in range(12)])
-        # Check if barcode is unique
-        if not Product.objects.filter(barcode=barcode).exists():
-            return barcode
-
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def register_webhooks(request):
@@ -623,61 +674,3 @@ def register_webhooks(request):
     register_webhooks = utils.webhook_register(params=params)
     print(register_webhooks)
     return Response(register_webhooks["message"], status=register_webhooks["status"])
-
-
-def generate_unique_sku(title: str = "", attributes: Optional[Dict[str, Any]] = None) -> str:
-    """
-    Build SKU like: <TITLE_PREFIX>-<ATTRS>-<4hex>
-    - TITLE_PREFIX: first letters of the first 3 words in the title (uppercased), e.g. "Shoulder Strap for Injury" -> "SSF"
-    - ATTRS: optional parts derived from attributes dict (color -> first 3 letters upper, size -> mapped code)
-    - unique 4 char hex suffix (lowercase), e.g. "f231"
-
-    Usage:
-      generate_unique_sku("Shoulder Strap for Injury", {"color": "Blue", "size": "Medium"})
-      -> "SSF-BLU-M-f231"
-    """
-    import re
-    import secrets
-
-    attributes = attributes or {}
-
-    # Title prefix: first letter of up to first 3 words
-    words = re.findall(r"\w+", (title or "").strip())
-    prefix_letters = [w[0].upper() for w in words[:3]]
-    prefix = "".join(prefix_letters) if prefix_letters else "PRD"
-
-    # Attributes part
-    parts = []
-    color = attributes.get("color") or attributes.get("colour")
-    if color:
-        # use first 3 alpha chars of color uppercased (pad/truncate)
-        col = re.sub(r"[^A-Za-z0-9]", "", str(color)).upper()
-        parts.append(col[:3] if len(col) >= 3 else col)
-
-    size = attributes.get("size")
-    if size:
-        s = str(size).strip().lower()
-        size_map = {
-            "xs": "XS", "extra small": "XS",
-            "s": "S", "small": "S",
-            "m": "M", "medium": "M",
-            "l": "L", "large": "L",
-            "xl": "XL", "extra large": "XL",
-            "xxl": "XXL",
-        }
-        code = size_map.get(s, None)
-        if not code:
-            # if single-letter provided (e.g. "M") or unknown, use upcased first 2 chars
-            code = s.upper()[:2] if s else ""
-        if code:
-            parts.append(code)
-
-    # unique 4 hex chars
-    uniq = secrets.token_hex(2)
-
-    sku_parts = [prefix]
-    if parts:
-        sku_parts.extend(parts)
-    sku_parts.append(uniq)
-
-    return "-".join(p for p in sku_parts if p)

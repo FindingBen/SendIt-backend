@@ -117,6 +117,10 @@ GET_ALL_PRODUCTS = """
             publishedAt
             tags
             totalInventory
+            seo {
+              title
+              description
+            }
             variantsCount {
               count
               precision
@@ -130,19 +134,24 @@ GET_ALL_PRODUCTS = """
                   price
                   inventoryQuantity
                   image {
-                    id
-                    src
+                    id       # ✔ This is also MediaImage ID now
+                    url
                     altText
                   }
                 }
               }
             }
-            images(first: 10) {
+            media(first: 10) {
               edges {
                 node {
-                  src
-                  id
-                  altText
+                  ... on MediaImage {
+                    id          # ✔ gid://shopify/MediaImage/xxx
+                    image {
+                      id
+                      url
+                      altText
+                    }
+                  }
                 }
               }
             }
@@ -154,7 +163,8 @@ GET_ALL_PRODUCTS = """
         }
       }
     }
-    """
+"""
+
 
 UPDATE_IMAGE = """mutation fileUpdate($files: [FileUpdateInput!]!) {
   fileUpdate(files: $files) {
@@ -233,6 +243,60 @@ query getProductById($id: ID!) {
   }
 }
 """
+
+GET_PRODUCT_W_MEDIA = """
+query getProductById($id: ID!) {
+  product(id: $id) {
+    id
+    title
+    descriptionHtml
+    handle
+    createdAt
+    updatedAt
+    hasOutOfStockVariants
+    isGiftCard
+    publishedAt
+    tags
+    totalInventory
+    seo {
+        title
+        description
+      }
+    variantsCount {
+      count
+      precision
+    }
+
+    variants(first: 50) {
+      edges {
+        node {
+          id
+          title
+          price
+          sku
+          inventoryQuantity
+        }
+      }
+    }
+
+    media(first: 10) {
+      edges {
+        node {
+          ... on MediaImage {
+            id                     # gid://shopify/MediaImage/xxx
+            image {
+              id                  # gid://shopify/ImageSource/xxx
+              url
+              altText
+            }
+          }
+        }
+      }
+    }
+  }
+}
+"""
+
 
 
 UPDATE_PRODUCT_VARIANTS_BULK = """
