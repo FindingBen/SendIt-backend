@@ -68,7 +68,7 @@ VONAGE_NR = os.environ.get('VONAGE_NUMBER', '')
 if ENVIRONMENT == "production":
     BACKEND = BACKEND_URL
 else:
-    BACKEND = "0c8bdea7fb21.ngrok-free.app"
+    BACKEND = "2458ecac03ac.ngrok-free.app"
 
 CORS_ALLOWED_ORIGINS = os.environ.get('ORIGINS', '').split(',')
 
@@ -203,7 +203,6 @@ VONAGE_ID = os.environ.get('VONAGE_ACCOUNT_ID')
 VONAGE_TOKEN = os.environ.get('VONAGE_TOKEN')
 
 # Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 CACHE_TTL = 60 * 15
 SMART_INSIGHTS_CACHE = 60 * 10
@@ -250,7 +249,6 @@ DATABASES = {
 print("DB SETTINGS:", DATABASES['default'])
 
 # Password validation
-# https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -277,7 +275,6 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 
 # Internationalization
-# https://docs.djangoproject.com/en/4.2/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
 
@@ -306,8 +303,6 @@ DATE_INPUT_FORMATS = ('%d-%m-%Y', '%Y-%m-%d')
 # MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.2/howto/static-files/
-
 
 DOMAIN_STRIPE_NAME = os.environ.get('DOMAIN_STRIPE_NAME')
 
@@ -357,7 +352,6 @@ STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
 ]
 # Default primary key field type
-# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

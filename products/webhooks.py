@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from base.models import ShopifyStore
 from decimal import Decimal
 from .analyzers import ProductAnalyzer
-from .models import ShopifyWebhookLog, Product, ProductScore, RulesPattern, ProductMedia
+from .models import ShopifyWebhookLog, Product,ProductVariant, ProductTag,ProductScore, RulesPattern, ProductMedia
 import json
 
 
@@ -36,104 +36,160 @@ def create_product_webhook(request):
             data.get("category", {}).get("full_name")
             or data.get("product_type", "")
         )
-        img_field = (data.get("image") or {}).get("src")
 
+        tags = data.get("tags", []) or []
+        img_field = (data.get("image") or {}).get("src")
         variants = data.get("variants", [])
-   
+
+        if not product_id:
+            return HttpResponse({"message": "Missing product ID"}, status=400)
+
+        # ---------------------------------------------------------------------
+        # FALLBACK: no variants?
+        # ---------------------------------------------------------------------
         if not variants:
-            return HttpResponse({"message": "No variants found, nothing to create."}, status=200)
-        print('sssaaaaaa')
-        created_variants = []
-        skipped_variants = []
+            return HttpResponse({"message": "No variants found"}, status=200)
+
+        # ---------------------------------------------------------------------
+        # BUILD IMAGE MAP (Shopify images array)
+        # ---------------------------------------------------------------------
         product_images = data.get("images", []) or []
         image_map = {img.get("id"): img.get("src") for img in product_images if isinstance(img, dict)}
 
+        # ---------------------------------------------------------------------
+        # CREATE / UPDATE PARENT PRODUCT
+        # ---------------------------------------------------------------------
+        parent_defaults = {
+            "product_id": product_id,
+            "parent_product_id": product_id,
+            "shopify_store": store_obj,
+            "title": title,
+            "description": data.get("body_html") or "",
+            "seo_description": None,  # Shopify webhook does not send SEO meta normally
+            "img_field": img_field,
+            "variant": True if len(variants) > 1 else False,
+            "category": category,
+            "synced_with_shopify": True,
+        }
+
+        parent_obj, parent_created = Product.objects.update_or_create(
+            shopify_id=product_id,
+            defaults=parent_defaults,
+        )
+
+        # ---------------------------------------------------------------------
+        # SAVE TAGS (only when parent created)
+        # ---------------------------------------------------------------------
+        if parent_created:
+            for tag in tags:
+                ProductTag.objects.get_or_create(product=parent_obj, tag_name=tag)
+
+        # ---------------------------------------------------------------------
+        # SAVE PRODUCT MEDIA
+        # ---------------------------------------------------------------------
+        for img in product_images:
+            ProductMedia.objects.update_or_create(
+                shopify_media_id=img.get("id"),
+                defaults={
+                    "product": parent_obj,
+                    "src": img.get("src"),
+                    "alt_text": img.get("alt") or "",
+                    "field_id": img.get("id"),   # similar to main pipeline
+                },
+            )
+
+        # ---------------------------------------------------------------------
+        # PROCESS VARIANTS
+        # ---------------------------------------------------------------------
+        created_variants = []
+        skipped_variants = []
+
         for variant in variants:
 
-            shopify_id = variant.get("admin_graphql_api_id")
-            variant_name = variant.get("title", None)
-            image_id = variant.get("image_id",None)
-            sku = variant.get("sku",None)
-            barcode = variant.get("barcode",None)
-            price = variant.get("price",None)
-            color = variant.get("option1",None)
-            size = variant.get("option2",None)
-            #v_image = variant.get("image") or []
-            
+            v_id = variant.get("admin_graphql_api_id")
+            variant_name = variant.get("title")
+            image_id = variant.get("image_id")
+
+            sku = variant.get("sku")
+            barcode = variant.get("barcode")
+            price = variant.get("price")
+            color = variant.get("option1")
+            size = variant.get("option2")
+
+            # ---------------------- IMAGE RESOLUTION -------------------------
             variant_image = None
 
-            variant_image = None
             if image_id and image_id in image_map:
                 variant_image = image_map[image_id]
             else:
-                # Fallback: find via variant_ids list in images if image_id is missing
                 for img in product_images:
-                    variant_ids = img.get("variant_ids", []) or []
-                    if variant.get("id") in variant_ids:
+                    if variant.get("id") in (img.get("variant_ids") or []):
                         variant_image = img.get("src")
                         break
 
-            variant_image = variant_image or (data.get("image") or {}).get("src")
-            final_title = title
-            if variant:
-                vn = variant_name.strip()
-                if vn and vn.lower() != "default title":
-                    final_title = f'{final_title}-{vn}'
-            #variant_images = v_image
-            obj, created = Product.objects.get_or_create(
-                product_id=product_id,
-                shopify_id=shopify_id,
-                shopify_store=store_obj,
-                title=final_title,
-                sku=sku,
-                barcode=barcode,
-                color=color,
-                size=size,
-                category=category,
-                img_field=variant_image or img_field,
-                price=price if price else None,
-                variant=True if len(variants) > 1 else False,
-                synced_with_shopify=True,
-            )
+            variant_image = variant_image or img_field
 
-            if created:
-                for parent_img in product_images:
+            # ---------------------- VARIANT NAME LOGIC -----------------------
+            pv_name = variant_name.strip() if variant_name and variant_name.lower() != "default title" else v_id
 
-                    ProductMedia.objects.update_or_create(
-                        shopify_media_id=parent_img.get("id"),
-                                defaults={
-                                    "product": obj,
-                                    "src": parent_img.get("src"),
-                                    "shopify_media_id": parent_img.get("id"),
-                                    "alt_text": parent_img.get("alt") or "",
-                        }
-                    )
-                    
-                product_score = ProductScore.objects.create(product=obj)
-                rules = RulesPattern.objects.get(store=store_obj)
+            # ---------------------- UPSERT VARIANT ---------------------------
+            pv_defaults = {
+                "sku": sku,
+                "barcode": barcode,
+                "img_field": variant_image,
+                "price": Decimal(price) if price else None,
+                "color": color,
+                "size": size,
+            }
 
-                variables = {
-                            "product": obj,
-                            "rules": rules,
-                            "product_id": product_id,
-                            "parent_images": product_images,
-                            "variant_images": []
-                        }
+            try:
+                pv_obj, pv_created = ProductVariant.objects.update_or_create(
+                    parent_product=parent_obj,
+                    name=pv_name,
+                    defaults=pv_defaults,
+                )
 
-                product_analysis = ProductAnalyzer.analyze_product(variables)
+                if pv_created:
+                    created_variants.append(v_id)
+                else:
+                    skipped_variants.append(v_id)
 
-                if product_analysis:
-                    product_score.seo_score = Decimal(product_analysis["seo_score"])
-                    product_score.completeness = Decimal(product_analysis["completeness"])
-                    product_score.save()
+            except Exception as e:
+                print("Variant upsert failed:", v_id, str(e))
+                skipped_variants.append(v_id)
+                continue
 
-            created_variants.append(shopify_id)
+        # ---------------------------------------------------------------------
+        # CREATE SCORE + ANALYSIS ONLY ON PARENT CREATION
+        # ---------------------------------------------------------------------
+        if parent_created:
+            medias = ProductMedia.objects.filter(product=parent_obj)
+            rules = RulesPattern.objects.filter(store=store_obj).first()
 
+            product_score = ProductScore.objects.create(product=parent_obj)
+
+            variables = {
+                "product": parent_obj,
+                "rules": rules,
+                "product_id": product_id,
+                "parent_images": medias,
+                "variant_images": [],
+            }
+
+            analysis = ProductAnalyzer.analyze_product(variables)
+            if analysis:
+                product_score.seo_score = Decimal(analysis.get("seo_score", 0))
+                product_score.completeness = Decimal(analysis.get("completeness", 0))
+                product_score.save()
+
+        # ---------------------------------------------------------------------
+        # RESPONSE
+        # ---------------------------------------------------------------------
         return HttpResponse(
             {
-                "message": "Product variants processed successfully.",
-                "created": created_variants,
-                "skipped": skipped_variants,
+                "message": "Product processed successfully",
+                "created_variants": created_variants,
+                "skipped_variants": skipped_variants,
             },
             status=201,
         )

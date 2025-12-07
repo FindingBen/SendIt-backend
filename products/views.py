@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
-from .models import Product,ShopifyWebhookLog, RulesPattern, ProductVariant,ProductVariantDraft,ProductDraft,ProductMediaDraft,ProductScore, ProductMedia
+from .models import Product,ShopifyWebhookLog, RulesPattern, ProductTag,ProductTagDraft,ProductVariant,ProductVariantDraft,ProductDraft,ProductMediaDraft,ProductScore, ProductMedia
 from decimal import Decimal
 from typing import Optional, Dict, Any
 from django.db import transaction
@@ -477,6 +477,8 @@ def import_bulk_products(request):
                 node = edge.get("node", {})
                 gid = node.get("id")
                 seo_title = node.get("seo", {}).get("title", None)
+                tags = node.get('tags',[])
+                
                 seo_meta = node.get("seo", {}).get("description", None)
                 if not gid:
                     continue
@@ -540,7 +542,12 @@ def import_bulk_products(request):
                     shopify_id=gid,
                     defaults=parent_defaults,
                 )
-
+                if parent_created:
+                    for tag in tags:
+                        tag_obj, created = ProductTag.objects.get_or_create(
+                            product=parent_obj,
+                            tag_name=tag
+                        )
                 # ---------------------------------------------------------------------
                 # CREATE/UPDATE PRODUCT MEDIA (attach to parent product)
                 # ---------------------------------------------------------------------
@@ -611,13 +618,16 @@ def import_bulk_products(request):
                         }
                         # Use name (title) as identifying attribute for update_or_create
                         pv_name = v_title if v_title and v_title.lower() != "default title" else v_gid
+                        pv_list = []
                         try:
                             pv_obj, pv_created = ProductVariant.objects.update_or_create(
                                 parent_product=parent_obj,
                                 name=pv_name,
                                 defaults=pv_defaults,
                             )
+
                             if pv_created:
+                                pv_list.append(pv_obj)
                                 created += 1
                             else:
                                 updated += 1
@@ -628,13 +638,14 @@ def import_bulk_products(request):
                 # Optionally create analysis/score for newly created parent
                 if parent_created:
                     try:
+                        medias = ProductMedia.objects.filter(product=parent_obj)
                         product_score = ProductScore.objects.create(product=parent_obj)
                         rules = RulesPattern.objects.filter(store=shopify_store_obj).first()
                         variables = {
                             "product": parent_obj,
                             "rules": rules,
                             "product_id": gid,
-                            "parent_images": parent_images,
+                            "parent_images": medias,
                             "variant_images": [],  # analyzer can inspect ProductVariant if needed
                         }
                         analysis = ProductAnalyzer.analyze_product(variables)
