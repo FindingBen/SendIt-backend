@@ -329,13 +329,13 @@ class ProductOptimizeView(ShopifyAuthMixin, APIView):
             alt_response = init_ai.generate_alt_text()
             title_response = init_ai.generate_title()
             seo_desc = init_ai.generate_meta_description()
-            #descr, static = init_ai.generate_description()
+            descr, static = init_ai.generate_description()
             
             
             # alt_response = [{'id': 'gid://shopify/ProductImage/79160975130999', 'alt': 'Black shoulder support brace workout'}, {'id': 'gid://shopify/ProductImage/79160975065463', 'alt': 'Detailed black shoulder support workout'}, {'id': 'gid://shopify/ProductImage/79160975098231', 'alt': 'Comfortable shoulder support workout'}]
             # title_response = [{'product_id': 'gid://shopify/Product/15132834529655', 'title': 'Workout Shoulder Strap for Injury Recovery and Support'}]
-            descr = {'product_id': 'gid://shopify/Product/15132834529655', 'description': 'Optimize your workout recovery with our Shoulder Strap for Injury. Designed to provide support and stability, it helps alleviate pain while allowing you to maintain your exercise routine. Perfect for athletes and fitness enthusiasts looking to prevent further injury.'}
-            static = False
+            #descr = {'product_id': 'gid://shopify/Product/15132834529655', 'description': 'Optimize your workout recovery with our Shoulder Strap for Injury. Designed to provide support and stability, it helps alleviate pain while allowing you to maintain your exercise routine. Perfect for athletes and fitness enthusiasts looking to prevent further injury.'}
+            #static = False
             print('Optimize please...',seo_desc)
             optimization_body = {
                 "titles":title_response,
