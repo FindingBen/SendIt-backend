@@ -70,7 +70,11 @@ if ENVIRONMENT == "production":
 else:
     BACKEND = "2458ecac03ac.ngrok-free.app"
 
-CORS_ALLOWED_ORIGINS = os.environ.get('ORIGINS', '').split(',')
+_origins_env = os.environ.get('ORIGINS', '')
+if _origins_env:
+    CORS_ALLOWED_ORIGINS = [o.strip() for o in _origins_env.split(',') if o.strip()]
+else:
+    CORS_ALLOWED_ORIGINS = []
 
 
 CORS_ALLOW_CREDENTIALS = True

@@ -161,6 +161,7 @@ class AiPromptGenerator:
         )
   
         raw = response.choices[0].message.content
+        print("RAW MEETA DESC OUTPUT:", raw)
         description = self.extract_json(raw)
         return description
 
