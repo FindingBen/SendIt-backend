@@ -2,11 +2,12 @@ import json
 import re
 from openai import OpenAI
 from base.auth import OpenAiAuthInit
+from .wrapperAi import RetrySafeOpenAI
 
 
 class AiPromptGenerator:
     def __init__(self, rules, image_data,product_id,title=None,description=None,seo_desc = None):
-        self.client = OpenAiAuthInit().clientAuth()
+        self.openai = RetrySafeOpenAI()
         self.rules = rules
         self.image_data = image_data
         self.title = title
@@ -18,22 +19,27 @@ class AiPromptGenerator:
     def generate_title(self):
         prompt = f"""
         You are an expert Shopify SEO title optimizer.
-        Generate new or modify this Product title {self.title} for product.
 
-        Follow these rules:
-        - Include relevant keywords: {self.rules.keywords}
-        - Recommended length: between {self.rules.min_title_length} and {self.rules.max_title_length}
-       
-        - Do NOT output explanations. Output ONLY pure JSON.
+        Generate ONE optimized product title based on:
+        - Original title: "{self.title}"
+        - Keywords: {self.rules.keywords}
+        - Length: {self.rules.min_title_length}–{self.rules.max_title_length} characters
 
-        Return a JSON array where EACH element is:
+        Rules:
+        - Generate EXACTLY ONE title
+        - Do NOT provide multiple options
+        - Do NOT include explanations
+        - Output ONLY valid JSON
+
+        Return EXACTLY this object:
         {{
         "product_id": "{self.product_id}",
-        "title": "<generated/modified title>"
+        "title": "<optimized title>"
         }}
         """
 
-        response = self.client.chat.completions.create(
+
+        response = self.openai.chat_completion(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "Return ONLY valid JSON. No markdown. No code fences."},
@@ -53,9 +59,10 @@ class AiPromptGenerator:
         Returns a list of objects: [{"id": "...", "alt": "..."}]
         """
 
+
         # First classify all images
         image_info = self.classify_images(self.image_data)
-
+        print('CLASSIFYING')
         # Prepare prompt
         prompt = f"""
         You are an expert Shopify SEO image optimizer.
@@ -80,7 +87,7 @@ class AiPromptGenerator:
         }}
         """
 
-        response = self.client.chat.completions.create(
+        response = self.openai.chat_completion(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "Return ONLY valid JSON. No markdown. No code fences."},
@@ -124,7 +131,7 @@ class AiPromptGenerator:
         }}
         """
 
-        response = self.client.chat.completions.create(
+        response = self.openai.chat_completion(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You generate Shopify HTML product descriptions with clean formatting."},
@@ -152,7 +159,7 @@ class AiPromptGenerator:
         }}
         """
 
-        response = self.client.chat.completions.create(
+        response = self.openai.chat_completion(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You generate Shopify HTML product meta descriptions with clean formatting."},
@@ -175,7 +182,7 @@ class AiPromptGenerator:
 
         Returns list of classification JSONs for each image.
         """
-
+        images = self.normalize_images(images)
         # Build message content for ALL images at once
         content_blocks = [
             {
@@ -187,7 +194,7 @@ class AiPromptGenerator:
                 ),
             }
         ]
-
+        print('IMAGESSSSSSS',images)
         # Attach every image
         for img in images:
             content_blocks.append({
@@ -200,7 +207,7 @@ class AiPromptGenerator:
             })
 
         # Make a single GPT request
-        response = self.client.chat.completions.create(
+        response = self.openai.chat_completion(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are an expert product image classifier."},
@@ -217,6 +224,33 @@ class AiPromptGenerator:
             print("FAILED TO PARSE JSON:", raw)
             raise
 
+    def normalize_images(self, images):
+            """
+            Accepts ProductMedia queryset OR list of dicts.
+            Returns normalized list of dicts:
+            [
+                {"id": "...", "src": "...", "altText": "..."}
+            ]
+            """
+            normalized = []
+
+            for img in images:
+                # Django model
+                if hasattr(img, "shopify_media_id"):
+                    normalized.append({
+                        "id": img.shopify_media_id,
+                        "src": img.src,
+                        "altText": img.alt_text or "",
+                    })
+                # Dict (future-proof)
+                elif isinstance(img, dict):
+                    normalized.append({
+                        "id": img.get("id"),
+                        "src": img.get("src"),
+                        "altText": img.get("altText", ""),
+                    })
+
+            return normalized
     
     def extract_json(self, raw):
         """

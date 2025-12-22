@@ -13,6 +13,7 @@ from typing import Optional, Dict, Any
 from django.db import transaction
 from base.models import ShopifyStore, CustomUser
 from base.utils import helpers
+from .tasks import optimize_product_task
 from base.analyzers import Prompting
 from base.auth import get_business_info, OpenAiAuthInit
 from base.shopify_functions import ShopifyFactoryFunction
@@ -23,6 +24,7 @@ from .generatorAi import AiPromptGenerator
 from .optimizers import ProductOptimizer
 from .helpers import create_product_draft, generate_unique_barcode, generate_unique_sku
 import json
+from notification.models import OptimizationJob
 
 
 
@@ -235,15 +237,14 @@ class ProductOptimizeView(ShopifyAuthMixin, APIView):
     def get(self, request, format=None):
         try:
             shopify_store, shopify_token, url = ShopifyAuthMixin().resolve_shopify(request)
-            
+            jobs = OptimizationJob.objects.filter(user=request.user).order_by('-created_at')
             product_id = request.query_params.get("product_id")
-            print('PARAM',product_id)
-            if not product_id:
-                return Response({"error": "product_id query parameter is required"}, status=400)
+            product = Product.objects.get(product_id=product_id)
+  
+            jobs = OptimizationJob.objects.get(user=request.user,product_id=product.product_id)
+            product_draft = jobs.product_draft
 
-            try:
-                product_draft = ProductDraft.objects.get(product_id=product_id, shopify_store=shopify_store)
-            except ProductDraft.DoesNotExist:
+            if not product_draft:
                 return Response({"error": "Draft for this product does not exist"}, status=404)
 
             media_drafts = ProductMediaDraft.objects.filter(product=product_draft)
@@ -314,43 +315,47 @@ class ProductOptimizeView(ShopifyAuthMixin, APIView):
             )
 
             product_id = request.data.get("product_id", [])
-            rules = RulesPattern.objects.get(store=shopify_store)
-
-            product, images = shopify_factory.get_product_for_opt(product_id)
+            #rules = RulesPattern.objects.get(store=shopify_store)
+            print('started...',product_id)
+            #product, images = shopify_factory.get_product_for_opt(product_id)
             
-            product_obj = Product.objects.get(product_id=product['id'])
-            print("PRODUCT",product)
-            print("IMAGES",images)
-            product_draft = create_product_draft(product_obj)
+            # product_obj = Product.objects.get(product_id=product['id'])
+            # print("PRODUCT",product)
+            # print("IMAGES",images)
+            #product_draft = create_product_draft(product_obj)
             #print('DRAFT CREATED',product['title'])
             #create draft product here
            
-            init_ai = AiPromptGenerator(rules,image_data=images,title=product['title'],product_id=product['id'])
-            alt_response = init_ai.generate_alt_text()
-            title_response = init_ai.generate_title()
-            seo_desc = init_ai.generate_meta_description()
-            descr, static = init_ai.generate_description()
-            
+            # init_ai = AiPromptGenerator(rules,image_data=images,title=product['title'],product_id=product['id'])
+            # alt_response = init_ai.generate_alt_text()
+            # title_response = init_ai.generate_title()
+            # seo_desc = init_ai.generate_meta_description()
+            # descr, static = init_ai.generate_description()
+            # optimize_product_task.delay(
+            #     product_id=product_id,
+            #     store_id=shopify_store.id
+            # )
             
             # alt_response = [{'id': 'gid://shopify/ProductImage/79160975130999', 'alt': 'Black shoulder support brace workout'}, {'id': 'gid://shopify/ProductImage/79160975065463', 'alt': 'Detailed black shoulder support workout'}, {'id': 'gid://shopify/ProductImage/79160975098231', 'alt': 'Comfortable shoulder support workout'}]
             # title_response = [{'product_id': 'gid://shopify/Product/15132834529655', 'title': 'Workout Shoulder Strap for Injury Recovery and Support'}]
             #descr = {'product_id': 'gid://shopify/Product/15132834529655', 'description': 'Optimize your workout recovery with our Shoulder Strap for Injury. Designed to provide support and stability, it helps alleviate pain while allowing you to maintain your exercise routine. Perfect for athletes and fitness enthusiasts looking to prevent further injury.'}
             #static = False
-            print('Optimize please...',seo_desc)
-            optimization_body = {
-                "titles":title_response,
-                "images":alt_response,
-                "seo_desc": seo_desc['description'],
-                "descriptions":descr['description'],
-                "static": static
-            }
-            optimizer = ProductOptimizer(product_draft,optimization_body)
-            results, status_code = optimizer.run()
+            # print('Optimize please...',seo_desc)
+            # optimization_body = {
+            #     "titles":title_response,
+            #     "images":alt_response,
+            #     "seo_desc": seo_desc['description'],
+            #     "descriptions":descr['description'],
+            #     "static": static
+            # }
+            # optimizer = ProductOptimizer(product_draft,optimization_body)
+            # results, status_code = optimizer.run()
             # print(results)
-            if status_code == 200:
-                return Response({"message": results["message"]}, status=200)
-            else:
-                return Response({"error": results["message"], "details": results["errors"]}, status=500)
+            # if status_code == 200:
+            #     return Response({"message": results["message"]}, status=200)
+            # else:
+            #     return Response({"error": results["message"], "details": results["errors"]}, status=500)
+            return Response({"message": "Optimization started. Check back later for results."}, status=202)
 
         except Exception as e:
             print("Error in optimize_product:", str(e))
@@ -360,80 +365,85 @@ class ProductOptimizeView(ShopifyAuthMixin, APIView):
 class MerchantApprovalProductOptimization(ShopifyAuthMixin, APIView):
     def post(self, request, format=None):
         try:
-            shopify_store, shopify_token, url = ShopifyAuthMixin().resolve_shopify(request)
-            shopify_factory = ShopifyFactoryFunction(
-                domain=shopify_store.shop_domain,
-                token=shopify_token,
-                url=url,
-                request=request
-            )
+            with transaction.atomic():
+                shopify_store, shopify_token, url = ShopifyAuthMixin().resolve_shopify(request)
+                shopify_factory = ShopifyFactoryFunction(
+                    domain=shopify_store.shop_domain,
+                    token=shopify_token,
+                    url=url,
+                    request=request
+                )
 
-            request_approval = request.data.get("approval")
-            product_id = request.data.get("product")
+                request_approval = request.data.get("approval")
+                product_id = request.data.get("product")
+                print('PRODUCT ID',product_id)
+                product_obj = Product.objects.get(parent_product_id=product_id)
+                product_draft = ProductDraft.objects.get(parent_product_id=product_obj.parent_product_id)
+                print('DRAFT',product_draft)
+                if not request_approval:
+                    product_draft.delete()
+                    product_obj.optimization_status = "not started"
+                    product_obj.save(update_fields=["optimization_status"])
+                    return Response({"message": "Merchant declined optimization"}, status=200)
 
-            product_obj = Product.objects.get(parent_product_id=product_id)
-            product_draft = ProductDraft.objects.get(parent_product_id=product_obj.parent_product_id)
 
-            if not request_approval:
-                product_draft.delete()
-                return Response({"message": "Merchant declined optimization"}, status=200)
-
-
-            # ---------------------------------------------------------
-            # 1. PRODUCT UPDATE (Title, description, SEO)
-            # ---------------------------------------------------------
-            product_vars = {
-                "input": {
-                    "id": product_obj.product_id,
-                    "title": product_draft.title,
-                    "descriptionHtml": getattr(product_draft, "description", ""),
-                    "seo": {
+                # ---------------------------------------------------------
+                # 1. PRODUCT UPDATE (Title, description, SEO)
+                # ---------------------------------------------------------
+                product_vars = {
+                    "input": {
+                        "id": product_obj.product_id,
                         "title": product_draft.title,
-                        "description": product_draft.seo_description
+                        "descriptionHtml": getattr(product_draft, "description", ""),
+                        "seo": {
+                            "title": product_draft.title,
+                            "description": product_draft.seo_description
+                        }
                     }
                 }
-            }
-            product_resp = shopify_factory.product_update(product_vars)
-            product_json = product_resp.json()
+                product_resp = shopify_factory.product_update(product_vars)
+                product_json = product_resp.json()
+                print('AAAA',product_json)
 
+                product_errors = product_json.get("data", {}).get("productUpdate", {}).get("userErrors", [])
+                if product_errors:
+                    return Response({"error": product_errors}, status=400)
 
-            product_errors = product_json.get("data", {}).get("productUpdate", {}).get("userErrors", [])
-            if product_errors:
-                return Response({"error": product_errors}, status=400)
+                # ---------------------------------------------------------
+                # 2. FILE UPDATE (Image alt text)
+                # ---------------------------------------------------------
+                media_drafts = ProductMediaDraft.objects.filter(product=product_draft)
 
-            # ---------------------------------------------------------
-            # 2. FILE UPDATE (Image alt text)
-            # ---------------------------------------------------------
-            media_drafts = ProductMediaDraft.objects.filter(product=product_draft)
+                file_payload = []
+                for media in media_drafts:
+                    print(media)
+                    # Only send payload if ImageSource ID exists
+                    if media.field_id:
+                        file_payload.append({
+                            "id": media.shopify_media_id,     # ✔ correct
+                            "alt": media.alt_text or ""
+                        })
+                file_payload = [f for f in file_payload if "MediaImage" in f["id"]]
+                if file_payload:
+                    file_vars = { "files": file_payload }
+                    file_resp = shopify_factory.product_image_update(file_vars)
+                    file_json = file_resp.json()
 
-            file_payload = []
-            for media in media_drafts:
-                print(media)
-                # Only send payload if ImageSource ID exists
-                if media.field_id:
-                    file_payload.append({
-                        "id": media.shopify_media_id,     # ✔ correct
-                        "alt": media.alt_text or ""
-                    })
-            file_payload = [f for f in file_payload if "MediaImage" in f["id"]]
-            if file_payload:
-                file_vars = { "files": file_payload }
-                file_resp = shopify_factory.product_image_update(file_vars)
-                file_json = file_resp.json()
+                    file_errors = file_json.get("data", {}).get("fileUpdate", {}).get("userErrors", [])
+                    if file_errors:
+                        return Response({"error": file_errors}, status=400)
 
-                file_errors = file_json.get("data", {}).get("fileUpdate", {}).get("userErrors", [])
-                if file_errors:
-                    return Response({"error": file_errors}, status=400)
+                # CLEANUP
+                product_obj.optimization_status = "not started"
+                product_obj.save(update_fields=["optimization_status"])
+                product_draft.delete()
+                media_drafts.delete()
 
-            # CLEANUP
-            product_draft.delete()
-            media_drafts.delete()
-
-            return Response({
-                "message": "Product optimization successfully applied",
-                "product_update": product_json,
-                "media_update": file_json if file_payload else "no media updates"
-            }, status=200)
+                return Response({
+                    "message": "Product optimization successfully applied",
+                    "product_update": product_json,
+                    "media_update": file_json if file_payload else "no media updates"
+                }, status=200)
 
         except Exception as e:
             return Response({"error": str(e)}, status=500)

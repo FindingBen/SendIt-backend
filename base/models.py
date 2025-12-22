@@ -218,10 +218,20 @@ class ContactList(models.Model):
         # Replace 'yourappname' with your actual app name
         Contact = apps.get_model('base', 'Contact')
 
-        contact_list = instance.contact_list
+        # Use the raw FK id to avoid triggering a relation lookup that can
+        # raise ContactList.DoesNotExist when the ContactList has already
+        # been deleted (e.g. during cascade deletes).
+        contact_list_id = getattr(instance, 'contact_list_id', None)
+        if not contact_list_id:
+            return
 
-        contact_count = Contact.objects.filter(
-            contact_list=contact_list).count()
+        ContactList = apps.get_model('base', 'ContactList')
+        contact_list = ContactList.objects.filter(pk=contact_list_id).first()
+        if not contact_list:
+            # Parent ContactList no longer exists; nothing to update.
+            return
+
+        contact_count = Contact.objects.filter(contact_list=contact_list).count()
         contact_list.contact_lenght = contact_count
         contact_list.save()
 

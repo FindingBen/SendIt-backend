@@ -24,6 +24,12 @@ class RulesPattern(models.Model):
     requires_alt_text = models.BooleanField(default=True)
 
 class Product(models.Model):
+    STATUS_CHOICES = (
+        ("in progress", "In progress"),
+        ("not started", "Not started"),
+        ("completed", "Completed"),
+        ("failed", "Failed"),
+    )
     product_id=models.CharField(max_length=255, unique=False)
     parent_product_id=models.CharField(max_length=255, blank=True, null=True)
     shopify_id = models.CharField(max_length=255, unique=True)
@@ -39,6 +45,7 @@ class Product(models.Model):
     category = models.CharField(max_length=100, blank=True, null=True)
     img_field = models.URLField(max_length=500, blank=True, null=True)
     variant = models.BooleanField(default=False)
+    optimization_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="not started")
     price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     synced_with_shopify = models.BooleanField(default=False)
 
@@ -81,6 +88,19 @@ class ProductDraft(models.Model):
     def __str__(self):
         return self.title
     
+    def apply_title(self, title: str):
+        self.title = title
+        self.save(update_fields=["title"])
+
+    def apply_description(self, description: str, static: bool = False):
+        self.description = description
+        self.static_desc = static
+        self.save(update_fields=["description", "static_desc"])
+
+    def apply_seo_description(self, seo_desc: str):
+        self.seo_description = seo_desc
+        self.save(update_fields=["seo_description"])
+    
 class ProductTag(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     tag_name = models.CharField(max_length=100, blank=True, null=True)
@@ -89,12 +109,21 @@ class ProductTagDraft(models.Model):
     product = models.ForeignKey(ProductDraft, on_delete=models.CASCADE)
     tag_name = models.CharField(max_length=100, blank=True, null=True)
 
+    def apply_tags(self, tags: list[str]):
+        ProductTagDraft.objects.filter(product=self).delete()
+        ProductTagDraft.objects.bulk_create([
+            ProductTagDraft(product=self, tag_name=tag.strip())
+            for tag in tags if tag.strip()
+        ])
+
 class ProductMediaDraft(models.Model):
     product = models.ForeignKey(ProductDraft, on_delete=models.CASCADE)
     shopify_media_id = models.CharField(max_length=255, unique=True)
     field_id = models.CharField(max_length=255, null=True, blank=True)
     src = models.URLField(max_length=500, blank=True, null=True)
     alt_text = models.TextField(blank=True, null=True)
+
+
     
 class ProductMedia(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)

@@ -11,7 +11,6 @@ from .queries import GET_SHOPIFY_DATA, GET_SHOP_INFO_2
 class OpenAiAuthInit:
     def clientAuth(self):
         client = OpenAI(
-            # This is the default and can be omitted
             api_key=os.environ.get("OPENAI_API_KEY"),
         )
         return client
