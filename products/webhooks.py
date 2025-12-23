@@ -113,8 +113,8 @@ def create_product_webhook(request):
             sku = variant.get("sku")
             barcode = variant.get("barcode")
             price = variant.get("price")
-            color = variant.get("option1")
-            size = variant.get("option2")
+            # color = variant.get("option1")
+            # size = variant.get("option2")
 
             # ---------------------- IMAGE RESOLUTION -------------------------
             variant_image = None
@@ -137,9 +137,7 @@ def create_product_webhook(request):
                 "sku": sku,
                 "barcode": barcode,
                 "img_field": variant_image,
-                "price": Decimal(price) if price else None,
-                "color": color,
-                "size": size,
+                "price": Decimal(price) if price else None
             }
 
             try:

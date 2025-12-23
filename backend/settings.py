@@ -83,7 +83,7 @@ VONAGE_NR = os.environ.get('VONAGE_NUMBER', '')
 if ENVIRONMENT == "production":
     BACKEND = BACKEND_URL
 else:
-    BACKEND = "2458ecac03ac.ngrok-free.app"
+    BACKEND = "4b68d8e68625.ngrok-free.app"
 
 _origins_env = os.environ.get('ORIGINS', '')
 if _origins_env:
