@@ -112,7 +112,7 @@ def create_product_webhook(request):
 
             sku = variant.get("sku")
             barcode = variant.get("barcode")
-            price = variant.get("price")
+            # price = variant.get("price")
             # color = variant.get("option1")
             # size = variant.get("option2")
 
