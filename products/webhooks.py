@@ -137,7 +137,7 @@ def create_product_webhook(request):
                 "sku": sku,
                 "barcode": barcode,
                 "img_field": variant_image,
-                "price": Decimal(price) if price else None
+                # "price": Decimal(price) if price else None
             }
 
             try:
