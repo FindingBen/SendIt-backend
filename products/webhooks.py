@@ -24,7 +24,7 @@ def create_product_webhook(request):
         return HttpResponse(status=208)  # Acknowledge but skip
 
     store_obj = ShopifyStore.objects.filter(shop_domain=shopify_domain).first()
-
+    print('Store object:', store_obj)
     ShopifyWebhookLog.objects.create(webhook_id=shopify_webhook_id, 
         webhook_topic=shopify_topic, shopify_store=store_obj,created_at=created_at)
 
@@ -36,7 +36,7 @@ def create_product_webhook(request):
             data.get("category", {}).get("full_name")
             or data.get("product_type", "")
         )
-
+        print(data)
         tags = data.get("tags", []) or []
         img_field = (data.get("image") or {}).get("src")
         variants = data.get("variants", [])
@@ -55,7 +55,7 @@ def create_product_webhook(request):
         # ---------------------------------------------------------------------
         product_images = data.get("images", []) or []
         image_map = {img.get("id"): img.get("src") for img in product_images if isinstance(img, dict)}
-
+        print('STEP 1')
         # ---------------------------------------------------------------------
         # CREATE / UPDATE PARENT PRODUCT
         # ---------------------------------------------------------------------
@@ -76,15 +76,15 @@ def create_product_webhook(request):
             shopify_id=product_id,
             defaults=parent_defaults,
         )
-
+        print('STEP 2')
         # ---------------------------------------------------------------------
         # SAVE TAGS (only when parent created)
         # ---------------------------------------------------------------------
         if parent_created:
             for tag in tags:
                 ProductTag.objects.get_or_create(product=parent_obj, tag_name=tag)
-
-        # ---------------------------------------------------------------------
+        print('STEP 3')
+        # -----------  ----------------------------------------------------------
         # SAVE PRODUCT MEDIA
         # ---------------------------------------------------------------------
         for img in product_images:
@@ -97,13 +97,13 @@ def create_product_webhook(request):
                     "field_id": img.get("id"),   # similar to main pipeline
                 },
             )
-
+        print('STEP 4')
         # ---------------------------------------------------------------------
         # PROCESS VARIANTS
         # ---------------------------------------------------------------------
         created_variants = []
         skipped_variants = []
-
+        print('VARIANTS:', variants)
         for variant in variants:
 
             v_id = variant.get("admin_graphql_api_id")
@@ -126,7 +126,7 @@ def create_product_webhook(request):
                     if variant.get("id") in (img.get("variant_ids") or []):
                         variant_image = img.get("src")
                         break
-
+            print('STEP 5')
             variant_image = variant_image or img_field
 
             # ---------------------- VARIANT NAME LOGIC -----------------------
@@ -146,7 +146,7 @@ def create_product_webhook(request):
                     name=pv_name,
                     defaults=pv_defaults,
                 )
-
+                print('STEP 6')
                 if pv_created:
                     created_variants.append(v_id)
                 else:
@@ -163,7 +163,7 @@ def create_product_webhook(request):
         if parent_created:
             medias = ProductMedia.objects.filter(product=parent_obj)
             rules = RulesPattern.objects.filter(store=store_obj).first()
-
+            print('STEP 7')
             product_score = ProductScore.objects.create(product=parent_obj)
 
             variables = {
