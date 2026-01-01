@@ -666,9 +666,9 @@ def import_bulk_products(request):
                     except Exception as e:
                         print("Product analysis failed for", gid, str(e))
 
-            # custom_user = CustomUser.objects.get(custom_email=shopify_store_obj.email)
-            # custom_user.shopify_product_import = True
-            # custom_user.save()
+            custom_user = CustomUser.objects.get(custom_email=shopify_store_obj.email)
+            custom_user.shopify_product_import = True
+            custom_user.save()
 
         return Response({"message": "Products imported successfully.", "created": created, "updated": updated}, status=201)
 
