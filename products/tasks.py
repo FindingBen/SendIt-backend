@@ -11,18 +11,21 @@ from django.utils import timezone
 
 
 def notify_user(job,product, status):
-    channel_layer = get_channel_layer()
-    print("CHANNEL LAYER:", channel_layer)
-    
-    async_to_sync(channel_layer.group_send)(
-        f"user_{job.user.id}",
-        {
-            "type": "job_notification",
-            "event": "OPTIMIZATION_DONE" if status == "completed" else "OPTIMIZATION_FAILED",
-            "job_id": str(job.id),
-            "product_id": product.id,
-        }
-    )
+    try:
+        channel_layer = get_channel_layer()
+        print("CHANNEL LAYER:", channel_layer)
+        
+        async_to_sync(channel_layer.group_send)(
+            f"user_{job.user.id}",
+            {
+                "type": "job_notification",
+                "event": "OPTIMIZATION_DONE" if status == "completed" else "OPTIMIZATION_FAILED",
+                "job_id": str(job.id),
+                "product_id": product.id,
+            }
+        )
+    except Exception as e:
+        print("ERROR SENDING WEBSOCKET NOTIFICATION:", str(e))
 
 
 @shared_task(
