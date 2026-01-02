@@ -195,3 +195,30 @@ def create_product_webhook(request):
     except Exception as e:
         print("Error processing product webhook:", str(e))
         return HttpResponse({"error": str(e)}, status=500)
+    
+@csrf_exempt
+@require_http_methods(['POST'])
+def delete_product_webhook(request):
+    shopify_webhook_id = request.META.get('HTTP_X_SHOPIFY_WEBHOOK_ID')
+    shopify_domain = request.META.get('HTTP_X_SHOPIFY_SHOP_DOMAIN')
+    shopify_topic = request.META.get('HTTP_X_SHOPIFY_TOPIC')
+    created_at = request.META.get('HTTP_X_SHOPIFY_TRIGGERED_AT')
+
+    if ShopifyWebhookLog.objects.filter(webhook_id=shopify_webhook_id).exists():
+        print("⚠️ Duplicate webhook ignored:", shopify_webhook_id)
+        return HttpResponse(status=208)  # Acknowledge but skip
+    print('SSSSSSS')
+    store_obj = ShopifyStore.objects.filter(shop_domain=shopify_domain).first()
+    print('Store object:', store_obj)
+    ShopifyWebhookLog.objects.create(webhook_id=shopify_webhook_id, 
+        webhook_topic=shopify_topic, shopify_store=store_obj,created_at=created_at)
+    try:
+        data = json.loads(request.body)
+        print('Webhook data:', data)
+        product_id = data.get("id")
+        craft_id = "gid://shopify/Product/" + str(product_id)
+        Product.objects.filter(shopify_id=craft_id).delete()
+        return HttpResponse({"message": "Product deleted successfully"}, status=200)
+    except Exception as e:        
+        print("Error processing product delete webhook:", str(e))
+        return HttpResponse({"error": str(e)}, status=500)

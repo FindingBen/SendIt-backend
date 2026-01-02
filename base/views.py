@@ -230,7 +230,8 @@ class CallbackAuthView(APIView):
                         first_name=shop_data.get('shopOwnerName')
                     )
                     webhook_urls = [{"url":"products/product_webhook","topic":"PRODUCTS_CREATE"},
-                                    {"url":"api/customer_create_data_webhook","topic":"CUSTOMERS_CREATE"}]
+                                    {"url":"api/customer_create_data_webhook","topic":"CUSTOMERS_CREATE"},
+                                    {"url":"products/product_webhook","topic":"PRODUCTS_DELETE"}]
                     for urls in webhook_urls:
 
                         params = {
