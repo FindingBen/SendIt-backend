@@ -237,18 +237,15 @@ class ProductOptimizeView(ShopifyAuthMixin, APIView):
     def get(self, request, format=None):
         try:
             shopify_store, shopify_token, url = ShopifyAuthMixin().resolve_shopify(request)
-            jobs = OptimizationJob.objects.filter(user=request.user).order_by('-created_at')
             product_id = request.query_params.get("product_id")
             product = Product.objects.get(product_id=product_id)
   
-            jobs = OptimizationJob.objects.get(user=request.user,product_id=product.product_id)
-            product_draft = jobs.product_draft
-
+            product_draft = ProductDraft.objects.get(parent_product_id=product_id)
             if not product_draft:
                 return Response({"error": "Draft for this product does not exist"}, status=404)
-
+            
             media_drafts = ProductMediaDraft.objects.filter(product=product_draft)
-
+            # jobs = OptimizationJob.objects.get(id=product_draft.optimization_job_id)
             try:
                 original_product = Product.objects.get(shopify_id=product_draft.shopify_id)
             except Product.DoesNotExist:
@@ -313,48 +310,7 @@ class ProductOptimizeView(ShopifyAuthMixin, APIView):
                 url=url,
                 request=request
             )
-
-            product_id = request.data.get("product_id", [])
-            #rules = RulesPattern.objects.get(store=shopify_store)
-            print('started...',product_id)
-            #product, images = shopify_factory.get_product_for_opt(product_id)
             
-            # product_obj = Product.objects.get(product_id=product['id'])
-            # print("PRODUCT",product)
-            # print("IMAGES",images)
-            #product_draft = create_product_draft(product_obj)
-            #print('DRAFT CREATED',product['title'])
-            #create draft product here
-           
-            # init_ai = AiPromptGenerator(rules,image_data=images,title=product['title'],product_id=product['id'])
-            # alt_response = init_ai.generate_alt_text()
-            # title_response = init_ai.generate_title()
-            # seo_desc = init_ai.generate_meta_description()
-            # descr, static = init_ai.generate_description()
-            # optimize_product_task.delay(
-            #     product_id=product_id,
-            #     store_id=shopify_store.id
-            # )
-            
-            # alt_response = [{'id': 'gid://shopify/ProductImage/79160975130999', 'alt': 'Black shoulder support brace workout'}, {'id': 'gid://shopify/ProductImage/79160975065463', 'alt': 'Detailed black shoulder support workout'}, {'id': 'gid://shopify/ProductImage/79160975098231', 'alt': 'Comfortable shoulder support workout'}]
-            # title_response = [{'product_id': 'gid://shopify/Product/15132834529655', 'title': 'Workout Shoulder Strap for Injury Recovery and Support'}]
-            #descr = {'product_id': 'gid://shopify/Product/15132834529655', 'description': 'Optimize your workout recovery with our Shoulder Strap for Injury. Designed to provide support and stability, it helps alleviate pain while allowing you to maintain your exercise routine. Perfect for athletes and fitness enthusiasts looking to prevent further injury.'}
-            #static = False
-            # print('Optimize please...',seo_desc)
-            # optimization_body = {
-            #     "titles":title_response,
-            #     "images":alt_response,
-            #     "seo_desc": seo_desc['description'],
-            #     "descriptions":descr['description'],
-            #     "static": static
-            # }
-            # optimizer = ProductOptimizer(product_draft,optimization_body)
-            # results, status_code = optimizer.run()
-            # print(results)
-            # if status_code == 200:
-            #     return Response({"message": results["message"]}, status=200)
-            # else:
-            #     return Response({"error": results["message"], "details": results["errors"]}, status=500)
             return Response({"message": "Optimization started. Check back later for results."}, status=202)
 
         except Exception as e:
@@ -389,7 +345,6 @@ class MerchantApprovalProductOptimization(ShopifyAuthMixin, APIView):
                     product_obj.save(update_fields=["optimization_status"])
                     return Response({"message": "Merchant declined optimization"}, status=200)
 
-
                 # ---------------------------------------------------------
                 # 1. PRODUCT UPDATE (Title, description, SEO)
                 # ---------------------------------------------------------
@@ -410,10 +365,16 @@ class MerchantApprovalProductOptimization(ShopifyAuthMixin, APIView):
                 product_errors = product_json.get("data", {}).get("productUpdate", {}).get("userErrors", [])
                 if product_errors:
                     return Response({"error": product_errors}, status=400)
-
-                # ---------------------------------------------------------
-                # 2. FILE UPDATE (Image alt text)
-                # ---------------------------------------------------------
+                
+                try:
+                    product_obj.title = product_draft.title
+                    product_obj.description = getattr(product_draft, "description", "")
+                    product_obj.seo_description = getattr(product_draft, "seo_description", "")
+                    
+                    product_obj.save(update_fields=["title", "description", "seo_description"])
+                except Exception as e:
+                    print("Failed to apply draft to local Product:", str(e))
+                
                 media_drafts = ProductMediaDraft.objects.filter(product=product_draft)
 
                 file_payload = []
@@ -435,6 +396,20 @@ class MerchantApprovalProductOptimization(ShopifyAuthMixin, APIView):
                         return Response({"error": file_errors}, status=400)
 
                 # CLEANUP
+                product_score = ProductScore.objects.get(product=product_obj)
+                rules = RulesPattern.objects.filter(store=shopify_store).first()
+                variables = {
+                            "product": product_obj,
+                            "rules": rules,
+                            "product_id": product_obj.shopify_id,
+                            "parent_images": media_drafts,
+                            "variant_images": [],  # analyzer can inspect ProductVariant if needed
+                }
+                analysis = ProductAnalyzer.analyze_product(variables)
+                if analysis:
+                    product_score.seo_score = Decimal(analysis.get("seo_score", 0))
+                    product_score.completeness = Decimal(analysis.get("completeness", 0))
+                    product_score.save()
                 product_obj.optimization_status = "not started"
                 product_obj.save(update_fields=["optimization_status"])
                 product_draft.delete()

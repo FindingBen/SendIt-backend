@@ -34,7 +34,7 @@ class OptimizationJob(models.Model):
     user = models.ForeignKey("auth.User", on_delete=models.CASCADE)
     product_id = models.CharField(max_length=255)
     store = models.ForeignKey(ShopifyStore, on_delete=models.CASCADE, null=True)
-    product_draft = models.ForeignKey(ProductDraft, on_delete=models.CASCADE, null=True)
+    product_draft_id = models.CharField(max_length=255,blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
     error = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)

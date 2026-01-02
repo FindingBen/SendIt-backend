@@ -49,10 +49,10 @@ def optimize_product_task(self, job_id):
             product = Product.objects.get(
                 product_id=job.product_id
             )
-            print('FOUND PRODUCT:', product.title)
+
             product_images = ProductMedia.objects.filter(product=product)
             product_tag = ProductTag.objects.filter(product=product)
-            print('OPTIMIZING PRODUCT:', product.title)
+
 
             rules = RulesPattern.objects.get(store=job.store)
             product_draft, created = ProductDraft.objects.get_or_create(
@@ -62,14 +62,15 @@ def optimize_product_task(self, job_id):
                     "parent_product_id": product.product_id,
                     "title": getattr(product, "title", ""),
                     "description": getattr(product, "description", ""),
+                    "optimization_job_id": job_id,
                     "seo_description": getattr(product, "seo_description", ""),
                     "shopify_id": getattr(product, "shopify_id", ""),
                     "img_field": getattr(product, "images", None),
                 },
             )
             
-            job.product_draft = product_draft
-            job.save(update_fields=["product_draft"])
+            job.product_draft_id = product_draft.product_id
+            job.save(update_fields=["product_draft_id"])
 
             for img in product_images:
                 shopify_media_id = getattr(img, "shopify_media_id", None) or getattr(img, "id", None)

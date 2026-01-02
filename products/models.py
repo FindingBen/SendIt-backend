@@ -81,6 +81,7 @@ class ProductDraft(models.Model):
     color = models.CharField(max_length=100, blank=True, null=True)
     size = models.CharField(max_length=100, blank=True, null=True)
     category = models.CharField(max_length=100, blank=True, null=True)
+    optimization_job_id = models.CharField(max_length=255, blank=True, null=True)
     img_field = models.URLField(max_length=500, blank=True, null=True)
     variant = models.BooleanField(default=False)
     price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
