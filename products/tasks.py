@@ -134,6 +134,8 @@ def optimize_product_task(self, job_id):
         job.status = "failed"
         job.error = str(e)
         job.save(update_fields=["status", "error"])
+        product.optimization_status = "not started"
+        product.save(update_fields=["optimization_status"])
         notify_user(job, product,"failed")
         raise
 
