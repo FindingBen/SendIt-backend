@@ -24,14 +24,13 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [{
-                "address": os.getenv("REDIS_URL")
-            }],
-            "capacity": 1500,         
+            "hosts": [os.environ["REDIS_URL"]],
+            "capacity": 1500,
             "expiry": 60 * 60,
         },
     },
 }
+
 
 
 INSTALLED_APPS = [
