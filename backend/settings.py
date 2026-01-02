@@ -302,7 +302,7 @@ USE_I18N = True
 
 CELERY_TIMEZONE = 'Europe/Copenhagen'
 CELERY_TASK_TRACK_STARTED = True
-CELERY_IMPORTS = ("sms.tasks", "payments.tasks")
+CELERY_IMPORTS = ("sms.tasks", "payments.tasks","products.tasks")
 CELERY_BROKER_URL = os.environ.get('REDIS_URL')
 CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL')
 CELERY_CACHE_BACKEND = 'default'

@@ -90,9 +90,10 @@ class OptimizationJobView(APIView, ShopifyAuthMixin):
             )
             product.optimization_status = "in progress"
             product.save(update_fields=["optimization_status"])
-
-            optimize_product_task.delay(str(job.id))
-
+            if job:
+                optimize_product_task.delay(str(job.id))
+            else:
+                return Response({"error": "Failed to create optimization job."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             return Response({
                 "job_id": str(job.id),
                 "status": "started"
