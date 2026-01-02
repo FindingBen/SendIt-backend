@@ -81,17 +81,17 @@ class OptimizationJobView(APIView, ShopifyAuthMixin):
             print('DATA RECEIVED:', data)
             product = Product.objects.get(product_id=data['product_id'])
             
-            with transaction.atomic():
-                job = OptimizationJob.objects.create(
-                user=request.user,
-                product_id=data['product_id'],
-                store=shopify_store,
-                status="pending",
-                )
-                product.optimization_status = "in progress"
-                product.save(update_fields=["optimization_status"])
+            #with transaction.atomic():
+            job = OptimizationJob.objects.create(
+            user=request.user,
+            product_id=data['product_id'],
+            store=shopify_store,
+            status="pending",
+            )
+            product.optimization_status = "in progress"
+            product.save(update_fields=["optimization_status"])
 
-                transaction.on_commit(lambda: optimize_product_task.delay(str(job.id)))
+            optimize_product_task.delay(str(job.id))
 
             return Response({
                 "job_id": str(job.id),
