@@ -46,6 +46,7 @@ class Product(models.Model):
     img_field = models.URLField(max_length=500, blank=True, null=True)
     variant = models.BooleanField(default=False)
     optimization_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="not started")
+    optimized = models.BooleanField(default=False)
     price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     synced_with_shopify = models.BooleanField(default=False)
 

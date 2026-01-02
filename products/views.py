@@ -378,8 +378,11 @@ class MerchantApprovalProductOptimization(ShopifyAuthMixin, APIView):
                 product_id = request.data.get("product")
                 print('PRODUCT ID',product_id)
                 product_obj = Product.objects.get(parent_product_id=product_id)
-                product_draft = ProductDraft.objects.get(parent_product_id=product_obj.parent_product_id)
-                print('DRAFT',product_draft)
+                try:
+                    product_draft = ProductDraft.objects.get(parent_product_id=product_obj.parent_product_id)
+                except ProductDraft.DoesNotExist:
+                    return Response({"error": "Can't approve changes because they don't exist!"}, status=404)
+
                 if not request_approval:
                     product_draft.delete()
                     product_obj.optimization_status = "not started"
@@ -403,7 +406,6 @@ class MerchantApprovalProductOptimization(ShopifyAuthMixin, APIView):
                 }
                 product_resp = shopify_factory.product_update(product_vars)
                 product_json = product_resp.json()
-                print('AAAA',product_json)
 
                 product_errors = product_json.get("data", {}).get("productUpdate", {}).get("userErrors", [])
                 if product_errors:
@@ -416,7 +418,6 @@ class MerchantApprovalProductOptimization(ShopifyAuthMixin, APIView):
 
                 file_payload = []
                 for media in media_drafts:
-                    print(media)
                     # Only send payload if ImageSource ID exists
                     if media.field_id:
                         file_payload.append({
