@@ -12,7 +12,8 @@ from django.utils import timezone
 
 def notify_user(job,product, status):
     channel_layer = get_channel_layer()
-
+    print("CHANNEL LAYER:", channel_layer)
+    print("REDIS HOSTS:", channel_layer.config["hosts"])
     async_to_sync(channel_layer.group_send)(
         f"user_{job.user.id}",
         {
