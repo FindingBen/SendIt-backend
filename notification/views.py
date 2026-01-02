@@ -91,7 +91,7 @@ class OptimizationJobView(APIView, ShopifyAuthMixin):
                 product.optimization_status = "in progress"
                 product.save(update_fields=["optimization_status"])
             
-            optimize_product_task.delay(str(job.id))
+                optimize_product_task.delay(str(job.id))
 
             return Response({
                 "job_id": str(job.id),
