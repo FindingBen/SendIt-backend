@@ -73,6 +73,7 @@ def optimize_product_task(self, job_id):
             job.save(update_fields=["product_draft_id"])
 
             for img in product_images:
+                print('IMG',img.shopify_media_id)
                 shopify_media_id = getattr(img, "shopify_media_id", None) or getattr(img, "id", None)
                 alt_text = getattr(img, "alt", None) or getattr(img, "alt_text", "")
                 ProductMediaDraft.objects.update_or_create(

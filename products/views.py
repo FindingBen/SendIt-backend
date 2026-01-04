@@ -332,7 +332,11 @@ class MerchantApprovalProductOptimization(ShopifyAuthMixin, APIView):
 
                 request_approval = request.data.get("approval")
                 product_id = request.data.get("product")
-                print('PRODUCT ID',product_id)
+                changes = request.data.get('approved_changes')
+                if isinstance(changes, str):
+                    # accept comma-separated string as well
+                    changes = [c.strip() for c in changes.split(",") if c.strip()]
+                print('PRODUCT ID',changes)
                 product_obj = Product.objects.get(parent_product_id=product_id)
                 try:
                     product_draft = ProductDraft.objects.get(parent_product_id=product_obj.parent_product_id)
@@ -345,57 +349,84 @@ class MerchantApprovalProductOptimization(ShopifyAuthMixin, APIView):
                     product_obj.save(update_fields=["optimization_status"])
                     return Response({"message": "Merchant declined optimization"}, status=200)
 
-                # ---------------------------------------------------------
-                # 1. PRODUCT UPDATE (Title, description, SEO)
-                # ---------------------------------------------------------
-                product_vars = {
-                    "input": {
-                        "id": product_obj.product_id,
-                        "title": product_draft.title,
-                        "descriptionHtml": getattr(product_draft, "description", ""),
-                        "seo": {
-                            "title": product_draft.title,
-                            "description": product_draft.seo_description
-                        }
-                    }
-                }
-                product_resp = shopify_factory.product_update(product_vars)
-                product_json = product_resp.json()
+                product_vars = {"input": {"id": product_obj.product_id}}
+                input_payload = product_vars["input"]
 
-                product_errors = product_json.get("data", {}).get("productUpdate", {}).get("userErrors", [])
-                if product_errors:
-                    return Response({"error": product_errors}, status=400)
+                if "title" in changes:
+                    input_payload["title"] = product_draft.title
+                if "description" in changes or "descriptionHtml" in changes:
+                    # prefer "description" key from draft
+                    input_payload["descriptionHtml"] = getattr(product_draft, "description", "")
+                if "seo" in changes:
+                    input_payload["seo"] = {
+                        "title": product_draft.title,
+                        "description": getattr(product_draft, "seo_description", "")
+                    }
+                product_json = None
+                product_errors = []
+                # only call Shopify product_update when there are fields besides id
+                if len(input_payload.keys()) > 1:
+                    product_resp = shopify_factory.product_update(product_vars)
+                    product_json = product_resp.json()
+                    product_errors = product_json.get("data", {}).get("productUpdate", {}).get("userErrors", [])
+                    if product_errors:
+                        return Response({"error": product_errors}, status=400)
                 
+                file_json = None
+                media_drafts = ProductMediaDraft.objects.filter(product=product_draft)
+                print('media draft', media_drafts)
+                if "alt_text" in changes and media_drafts.exists():
+                    file_payload = []
+                    print('CHANGE ALT TEXT')
+                    for media in media_drafts:
+                        print('MEDIA',media)
+                        
+                        file_payload.append({
+                                "id": media.shopify_media_id,
+                                "alt": media.alt_text or ""
+                            })
+                    file_payload = [f for f in file_payload if "MediaImage" in f["id"]]
+                    print('FILE PAYLOAD',file_payload)
+                    if file_payload:
+                        file_vars = {"files": file_payload}
+                        file_resp = shopify_factory.product_image_update(file_vars)
+                        file_json = file_resp.json()
+                        print('FILE JSON',file_json)
+                        file_errors = file_json.get("data", {}).get("fileUpdate", {}).get("userErrors", [])
+                        if file_errors:
+                            return Response({"error": file_errors}, status=400)
+
+                        # apply alt text updates to local ProductMedia rows
+                        try:
+                            for md in media_drafts:
+                                ProductMedia.objects.filter(
+                                    shopify_media_id=md.shopify_media_id,
+                                    product=product_obj
+                                ).update(alt_text=md.alt_text or "", field_id=getattr(md, "field_id", None))
+                        except Exception as e:
+                            print("Failed to update local ProductMedia alt_texts:", str(e))
+
+                # apply approved draft fields to local Product immediately
+                update_fields = []
                 try:
-                    product_obj.title = product_draft.title
-                    product_obj.description = getattr(product_draft, "description", "")
-                    product_obj.seo_description = getattr(product_draft, "seo_description", "")
-                    
-                    product_obj.save(update_fields=["title", "description", "seo_description"])
+                    if "title" in changes:
+                        product_obj.title = product_draft.title
+                        update_fields.append("title")
+                    if "description" in changes or "descriptionHtml" in changes:
+                        product_obj.description = getattr(product_draft, "description", "")
+                        update_fields.append("description")
+                    if "seo" in changes:
+                        product_obj.seo_description = getattr(product_draft, "seo_description", "")
+                        update_fields.append("seo_description")
+                    if getattr(product_draft, "img_field", None) and "img_field" in changes:
+                        product_obj.img_field = product_draft.img_field
+                        update_fields.append("img_field")
+                    if update_fields:
+                        product_obj.save(update_fields=update_fields)
                 except Exception as e:
                     print("Failed to apply draft to local Product:", str(e))
-                
-                media_drafts = ProductMediaDraft.objects.filter(product=product_draft)
 
-                file_payload = []
-                for media in media_drafts:
-                    # Only send payload if ImageSource ID exists
-                    if media.field_id:
-                        file_payload.append({
-                            "id": media.shopify_media_id,     # ✔ correct
-                            "alt": media.alt_text or ""
-                        })
-                file_payload = [f for f in file_payload if "MediaImage" in f["id"]]
-                if file_payload:
-                    file_vars = { "files": file_payload }
-                    file_resp = shopify_factory.product_image_update(file_vars)
-                    file_json = file_resp.json()
-
-                    file_errors = file_json.get("data", {}).get("fileUpdate", {}).get("userErrors", [])
-                    if file_errors:
-                        return Response({"error": file_errors}, status=400)
-
-                # CLEANUP
+                # cleanup draft records
                 product_score = ProductScore.objects.get(product=product_obj)
                 rules = RulesPattern.objects.filter(store=shopify_store).first()
                 variables = {
@@ -412,14 +443,89 @@ class MerchantApprovalProductOptimization(ShopifyAuthMixin, APIView):
                     product_score.save()
                 product_obj.optimization_status = "not started"
                 product_obj.save(update_fields=["optimization_status"])
-                product_draft.delete()
-                media_drafts.delete()
+                # product_draft.delete()
+                # media_drafts.delete()
 
                 return Response({
                     "message": "Product optimization successfully applied",
                     "product_update": product_json,
-                    "media_update": file_json if file_payload else "no media updates"
+                    "media_update": file_json if file_json else "no media updates"
                 }, status=200)
+                # # ---------------------------------------------------------
+                # # 1. PRODUCT UPDATE (Title, description, SEO)
+                # # ---------------------------------------------------------
+                # product_vars = {
+                #     "input": {
+                #         "id": product_obj.product_id,
+                #         "title": product_draft.title,
+                #         "descriptionHtml": getattr(product_draft, "description", ""),
+                #         "seo": {
+                #             "title": product_draft.title,
+                #             "description": product_draft.seo_description
+                #         }
+                #     }
+                # }
+                # product_resp = shopify_factory.product_update(product_vars)
+                # product_json = product_resp.json()
+
+                # product_errors = product_json.get("data", {}).get("productUpdate", {}).get("userErrors", [])
+                # if product_errors:
+                #     return Response({"error": product_errors}, status=400)
+                
+                # try:
+                #     product_obj.title = product_draft.title
+                #     product_obj.description = getattr(product_draft, "description", "")
+                #     product_obj.seo_description = getattr(product_draft, "seo_description", "")
+                    
+                #     product_obj.save(update_fields=["title", "description", "seo_description"])
+                # except Exception as e:
+                #     print("Failed to apply draft to local Product:", str(e))
+                
+                # media_drafts = ProductMediaDraft.objects.filter(product=product_draft)
+
+                # file_payload = []
+                # for media in media_drafts:
+                #     # Only send payload if ImageSource ID exists
+                #     if media.field_id:
+                #         file_payload.append({
+                #             "id": media.shopify_media_id,     # ✔ correct
+                #             "alt": media.alt_text or ""
+                #         })
+                # file_payload = [f for f in file_payload if "MediaImage" in f["id"]]
+                # if file_payload:
+                #     file_vars = { "files": file_payload }
+                #     file_resp = shopify_factory.product_image_update(file_vars)
+                #     file_json = file_resp.json()
+
+                #     file_errors = file_json.get("data", {}).get("fileUpdate", {}).get("userErrors", [])
+                #     if file_errors:
+                #         return Response({"error": file_errors}, status=400)
+
+                # # CLEANUP
+                # product_score = ProductScore.objects.get(product=product_obj)
+                # rules = RulesPattern.objects.filter(store=shopify_store).first()
+                # variables = {
+                #             "product": product_obj,
+                #             "rules": rules,
+                #             "product_id": product_obj.shopify_id,
+                #             "parent_images": media_drafts,
+                #             "variant_images": [],  # analyzer can inspect ProductVariant if needed
+                # }
+                # analysis = ProductAnalyzer.analyze_product(variables)
+                # if analysis:
+                #     product_score.seo_score = Decimal(analysis.get("seo_score", 0))
+                #     product_score.completeness = Decimal(analysis.get("completeness", 0))
+                #     product_score.save()
+                # product_obj.optimization_status = "not started"
+                # product_obj.save(update_fields=["optimization_status"])
+                # product_draft.delete()
+                # media_drafts.delete()
+
+                # return Response({
+                #     "message": "Product optimization successfully applied",
+                #     "product_update": 'ss',
+                #     #"media_update": file_json if file_payload else "no media updates"
+                # }, status=200)
 
         except Exception as e:
             return Response({"error": str(e)}, status=500)
@@ -664,8 +770,8 @@ def register_webhooks(request):
     params = {
         "shopify_token": shopify_token,
         "shopify_domain": shopify_domain,
-        "topic":"PRODUCTS_DELETE",
-        "url":f"https://{settings.BACKEND}/products/delete_product_webhook"
+        "topic":"PRODUCTS_CREATE",
+        "url":f"https://{settings.BACKEND}/products/product_webhook"
     }
     
     register_webhooks = utils.webhook_register(params=params)

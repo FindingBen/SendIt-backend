@@ -53,8 +53,8 @@ def create_product_webhook(request):
         # ---------------------------------------------------------------------
         # BUILD IMAGE MAP (Shopify images array)
         # ---------------------------------------------------------------------
-        product_images = data.get("images", []) or []
-        image_map = {img.get("id"): img.get("src") for img in product_images if isinstance(img, dict)}
+        product_images = data.get("media", []) or []
+        image_map = {img.get("admin_graphql_api_id"): img.get("preview_image").get('src') for img in product_images if isinstance(img, dict)}
         print('STEP 1')
         # ---------------------------------------------------------------------
         # CREATE / UPDATE PARENT PRODUCT
@@ -89,10 +89,10 @@ def create_product_webhook(request):
         # ---------------------------------------------------------------------
         for img in product_images:
             ProductMedia.objects.update_or_create(
-                shopify_media_id=img.get("id"),
+                shopify_media_id=img.get("admin_graphql_api_id"),
                 defaults={
                     "product": parent_obj,
-                    "src": img.get("src"),
+                    "src": img.get("preview_image").get("src"),
                     "alt_text": img.get("alt") or "",
                     "field_id": img.get("id"),   # similar to main pipeline
                 },
