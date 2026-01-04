@@ -442,7 +442,8 @@ class MerchantApprovalProductOptimization(ShopifyAuthMixin, APIView):
                     product_score.completeness = Decimal(analysis.get("completeness", 0))
                     product_score.save()
                 product_obj.optimization_status = "not started"
-                product_obj.save(update_fields=["optimization_status"])
+                product_obj.optimized = True
+                product_obj.save(update_fields=["optimization_status","optimized"])
                 product_draft.delete()
                 media_drafts.delete()
 
