@@ -443,8 +443,8 @@ class MerchantApprovalProductOptimization(ShopifyAuthMixin, APIView):
                     product_score.save()
                 product_obj.optimization_status = "not started"
                 product_obj.save(update_fields=["optimization_status"])
-                # product_draft.delete()
-                # media_drafts.delete()
+                product_draft.delete()
+                media_drafts.delete()
 
                 return Response({
                     "message": "Product optimization successfully applied",

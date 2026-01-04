@@ -125,7 +125,7 @@ def optimize_product_task(self, job_id):
             job.save(update_fields=["status", "finished_at"])
             product.optimization_status = "completed"
             product.optimized = True
-            product.save(update_fields=["optimization_status"])
+            product.save(update_fields=["optimization_status","optimized"])
             notify_user(job,product, "completed")
 
             # product_draft.mark_completed()
