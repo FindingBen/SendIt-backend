@@ -117,35 +117,26 @@ class ProductAnalyzer:
 
     @staticmethod
     def analyze_images(parent_images, variant_images, rules):
-        total_seo = 0
-        total_completeness = 0
-        image_count = 0
+        # Normalize inputs
+        images = list(parent_images or []) + list(variant_images or [])
 
-        # all_images = (parent_images or []) + (variant_images or [])
-        if isinstance(parent_images,list):
-            image_count = len(parent_images)
-            if image_count == 0:
-                return {"seo_score": 0.0, "completeness": 0.0}
-        
-        elif parent_images is None:
+        image_count = len(images)
+        if image_count == 0:
             return {"seo_score": 0.0, "completeness": 0.0}
 
         total_seo = 0.0
         total_completeness = 0.0
-        for img in parent_images:
-            image_count += 1
+
+        for img in images:
             img_result = ProductAnalyzer.analyze_image(img, rules)
-            print('IMAGE_RESULT', img_result)
             total_seo += img_result["seo_score"]
             total_completeness += img_result["completeness"]
 
         avg_seo = total_seo / image_count
         avg_completeness = total_completeness / image_count
 
-        seo_contribution = min(avg_seo, 20.0)
-        completeness_contribution = min(avg_completeness, 20.0)
-
         return {
-            "seo_score": round(seo_contribution, 2),
-            "completeness": round(completeness_contribution, 2),
+            "seo_score": round(min(avg_seo, 20.0), 2),
+            "completeness": round(min(avg_completeness, 20.0), 2),
         }
+
