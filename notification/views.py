@@ -5,6 +5,8 @@ from django.conf import settings
 from base.models import ShopifyStore
 from products.models import Product
 from django.db import transaction
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from .models import Notification, OptimizationJob
 from .serializers import NotificationSerializer, OptimizationJobSerializer
 from products.tasks import optimize_product_task
@@ -114,3 +116,23 @@ def can_optimize(store):
                     store=store,
                     status__in=["pending", "failed", "completed"],
     ).count() < int(settings.MAX_OPTIMIZATIONS)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def optimization_quota(request):
+    try:
+        shopify_store, shopify_token, url = ShopifyAuthMixin().resolve_shopify(request)
+        used = OptimizationJob.objects.filter(
+            store=shopify_store,
+            status__in=["queued", "running", "completed"],
+        ).count()
+
+        return Response({
+            "used": used,
+            "limit": 50,
+            "remaining": max(0, 50 - used),
+        })
+    except ValueError as ve:
+        return Response({
+            "error": str(ve)
+        }, status=status.HTTP_400_BAD_REQUEST)

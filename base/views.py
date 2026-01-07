@@ -31,8 +31,6 @@ import base64
 import json
 import uuid
 import logging
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
 from reportlab.lib import colors
 import requests
 from reportlab.platypus import Table, TableStyle
@@ -42,9 +40,8 @@ from django.utils.timezone import now
 from djoser.views import UserViewSet
 from reportlab.pdfgen import canvas
 from .utils import helpers
-from .permissions import HasPackageLimit
 import stripe
-from .auth import get_shop_info, get_business_info, OpenAiAuthInit
+from .auth import get_shop_info
 from .queries import (
     GET_CUSTOMERS_QUERY,
     GET_TOTAL_CUSTOMERS_NR,
