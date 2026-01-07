@@ -90,6 +90,7 @@ if _origins_env:
 else:
     CORS_ALLOWED_ORIGINS = []
 
+MAX_OPTIMIZATIONS = os.environ.get('MAX_OPTIMIZATIONS', 5)
 
 CORS_ALLOW_CREDENTIALS = True
 

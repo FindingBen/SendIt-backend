@@ -79,6 +79,11 @@ class OptimizationJobView(APIView, ShopifyAuthMixin):
             shopify_store, shopify_token, url = ShopifyAuthMixin().resolve_shopify(request)
             data = request.data
             print('DATA RECEIVED:', data)
+            if not can_optimize(shopify_store):
+                return Response({
+                    "error": "Maximum concurrent optimizations reached."
+                }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+            
             product = Product.objects.get(product_id=data['product_id'])
             
             #with transaction.atomic():
@@ -103,3 +108,9 @@ class OptimizationJobView(APIView, ShopifyAuthMixin):
             return Response({
                 "error": str(e)
             }, status=status.HTTP_400_BAD_REQUEST)
+        
+def can_optimize(store):
+    return OptimizationJob.objects.filter(
+                    store=store,
+                    status__in=["pending", "failed", "completed"],
+    ).count() < int(settings.MAX_OPTIMIZATIONS)

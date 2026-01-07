@@ -5,6 +5,7 @@ from .models import RulesPattern
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from .generatorAi import AiPromptGenerator
+from django.conf import settings
 from .wrapperAi import RetrySafeOpenAI
 from notification.models import OptimizationJob
 from django.utils import timezone
@@ -43,6 +44,16 @@ def optimize_product_task(self, job_id):
     try:
         with transaction.atomic():
             job = OptimizationJob.objects.select_related("user").get(id=job_id)
+
+            count = OptimizationJob.objects.filter(
+                store=job.store,
+                status__in=["pending", "failed", "completed"],
+            ).count()
+            if count > int(settings.MAX_OPTIMIZATIONS):
+                job.status = "cancelled"
+                job.error = "Optimization limit exceeded"
+                job.save(update_fields=["status", "error"])
+                return
             job.status = "running"
             job.save(update_fields=["status"])
 
