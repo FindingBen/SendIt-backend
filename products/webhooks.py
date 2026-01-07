@@ -105,7 +105,7 @@ def create_product_webhook(request):
         # ---------------------------------------------------------------------
         created_variants = []
         skipped_variants = []
-        print('VARIANTS:', variants)
+
         for variant in variants:
 
             v_id = variant.get("admin_graphql_api_id")
