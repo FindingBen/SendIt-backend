@@ -10,7 +10,8 @@ urlpatterns = [
     path('optimize_shopify_product/',MerchantApprovalProductOptimization.as_view()),
     # product webhooks
     path('product_webhook', webhooks.create_product_webhook),
-    path('delete_product_webhook', webhooks.delete_product_webhook),    
+    path('delete_product_webhook', webhooks.delete_product_webhook),
+    path('update_product_webhook', webhooks.update_product_webhook),
     path('shopify_webhooks/', views.register_webhooks),
     path('product_optimize/', ProductOptimizeView.as_view()),
     path('business_analysis/', PromptAnalysis.as_view()),

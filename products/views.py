@@ -771,8 +771,8 @@ def register_webhooks(request):
     params = {
         "shopify_token": shopify_token,
         "shopify_domain": shopify_domain,
-        "topic":"PRODUCTS_CREATE",
-        "url":f"https://{settings.BACKEND}/products/product_webhook"
+        "topic":"PRODUCTS_UPDATE",
+        "url":f"https://{settings.BACKEND}/products/update_product_webhook"
     }
     
     register_webhooks = utils.webhook_register(params=params)

@@ -1,6 +1,10 @@
 from django.db import transaction
-from .models import Product, ProductDraft, ProductMedia, ProductMediaDraft
+from .models import Product, ProductDraft, ProductMedia, ProductMediaDraft, RulesPattern,ProductScore
 from typing import Optional, Dict, Any
+from .analyzers import ProductAnalyzer
+from decimal import Decimal
+
+
 
 def create_product_draft(product: Product):
     """
@@ -120,3 +124,36 @@ def generate_unique_barcode() -> str:
         # Check if barcode is unique
         if not Product.objects.filter(barcode=barcode).exists():
             return barcode
+        
+
+def score_product_quality(store_obj, product:Product) -> bool:
+    """
+    Docstring for score_product_quality
+    
+    :param store_obj: Description
+    :param product: Description
+    :type product: Product
+    :return: Description
+    :rtype: bool
+    """
+    medias = ProductMedia.objects.filter(product=product)
+    rules = RulesPattern.objects.filter(store=store_obj).first()
+
+    product_score, created = ProductScore.objects.get_or_create(product=product)
+
+    variables = {
+                "product": product,
+                "rules": rules,
+                "product_id": product.product_id,
+                "parent_images": medias,
+                "variant_images": [],
+    }
+
+    analysis = ProductAnalyzer.analyze_product(variables)
+
+    if analysis:
+        product_score.seo_score = Decimal(analysis.get("seo_score", 0))
+        product_score.completeness = Decimal(analysis.get("completeness", 0))
+        product_score.save()
+        return True
+    return False
