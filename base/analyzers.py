@@ -26,7 +26,7 @@ class Prompting:
             - product_variant_rule
             - product_tag_rule
             - product_alt_image_rule
-        Return a JSON object.
+        Return a JSON object and keep each rule value under 100 words please.
         """
 
         response = client.chat.completions.create(

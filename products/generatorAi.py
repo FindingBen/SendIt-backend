@@ -23,6 +23,7 @@ class AiPromptGenerator:
         Generate ONE optimized product title based on:
         - Original title: "{self.title}"
         - Keywords: {self.rules.keywords}
+        - Title rules: {self.rules.product_name_rule}
         - Length: {self.rules.min_title_length}–{self.rules.max_title_length} characters
 
         Rules:
@@ -121,6 +122,7 @@ class AiPromptGenerator:
 
         - SEO best practices
         - Length between {self.rules.min_description_length} and {self.rules.max_description_length} characters
+        - Description rules: {self.rules.product_description_rule}
         - Use keywords: {self.rules.keywords or "None"}
         - The product title is: "{self.title}"
 

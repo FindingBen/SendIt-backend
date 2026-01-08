@@ -18,7 +18,7 @@ from base.analyzers import Prompting
 from base.auth import get_business_info, OpenAiAuthInit
 from base.shopify_functions import ShopifyFactoryFunction
 from base.queries import GET_ALL_PRODUCTS,UPDATE_PRODUCT_VARIANTS_BULK,CREATE_WEBHOOK
-from .serializers import ProductSerializer
+from .serializers import ProductSerializer,RulesetSerializer
 from .analyzers import ProductAnalyzer
 from .generatorAi import AiPromptGenerator
 from .optimizers import ProductOptimizer
@@ -203,6 +203,22 @@ class PromptAnalysis(ShopifyAuthMixin, APIView):
             return Response({"error": str(e)}, status=400)
         
         try:
+            ruleset = RulesPattern.objects.filter(store=shopify_store).first()
+            serializer = RulesetSerializer(ruleset)
+
+            return Response({"ruleset":serializer.data}, status=200)
+        except Exception as e:
+            return Response({"error": "Exception during analysis", "details": str(e)}, status=500)
+        
+    def post(self, request, format=None):
+        try:
+
+            shopify_store, shopify_token, url = self.resolve_shopify(request)
+
+        except ValueError as e:
+            return Response({"error": str(e)}, status=400)
+        
+        try:
             client = OpenAiAuthInit().clientAuth()
             
             business_info = get_business_info(shopify_store, shopify_token)
@@ -230,6 +246,57 @@ class PromptAnalysis(ShopifyAuthMixin, APIView):
             return Response({"Successfully created business analysis rules"}, status=200)
         except Exception as e:
             return Response({"error": "Exception during analysis", "details": str(e)}, status=500)
+
+    def patch(self, request, format=None):
+        """
+        Partial update of RulesPattern
+        """
+        try:
+            shopify_store, _, _ = self.resolve_shopify(request)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=400)
+
+        ruleset = RulesPattern.objects.filter(store=shopify_store).first()
+        if not ruleset:
+            return Response(
+                {"error": "Ruleset does not exist"},
+                status=404,
+            )
+
+        data = request.data
+
+        allowed_fields = {
+            "product_name_rule",
+            "product_description_rule",
+            "product_image_rule",
+            "product_variant_rule",
+            "product_tag_rule",
+            "product_alt_image_rule",
+            "keywords"
+        }
+
+        updated_fields = []
+
+        for field, value in data.items():
+            if field in allowed_fields:
+                setattr(ruleset, field, value)
+                updated_fields.append(field)
+
+        if not updated_fields:
+            return Response(
+                {"error": "No valid fields provided for update"},
+                status=400,
+            )
+
+        ruleset.save(update_fields=updated_fields)
+
+        return Response(
+            {
+                "message": "Rules updated successfully",
+                "updated_fields": updated_fields,
+            },
+            status=200,
+        )
 
 
 class ProductOptimizeView(ShopifyAuthMixin, APIView):

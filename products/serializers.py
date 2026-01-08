@@ -1,5 +1,5 @@
 from rest_framework.serializers import ModelSerializer
-from .models import Product, ProductScore, ProductMedia, ProductTag,ProductTagDraft,ProductMediaDraft, ProductDraft
+from .models import Product, ProductScore, ProductMedia, ProductTag,ProductTagDraft,ProductMediaDraft, ProductDraft, RulesPattern
 
 
 class ProductScoreSerializer(ModelSerializer):
@@ -7,10 +7,21 @@ class ProductScoreSerializer(ModelSerializer):
         model = ProductScore
         fields = "__all__"
 
+
 class ProductTagSerializer(ModelSerializer):
     class Meta:
         model = ProductTag
         fields = "__all__"
+
+class RulesetSerializer(ModelSerializer):
+    class Meta:
+        model = RulesPattern
+        fields = (
+            "product_name_rule",
+            "product_alt_image_rule",
+            "product_description_rule",
+            "keywords",
+        )
 
 class ProductTagDraftSerializer(ModelSerializer):
     class Meta:
