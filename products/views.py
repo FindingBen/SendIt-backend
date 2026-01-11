@@ -1,30 +1,21 @@
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
 from backend import settings
-from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
-from .models import Product,ShopifyWebhookLog, RulesPattern, ProductTag,ProductTagDraft,ProductVariant,ProductVariantDraft,ProductDraft,ProductMediaDraft,ProductScore, ProductMedia
+from .models import Product, RulesPattern, ProductTag,ProductVariant,ProductDraft,ProductMediaDraft,ProductScore, ProductMedia
 from decimal import Decimal
-from typing import Optional, Dict, Any
 from django.db import transaction
 from base.models import ShopifyStore, CustomUser
 from base.utils import helpers
-from .tasks import optimize_product_task
 from base.analyzers import Prompting
 from base.auth import get_business_info, OpenAiAuthInit
 from base.shopify_functions import ShopifyFactoryFunction
 from base.queries import GET_ALL_PRODUCTS,UPDATE_PRODUCT_VARIANTS_BULK,CREATE_WEBHOOK
 from .serializers import ProductSerializer,RulesetSerializer
 from .analyzers import ProductAnalyzer
-from .generatorAi import AiPromptGenerator
-from .optimizers import ProductOptimizer
-from .helpers import create_product_draft, generate_unique_barcode, generate_unique_sku
-import json
-from notification.models import OptimizationJob
+from .helpers import generate_unique_barcode, generate_unique_sku
 
 
 
@@ -222,11 +213,11 @@ class PromptAnalysis(ShopifyAuthMixin, APIView):
             client = OpenAiAuthInit().clientAuth()
             
             business_info = get_business_info(shopify_store, shopify_token)
-            
+            print("BUSINESS INFO:", business_info)
             prompt_response = Prompting.init_process(client,business_info)
-
+            print("PROMPT RESPONSE:", prompt_response)
             rules = prompt_response["recommended_seo_ruleset"]
-
+           
             with transaction.atomic():
                 business_ruleset = RulesPattern.objects.create(
                 store=shopify_store,
@@ -403,7 +394,6 @@ class MerchantApprovalProductOptimization(ShopifyAuthMixin, APIView):
                 if isinstance(changes, str):
                     # accept comma-separated string as well
                     changes = [c.strip() for c in changes.split(",") if c.strip()]
-                print('PRODUCT ID',changes)
                 product_obj = Product.objects.get(parent_product_id=product_id)
                 try:
                     product_draft = ProductDraft.objects.get(parent_product_id=product_obj.parent_product_id)
@@ -441,24 +431,20 @@ class MerchantApprovalProductOptimization(ShopifyAuthMixin, APIView):
                 
                 file_json = None
                 media_drafts = ProductMediaDraft.objects.filter(product=product_draft)
-                print('media draft', media_drafts)
+
                 if "alt_text" in changes and media_drafts.exists():
                     file_payload = []
-                    print('CHANGE ALT TEXT')
+ 
                     for media in media_drafts:
-                        print('MEDIA',media)
-                        
                         file_payload.append({
                                 "id": media.shopify_media_id,
                                 "alt": media.alt_text or ""
                             })
                     file_payload = [f for f in file_payload if "MediaImage" in f["id"]]
-                    print('FILE PAYLOAD',file_payload)
                     if file_payload:
                         file_vars = {"files": file_payload}
                         file_resp = shopify_factory.product_image_update(file_vars)
                         file_json = file_resp.json()
-                        print('FILE JSON',file_json)
                         file_errors = file_json.get("data", {}).get("fileUpdate", {}).get("userErrors", [])
                         if file_errors:
                             return Response({"error": file_errors}, status=400)

@@ -5,11 +5,12 @@ from django.conf import settings
 from base.models import ShopifyStore
 from products.models import Product
 from django.db import transaction
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from .models import Notification, OptimizationJob
 from .serializers import NotificationSerializer, OptimizationJobSerializer
-from products.tasks import optimize_product_task
+from products.tasks import start_optimization_task
 
 class ShopifyAuthMixin:
     """
@@ -36,12 +37,24 @@ class ShopifyAuthMixin:
         return shopify_store, shopify_token, url
 
 
-class NotificationView(APIView):
+class NotificationView(APIView,ShopifyAuthMixin):
     permission_classes = [permissions.IsAuthenticated]
+    def get(self, request, notification_id=None):
+        """
+        - If notification_id is provided → return that notification
+        - Otherwise → return last 4 notifications for the user
+        """
+        if notification_id:
+            try:
+                notif = Notification.objects.get(id=notification_id, user=request.user)
+            except Notification.DoesNotExist:
+                return Response({"detail": "Not found"}, status=status.HTTP_404_NOT_FOUND)
 
-    def get(self, request):
-        notifications = Notification.objects.filter(
-            user=request.user).order_by('-created_at')[:4]
+            serializer = NotificationSerializer(notif)
+            return Response(serializer.data)
+
+        # Default: return all notifications (or limit as needed)
+        notifications = Notification.objects.filter(user=request.user).order_by('-created_at')[:20]
         serializer = NotificationSerializer(notifications, many=True)
         return Response(serializer.data)
 
@@ -99,7 +112,7 @@ class OptimizationJobView(APIView, ShopifyAuthMixin):
             product.optimization_status = "in progress"
             product.save(update_fields=["optimization_status"])
             
-            optimize_product_task.delay(str(job.id))
+            start_optimization_task.delay(str(job.id))
             
             return Response({
                 "job_id": str(job.id),

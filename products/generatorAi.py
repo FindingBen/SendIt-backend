@@ -6,7 +6,7 @@ from .wrapperAi import RetrySafeOpenAI
 
 
 class AiPromptGenerator:
-    def __init__(self, rules, image_data,product_id,title=None,description=None,seo_desc = None):
+    def __init__(self, rules, product_id,image_data=None,title=None,description=None,seo_desc = None):
         self.openai = RetrySafeOpenAI()
         self.rules = rules
         self.image_data = image_data

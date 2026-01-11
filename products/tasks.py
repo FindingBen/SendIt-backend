@@ -6,150 +6,178 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from .generatorAi import AiPromptGenerator
 from django.conf import settings
+from notification.models import Notification
 from .wrapperAi import RetrySafeOpenAI
 from notification.models import OptimizationJob
 from django.utils import timezone
+from celery import chain
 
 
-def notify_user(job,product, status):
-    try:
-        channel_layer = get_channel_layer()
-        print("CHANNEL LAYER:", channel_layer)
-        
-        async_to_sync(channel_layer.group_send)(
-            f"user_{job.user.id}",
-            {
-                "type": "job_notification",
-                "event": "OPTIMIZATION_DONE" if status == "completed" else "OPTIMIZATION_FAILED",
-                "job_id": str(job.id),
-                "product_id": product.id,
-            }
-        )
-    except Exception as e:
-        print("ERROR SENDING WEBSOCKET NOTIFICATION:", str(e))
+def notify_user(job, product, status):
+    notif_type = "success" if status == "completed" else "error"
+    title = "Optimization completed" if status == "completed" else "Optimization failed"
+    message = (
+        f"Optimization finished for product {product.title}"
+        if status == "completed"
+        else f"Optimization failed for product {product.title}"
+    )
+
+    notification = Notification.objects.create(
+        user=job.user,
+        notif_type=notif_type,
+        title=title,
+        message=message,
+    )
+
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f"user_{job.user.id}",
+        {
+            "type": "job_notification",
+            "notification_id": notification.id,
+        }
+    )
 
 
-@shared_task(
-    bind=True,
-    autoretry_for=(Exception,),
-    retry_backoff=True,
-    retry_backoff_max=30,
-    retry_jitter=True,
-    max_retries=3
-)
-def optimize_product_task(self, job_id):
-    """
-    Orchestrates full product optimization safely.
-    """
-    try:
-        with transaction.atomic():
-            job = OptimizationJob.objects.select_related("user").get(id=job_id)
-
-            count = OptimizationJob.objects.filter(
-                store=job.store,
-                status__in=["pending", "failed", "completed"],
-            ).count()
-            if count > int(settings.MAX_OPTIMIZATIONS):
-                job.status = "cancelled"
-                job.error = "Optimization limit exceeded"
-                job.save(update_fields=["status", "error"])
-                return
-            job.status = "running"
-            job.save(update_fields=["status"])
-
-            product = Product.objects.get(
+@shared_task
+def start_optimization_task(job_id):
+    job = OptimizationJob.objects.get(id=job_id)
+    print(job_id)
+    job.status = "running"
+    job.created_at = timezone.now()
+    job.save(update_fields=["status", "created_at"])
+    product = Product.objects.get(
                 product_id=job.product_id
+        )
+    product_draft, created = ProductDraft.objects.get_or_create(
+                    product_id=product.product_id,
+                    shopify_store=getattr(product, "shopify_store", None),
+                    defaults={
+                        "parent_product_id": product.product_id,
+                        "title": getattr(product, "title", ""),
+                        "description": getattr(product, "description", ""),
+                        "optimization_job_id": job_id,
+                        "seo_description": getattr(product, "seo_description", ""),
+                        "shopify_id": getattr(product, "shopify_id", ""),
+                        "img_field": getattr(product, "images", None),
+                    },
             )
+    chain(
+            generate_title_task.si(job_id),
+            generate_alt_text_task.si(job_id),
+            generate_seo_desc_task.si(job_id),
+            generate_description_task.si(job_id),
+            finalize_optimization_task.si(job_id),
+    ).delay()
 
-            product_images = ProductMedia.objects.filter(product=product)
-            product_tag = ProductTag.objects.filter(product=product)
 
+@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=5, max_retries=3)
+def generate_title_task(self, job_id):
+    job = OptimizationJob.objects.get(id=job_id)
+    product = Product.objects.get(product_id=job.product_id)
+    rules = RulesPattern.objects.get(store=job.store)
 
-            rules = RulesPattern.objects.get(store=job.store)
-            product_draft, created = ProductDraft.objects.get_or_create(
-                product_id=product.product_id,
-                shopify_store=getattr(product, "shopify_store", None),
-                defaults={
-                    "parent_product_id": product.product_id,
-                    "title": getattr(product, "title", ""),
-                    "description": getattr(product, "description", ""),
-                    "optimization_job_id": job_id,
-                    "seo_description": getattr(product, "seo_description", ""),
-                    "shopify_id": getattr(product, "shopify_id", ""),
-                    "img_field": getattr(product, "images", None),
-                },
-            )
-            
-            job.product_draft_id = product_draft.product_id
-            job.save(update_fields=["product_draft_id"])
+    generator = AiPromptGenerator(
+        rules=rules,
+        description=product.description,
+        product_id=product.product_id,
+    )
 
-            for img in product_images:
-                print('IMG',img.shopify_media_id)
-                shopify_media_id = getattr(img, "shopify_media_id", None) or getattr(img, "id", None)
-                alt_text = getattr(img, "alt", None) or getattr(img, "alt_text", "")
-                ProductMediaDraft.objects.update_or_create(
-                    product=product_draft,
-                    shopify_media_id=shopify_media_id,
-                    defaults={"alt_text": alt_text},
-                )
-            for tag in product_tag:
-                tag_name = getattr(tag, "tag_name", None) or getattr(tag, "name", None) or ""
-                ProductTagDraft.objects.update_or_create(
-                    product=product_draft,
-                    tag_name=tag_name,
-                )
+    title_response = generator.generate_title()
+    title = title_response.get("title")
 
-            generator = AiPromptGenerator(
-                rules=rules,
-                image_data=product_images,
-                description=product.description,
-                seo_desc=product.seo_description,
-                title=product.title,
-                product_id=product.product_id
-            )
+    draft = ProductDraft.objects.get(
+    optimization_job_id=job_id
+    )
 
-            # --- Title ---
-            title_response = generator.generate_title()
-            title = title_response.get('title')
-            print('title response',title)
-            product_draft.apply_title(title)
-            print('TITLE UPDATED')
-            # --- Images ---
-            alt_response = generator.generate_alt_text()
-            print('alt response',alt_response)
-            apply_alt_text_updates(product_draft, alt_response)
-            print('IMAGES UPDATED')
-            # --- Meta description ---
-            meta_response = generator.generate_meta_description()
-            meta_data = meta_response.get('description')
-            product_draft.apply_seo_description(meta_data)
-            print('META DESCRIPTION UPDATED')
-            # --- Description ---
-            descr, static = generator.generate_description()
-            
-            product_draft.apply_description(
+    draft.apply_title(title)
+
+@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=5, max_retries=3)
+def generate_description_task(self,job_id):
+    job = OptimizationJob.objects.get(id=job_id)
+    product = Product.objects.get(product_id=job.product_id)
+    rules = RulesPattern.objects.get(store=job.store)
+
+    generator = AiPromptGenerator(
+        rules=rules,
+        title=product.title,
+        product_id=product.product_id,
+    )
+    descr, static = generator.generate_description()
+    draft = ProductDraft.objects.get(
+    optimization_job_id=job_id
+    )
+ 
+    draft.apply_description(
                 descr["description"] if not static else descr,
                 static=static
-            )
-            job.status = "completed"
-            job.finished_at = timezone.now()
-            job.save(update_fields=["status", "finished_at"])
-            product.optimization_status = "completed"
-            
-            product.save(update_fields=["optimization_status"])
-            notify_user(job,product, "completed")
+        )
 
-            # product_draft.mark_completed()
+@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=5, max_retries=3)
+def generate_seo_desc_task(self,job_id):
+    job = OptimizationJob.objects.get(id=job_id)
+    product = Product.objects.get(product_id=job.product_id)
+    rules = RulesPattern.objects.get(store=job.store)
+    
+    generator = AiPromptGenerator(
+        rules=rules,
+        seo_desc=product.seo_description,
+        product_id=product.product_id,
+    )
+    draft = ProductDraft.objects.get(
+    optimization_job_id=job_id
+    )
+  
+    meta_response = generator.generate_meta_description()
+    meta_data = meta_response.get('description')
+    draft.apply_seo_description(meta_data)
 
-        
-    except Exception as e:
-        job.status = "failed"
-        job.error = str(e)
-        job.save(update_fields=["status", "error"])
-        product.optimization_status = "not started"
-        product.save(update_fields=["optimization_status"])
-        notify_user(job, product,"failed")
-        raise
+@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=5, max_retries=3)
+def generate_alt_text_task(self,job_id):
+    job = OptimizationJob.objects.get(id=job_id)
+    product = Product.objects.get(product_id=job.product_id)
+    product_images = ProductMedia.objects.filter(product=product)
+    rules = RulesPattern.objects.get(store=job.store)
+
+    generator = AiPromptGenerator(
+        rules=rules,
+        image_data=product_images,
+        product_id=product.product_id
+    )
+    if len(product_images) == 0:
+        return
+    alt_response = generator.generate_alt_text()
+    draft = ProductDraft.objects.get(
+    optimization_job_id=job_id
+        )
+
+    for img in product_images:
+        print('IMG',img.shopify_media_id)
+        shopify_media_id = getattr(img, "shopify_media_id", None) or getattr(img, "id", None)
+        alt_text = getattr(img, "alt", None) or getattr(img, "alt_text", "")
+        ProductMediaDraft.objects.update_or_create(
+                        product=draft,
+                        shopify_media_id=shopify_media_id,
+                        defaults={"alt_text": alt_text},
+        )
+    apply_alt_text_updates(draft, alt_response)
+
+@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=5, max_retries=3)
+def finalize_optimization_task(self,job_id):
+    job = OptimizationJob.objects.get(id=job_id)
+    product = Product.objects.get(product_id=job.product_id)
+
+    job.status = "completed"
+    job.finished_at = timezone.now()
+    job.save(update_fields=["status", "finished_at"])
+
+    product.optimization_status = "completed"
+    product.optimized = False
+    product.save(update_fields=["optimization_status"])
+
+    notify_user(job, product, "completed")
+
+
 
 def apply_alt_text_updates(product_draft, alt_payload):
         """
