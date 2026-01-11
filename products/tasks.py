@@ -173,7 +173,7 @@ def finalize_optimization_task(self,job_id):
 
     product.optimization_status = "completed"
     product.optimized = False
-    product.save(update_fields=["optimization_status"])
+    product.save(update_fields=["optimization_status","optimized"])
 
     notify_user(job, product, "completed")
 
