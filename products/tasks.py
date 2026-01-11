@@ -167,7 +167,7 @@ def generate_alt_text_task(self,job_id):
 def finalize_optimization_task(self,job_id):
     job = OptimizationJob.objects.get(id=job_id)
     product = Product.objects.get(product_id=job.product_id)
-
+    print('FINALIZE')
     job.status = "completed"
     job.finished_at = timezone.now()
     job.save(update_fields=["status", "finished_at"])
