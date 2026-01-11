@@ -28,7 +28,7 @@ def notify_user(job, product, status):
         title=title,
         message=message,
     )
-
+    print("NOTIFICATION CREATED:", notification.id)
     channel_layer = get_channel_layer()
     async_to_sync(channel_layer.group_send)(
         f"user_{job.user.id}",
@@ -62,6 +62,7 @@ def start_optimization_task(job_id):
                         "img_field": getattr(product, "images", None),
                     },
             )
+    print('AAAAAAAA')
     chain(
             generate_title_task.si(job_id),
             generate_alt_text_task.si(job_id),
@@ -76,7 +77,7 @@ def generate_title_task(self, job_id):
     job = OptimizationJob.objects.get(id=job_id)
     product = Product.objects.get(product_id=job.product_id)
     rules = RulesPattern.objects.get(store=job.store)
-
+    print('TITLE')
     generator = AiPromptGenerator(
         rules=rules,
         description=product.description,
@@ -97,7 +98,7 @@ def generate_description_task(self,job_id):
     job = OptimizationJob.objects.get(id=job_id)
     product = Product.objects.get(product_id=job.product_id)
     rules = RulesPattern.objects.get(store=job.store)
-
+    print('DESC')
     generator = AiPromptGenerator(
         rules=rules,
         title=product.title,
@@ -118,7 +119,7 @@ def generate_seo_desc_task(self,job_id):
     job = OptimizationJob.objects.get(id=job_id)
     product = Product.objects.get(product_id=job.product_id)
     rules = RulesPattern.objects.get(store=job.store)
-    
+    print('SEO')
     generator = AiPromptGenerator(
         rules=rules,
         seo_desc=product.seo_description,
@@ -138,7 +139,7 @@ def generate_alt_text_task(self,job_id):
     product = Product.objects.get(product_id=job.product_id)
     product_images = ProductMedia.objects.filter(product=product)
     rules = RulesPattern.objects.get(store=job.store)
-
+    print('ALT')
     generator = AiPromptGenerator(
         rules=rules,
         image_data=product_images,
