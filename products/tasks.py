@@ -40,7 +40,7 @@ def notify_user(job, product, status):
 
 
 @shared_task(bind=True)
-def start_optimization_task(job_id):
+def start_optimization_task(self,job_id):
     with transaction.atomic():
         job = OptimizationJob.objects.get(id=job_id)
         print(job_id)
