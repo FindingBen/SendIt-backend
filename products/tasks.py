@@ -39,37 +39,39 @@ def notify_user(job, product, status):
     )
 
 
-@shared_task
+@shared_task(bind=True)
 def start_optimization_task(job_id):
-    job = OptimizationJob.objects.get(id=job_id)
-    print(job_id)
-    job.status = "running"
-    job.created_at = timezone.now()
-    job.save(update_fields=["status", "created_at"])
-    product = Product.objects.get(
-                product_id=job.product_id
-        )
-    product_draft, created = ProductDraft.objects.get_or_create(
-                    product_id=product.product_id,
-                    shopify_store=getattr(product, "shopify_store", None),
-                    defaults={
-                        "parent_product_id": product.product_id,
-                        "title": getattr(product, "title", ""),
-                        "description": getattr(product, "description", ""),
-                        "optimization_job_id": job_id,
-                        "seo_description": getattr(product, "seo_description", ""),
-                        "shopify_id": getattr(product, "shopify_id", ""),
-                        "img_field": getattr(product, "images", None),
-                    },
+    with transaction.atomic():
+        job = OptimizationJob.objects.get(id=job_id)
+        print(job_id)
+        job.status = "running"
+        job.created_at = timezone.now()
+        job.save(update_fields=["status", "created_at"])
+        product = Product.objects.get(
+                    product_id=job.product_id
             )
-    print('AAAAAAAA')
-    transaction.on_commit(lambda: chain(
-        generate_title_task.si(job_id),
-        generate_alt_text_task.si(job_id),
-        generate_seo_desc_task.si(job_id),
-        generate_description_task.si(job_id),
-        finalize_optimization_task.si(job_id),
-    ).delay())
+        product_draft, created = ProductDraft.objects.get_or_create(
+                        product_id=product.product_id,
+                        shopify_store=getattr(product, "shopify_store", None),
+                        defaults={
+                            "parent_product_id": product.product_id,
+                            "title": getattr(product, "title", ""),
+                            "description": getattr(product, "description", ""),
+                            "optimization_job_id": job_id,
+                            "seo_description": getattr(product, "seo_description", ""),
+                            "shopify_id": getattr(product, "shopify_id", ""),
+                            "img_field": getattr(product, "images", None),
+                        },
+                )
+        print('AAAAAAAA',product_draft)
+        print('CREATED',created)
+        transaction.on_commit(lambda: chain(
+            generate_title_task.si(job_id),
+            generate_alt_text_task.si(job_id),
+            generate_seo_desc_task.si(job_id),
+            generate_description_task.si(job_id),
+            finalize_optimization_task.si(job_id),
+        ).delay())
 
 
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=5, max_retries=3)
