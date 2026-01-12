@@ -63,13 +63,13 @@ def start_optimization_task(job_id):
                     },
             )
     print('AAAAAAAA')
-    chain(
-            generate_title_task.si(job_id),
-            generate_alt_text_task.si(job_id),
-            generate_seo_desc_task.si(job_id),
-            generate_description_task.si(job_id),
-            finalize_optimization_task.si(job_id),
-    ).delay()
+    transaction.on_commit(lambda: chain(
+        generate_title_task.si(job_id),
+        generate_alt_text_task.si(job_id),
+        generate_seo_desc_task.si(job_id),
+        generate_description_task.si(job_id),
+        finalize_optimization_task.si(job_id),
+    ).delay())
 
 
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=5, max_retries=3)
