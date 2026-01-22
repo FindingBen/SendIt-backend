@@ -46,7 +46,7 @@ class NotificationView(APIView,ShopifyAuthMixin):
         """
         if notification_id:
             try:
-                notif = Notification.objects.get(id=notification_id, user=request.user)
+                notif = Notification.objects.get(id=notification_id)
             except Notification.DoesNotExist:
                 # Debug: Log which user and notification were requested
                 print(f"DEBUG: Notification {notification_id} not found for user {request.user.id}")
