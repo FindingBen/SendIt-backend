@@ -263,10 +263,17 @@ def update_product_webhook(request):
                 updated_fields.append("description")
             print('hereeee')
             images = data.get("media")
-            if images:
+            
+            # Only sync images if media data was explicitly sent in the webhook
+            if images is not None:
+                # Get IDs of images coming from Shopify
+                incoming_media_ids = set()
                 for media in images:
+                    media_id = media.get("admin_graphql_api_id")
+                    incoming_media_ids.add(media_id)
+                    
                     ProductMedia.objects.update_or_create(
-                        shopify_media_id=media.get("admin_graphql_api_id"),
+                        shopify_media_id=media_id,
                         defaults={
                             "product": product_draft,
                             "src": media.get("preview_image").get("src"),
@@ -274,6 +281,11 @@ def update_product_webhook(request):
                             "field_id": media.get("id"),   # similar to main pipeline
                         },
                     )
+                
+                # Delete images that are no longer in Shopify
+                ProductMedia.objects.filter(product=product_draft).exclude(
+                    shopify_media_id__in=incoming_media_ids
+                ).delete()
             
             product_draft.save(update_fields=updated_fields)
             updated_fields = []
