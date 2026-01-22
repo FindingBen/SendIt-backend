@@ -48,7 +48,14 @@ class NotificationView(APIView,ShopifyAuthMixin):
             try:
                 notif = Notification.objects.get(id=notification_id, user=request.user)
             except Notification.DoesNotExist:
-                return Response({"detail": "Not found"}, status=status.HTTP_404_NOT_FOUND)
+                # Debug: Log which user and notification were requested
+                print(f"DEBUG: Notification {notification_id} not found for user {request.user.id}")
+                # Check if notification exists at all
+                exists = Notification.objects.filter(id=notification_id).exists()
+                if exists:
+                    actual_notif = Notification.objects.get(id=notification_id)
+                    print(f"DEBUG: Notification exists but belongs to user {actual_notif.user_id}")
+                return Response({"detail": "Notification not found"}, status=status.HTTP_404_NOT_FOUND)
 
             serializer = NotificationSerializer(notif)
             return Response(serializer.data)
