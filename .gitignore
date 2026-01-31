@@ -7,4 +7,8 @@ subs.json
 
 shopify.app.toml
 
+
+start_celery.bat
+start_migration.bat
+start_server.bat
 payments/testing.py

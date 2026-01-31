@@ -217,7 +217,7 @@ def send_sms(unique_tracking_id: None, user: None):
                     encoded_price = int(total_cost * 10000)
                     client_ref = f"{country_code}-{encoded_price:04}-{unique_tracking_id}"
                     sms_kwargs = {
-                        "from": "+13164166008",
+                        "from": "bopacaffe",
                         "to": phone_number,
                         "text": message_text,
                         "client-ref": client_ref  # includes price + country
