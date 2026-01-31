@@ -605,6 +605,7 @@ def create_one_time_purchase_charge(request):
 SMS_PACKAGES = {
     "200 sms": 200,
     "1000 sms": 1000,
+    "5000 sms": 5000,
 }
 
 @api_view(["GET"])
