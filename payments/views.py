@@ -744,7 +744,7 @@ def check_users_charge(request):
                     )
                     logger.info('Activating plan for user')
                     user_obj.package_plan = package_obj
-                    user_obj.sms_count = package_obj.sms_count_pack
+                    # user_obj.sms_count = package_obj.sms_count_pack
                     user_obj.scheduled_subscription = next_billing_date
                     user_obj.scheduled_package = billing_plan
                     user_obj.save()
