@@ -15,7 +15,8 @@ from .queries import (
     UPDATE_IMAGE,
     GET_SHOP_ORDERS,
     UPDATE_PRODUCT_WITH_SEO,
-    GET_SHOP_INFO_2
+    GET_SHOP_INFO_2,
+    CREATE_PURCHASED_CHARGE
 )
 
 
@@ -124,6 +125,24 @@ class ShopifyFactoryFunction:
             return default_phone.get("marketingState", "NONE")
         except Exception:
             return "NONE"
+
+    def get_charge(self,charge_id):
+        headers = {
+            "X-Shopify-Access-Token": self._token,
+            "Content-Type": "application/json",
+        }
+        variables = {
+            
+            "id": charge_id
+        }
+
+        response = requests.post(
+            self._url,
+            headers=headers,
+            json={"query": self._query, "variables": variables},
+        )
+
+        return response
 
     def create_customers(self, source='standard'):
         headers = {
@@ -348,6 +367,18 @@ class ShopifyFactoryFunction:
         return data
 
     def create_reccuring_charge(self, variable):
+        headers = {
+            "X-Shopify-Access-Token": self._token,
+            "Content-Type": "application/json",
+        }
+        response = requests.post(
+            self._url,
+            headers=headers,
+            json={"query": self._query, "variables": variable},
+        )
+        return response
+
+    def create_one_time_purchase_charge(self, variable):
         headers = {
             "X-Shopify-Access-Token": self._token,
             "Content-Type": "application/json",

@@ -6,7 +6,7 @@ import vonage
 from datetime import datetime, date
 from django.conf import settings
 from rest_framework.views import APIView
-from .models import UserPayment, StripeEvent, Billing
+from .models import UserPayment, StripeEvent, Billing, Purchase
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes, api_view
 from rest_framework.response import Response
@@ -21,7 +21,7 @@ from django.views.decorators.http import require_http_methods
 from django.core.mail import send_mail
 from notification.models import Notification
 from base.shopify_functions import ShopifyFactoryFunction
-from base.queries import CREATE_CHARGE, CURRENT_CHARGE, CANCEL_CHARGE
+from base.queries import CREATE_CHARGE, CURRENT_CHARGE, CANCEL_CHARGE, CREATE_PURCHASED_CHARGE,GET_CHARGE
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -29,6 +29,30 @@ util = Utils()
 logger = logging.getLogger(__name__)
 
 environment = settings.ENVIRONMENT
+
+class ShopifyAuthMixin:
+    """
+    Reusable helper to resolve shopify store, token and graphql url from request headers.
+    Raises ValueError on missing data so callers can return appropriate Response.
+    """
+    def resolve_shopify(self, request):
+        shopify_domain = request.headers.get('shopify-domain', None)
+        print(shopify_domain)
+        if not shopify_domain:
+            raise ValueError("Domain required from shopify!")
+        try:
+
+            shopify_store = ShopifyStore.objects.get(shop_domain=shopify_domain)
+
+        except ShopifyStore.DoesNotExist:
+            raise ValueError("Shopify store not found in local DB")
+        auth = request.headers.get('Authorization', '')
+        try:
+            shopify_token = auth.split(' ')[1]
+        except Exception:
+            raise ValueError("Authorization header missing or malformed")
+        url = f"https://{shopify_domain}/admin/api/{settings.SHOPIFY_API_VERSION}/graphql.json"
+        return shopify_store, shopify_token, url
 
 class StripeCheckoutView(APIView):
     def post(self, request):
@@ -505,8 +529,8 @@ def get_shopify(request):
 
 @api_view(['POST'])
 def create_shopify_charge(request):
-    shop = request.data.get("shop")  # like mystore.myshopify.com
-    shopify_token = request.headers['Authorization'].split(' ')[1]
+    shopify_auth = ShopifyAuthMixin()
+    shopify_token, shop, url = shopify_auth.resolve_shopify(request)
     plan = request.data.get("plan")  # e.g., basic, silver, gold
     # Define plan logic
     # data_package = [package for package in settings.ACTIVE_PRODUCTS_SHOPIFY]
@@ -546,6 +570,113 @@ def create_shopify_charge(request):
     confirmation_url = data.get('data', {}).get(
         'appSubscriptionCreate', {}).get('confirmationUrl')
     return Response({"url": confirmation_url})
+
+@api_view(['POST'])
+def create_one_time_purchase_charge(request):
+    shopify_auth = ShopifyAuthMixin()
+    shop,shopify_token, url = shopify_auth.resolve_shopify(request)
+    print(shopify_token)
+    amount = request.data.get("amount")
+    description = request.data.get("description", "One-time purchase 200 credits")
+
+    return_url = "https://spplane.app" if environment == "production" else "http://localhost:3000"
+    charge_data = {
+        "name": description,
+        "price": {
+            "amount": amount,
+            "currencyCode": "USD"
+        },
+        "returnUrl": f"{return_url}/shopify/one_time_charge/confirmation?shop={shop.shop_domain}"
+    }
+
+    shopify_factory = ShopifyFactoryFunction(
+        shop.shop_domain, shopify_token, url, request=request, query=CREATE_PURCHASED_CHARGE)
+    response = shopify_factory.create_one_time_purchase_charge(variable=charge_data)
+    data = response.json()
+    print("RAW SHOPIFY RESPONSE:", data)
+
+    errors = data.get("data", {}).get("appPurchaseOneTimeCreate", {}).get("userErrors")
+    if errors:
+        return Response({"errors": errors}, status=400)
+    confirmation_url = data.get('data', {}).get(
+        'appPurchaseOneTimeCreate', {}).get('confirmationUrl')
+    return Response({"url": confirmation_url})
+
+SMS_PACKAGES = {
+    "200 sms": 200,
+    "1000 sms": 1000,
+}
+
+@api_view(["GET"])
+def check_one_time_charge(request):
+    shopify_auth = ShopifyAuthMixin()
+    shop, shopify_token, url = shopify_auth.resolve_shopify(request)
+
+    charge_id = request.GET.get("charge_id")
+    if not charge_id:
+        return Response({"error": "Missing charge_id"}, status=400)
+
+    # Convert numeric ID → Shopify GID
+    gid = f"gid://shopify/AppPurchaseOneTime/{charge_id}"
+
+    shopify_factory = ShopifyFactoryFunction(
+        shop.shop_domain,
+        shopify_token,
+        url,
+        request=request,
+        query=GET_CHARGE,
+    )
+
+    response = shopify_factory.get_charge(gid)
+    data = response.json()
+
+    node = data.get("data", {}).get("node")
+    if not node:
+        return Response({"error": "Charge not found"}, status=400)
+
+    # 🔐 SECURITY CHECKS
+    if node["status"] != "ACTIVE":
+        return Response({"error": "Charge not active"}, status=400)
+
+    package_name = node["name"]
+    sms_amount = SMS_PACKAGES.get(package_name)
+
+    if not sms_amount:
+        return Response({"error": "Unknown SMS package"}, status=400)
+
+    user_obj = CustomUser.objects.get(email=shop.email)
+    user_payment = UserPayment.objects.get(user=user_obj)
+
+
+    # 🔒 Idempotent transaction
+    with transaction.atomic():
+        if Purchase.objects.filter(payment_id=gid).exists():
+            return Response(
+                {"status": "Already processed"},
+                status=status.HTTP_208_ALREADY_REPORTED,
+            )
+
+        # ✅ Append credits
+        user_obj.sms_count += sms_amount
+        user_obj.save(update_fields=["sms_count"])
+
+        # ✅ Record purchase
+        Purchase.objects.create(
+            userPayment=user_payment,
+            package_name=package_name,
+            price=int(node.get("price", {}).get("amount", 0)) if node.get("price") else 0,
+            payment_method="shopify",
+            payment_id=gid,
+        )
+
+    return Response(
+        {
+            "status": "Credits applied",
+            "sms_added": sms_amount,
+            "total_sms": user_obj.sms_count,
+        },
+        status=status.HTTP_200_OK,
+    )
 
 
 @api_view(['GET'])

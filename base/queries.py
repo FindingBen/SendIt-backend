@@ -514,6 +514,44 @@ CREATE_CHARGE = f"""mutation AppSubscriptionCreate($name: String!, $lineItems: [
     }}
   }}"""
 
+CREATE_PURCHASED_CHARGE = """
+mutation AppPurchaseOneTimeCreate(
+  $name: String!
+  $price: MoneyInput!
+  $returnUrl: URL!
+  $test: Boolean = true
+) {
+  appPurchaseOneTimeCreate(
+    name: $name
+    price: $price
+    returnUrl: $returnUrl
+    test: $test
+  ) {
+    userErrors {
+      field
+      message
+    }
+    appPurchaseOneTime {
+      id
+      createdAt
+    }
+    confirmationUrl
+  }
+}
+"""
+
+GET_CHARGE = """query GetOneTimeChargeById($id: ID!) {
+  node(id: $id) {
+    ... on AppPurchaseOneTime {
+      id
+      name
+      createdAt
+      status
+      test
+    }
+  }
+}"""
+
 CURRENT_CHARGE = """query {
   currentAppInstallation {
     activeSubscriptions {
