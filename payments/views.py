@@ -371,12 +371,6 @@ def get_purchases(request, id):
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-SMS_PACKAGES = [
-    {"sms_count": 200,"product_id": "prod_Ttl9MxlAsCFzyT"},
-    {"sms_count": 1000,"product_id": "prod_Ttl9yN18YIuDR1"},
-    {"sms_count": 5000,"product_id": "prod_Ttl9MM1aH2Cx7q"},
-]
-
 @require_http_methods(['POST'])
 @csrf_exempt
 def stripe_one_time_purchase_webhook(request):
@@ -410,20 +404,15 @@ def stripe_one_time_purchase_webhook(request):
                 session = event['data']['object']
                 customer_email = session["customer_details"]["email"]
                 product_id = session["metadata"]["product_id"]
+                sms_count_pack = session["metadata"]["sms_count"]
                 payment_intent = session['payment_intent']
                 ######
                 print('ID', product_id)
                 time.sleep(10)
                 ######
                 user_obj = CustomUser.objects.get(email=customer_email)
-                print(user_obj)
-                sms_object_package = next(
-                    (pkg for pkg in SMS_PACKAGES if pkg["product_id"] == product_id), None)
-                print('PACKAGE',sms_object_package)
-                if sms_object_package is None:
-                    print(f"No matching package for product_id: {product_id}")
-                    return HttpResponse(status=400)
-                user_obj.sms_count += sms_object_package['sms_count']
+               
+                user_obj.sms_count += int(sms_count_pack)
                 user_obj.save()
                 user_payment = UserPayment.objects.get(
                     user_id=user_obj.id)
