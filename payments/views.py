@@ -432,7 +432,7 @@ def stripe_one_time_purchase_webhook(request):
                 analytics.save()
                 StripeEvent.objects.create(event_id=event_id)
                 send_mail(
-                        subject=f'Receipt for sendperplane product SMS Credits ({sms_object_package["sms_count"]})',
+                        subject=f'Receipt for sendperplane product SMS Credits ({sms_count_pack})',
                         message='Thank you for purchasing the package from us! We hope that you will enjoy our sending service.' +
                         '\n\n\n'
                         'Your purchase id is: ' +
