@@ -335,6 +335,9 @@ TEST_PRODUCTS = (('Basic package', 'price_1RuFECAD7NIuijySOnprBvf3', 2), ('Silve
 TEST_ONE_TIME_PRODUCTS = (('200 SMS', 'price_1SvxcoAD7NIuijySwyk9IkVB', 'prod_Ttl9MxlAsCFzyT'), ('1000 SMS',
                                                                                      'price_1Svxd7AD7NIuijySqc6NUGHQ', 'prod_Ttl9yN18YIuDR1'), ('5000 SMS', 'price_1SvxdTAD7NIuijySk3I9yYmy', 'prod_Ttl9MM1aH2Cx7q'))
 
+ONE_TIME_PRODUCTS = (('200 SMS', 'price_1SvxZpAD7NIuijySReo8EPGf', 'prod_Ttl6vUpB18BYdQ'), ('1000 SMS',
+                                                                                     'price_1SvxbtAD7NIuijySaRpLIFZu', 'prod_Ttl8O6Vq5PXLPL'), ('5000 SMS', 'price_1SvxbTAD7NIuijyShdH1RMHC', 'prod_Ttl7W6okbdluJT'))
+
 PROD_PRODUCTS = (('Basic package', 'price_1RuF9lAD7NIuijySkvmcXQCm', 2), ('Silver package',
                                                                           'price_1RuZM9AD7NIuijySsdUXBYMK', 3), ('Gold package', 'price_1RuZPMAD7NIuijySqCgJJ434', 4))
 
@@ -357,6 +360,7 @@ if ENVIRONMENT == 'development':
     SHOPIFY_PRODUCTS = TEST_PRODUCTS_SHOPIFY
 elif ENVIRONMENT == 'production':
     ACTIVE_PRODUCTS = PROD_PRODUCTS
+    ACTIVE_PURCHASE_PRODUCTS = ONE_TIME_PRODUCTS
     SHOPIFY_PRODUCTS = PROD_PRODUCTS_SHOPIFY
 else:
     raise ValueError('Invalid environment specified in DJANGO_ENV variable.')
