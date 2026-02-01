@@ -374,199 +374,122 @@ def get_purchases(request, id):
 
 @require_http_methods(['POST'])
 @csrf_exempt
-def stripe_one_time_purchase_webhook(request):
-    stripe.api_key = settings.STRIPE_SECRET_KEY
-    print('test')
-    time.sleep(5)
-    payload = request.body
-    signature_header = request.META['HTTP_STRIPE_SIGNATURE']
-    event = None
-
-    try:
-        event = stripe.Webhook.construct_event(
-            payload, signature_header, settings.STRIPE_PURCHASE_WEBHOOK_SECRET
-        )
-
-    except ValueError as e:
-        print('ValueError:', e)
-        return HttpResponse(status=400)
-    except stripe.error.SignatureVerificationError as e:
-        print('SignatureVerificationError:', e)
-        return HttpResponse(status=400)
-    
-    event_id = event['id']
-    if StripeEvent.objects.filter(event_id=event_id).exists():
-        return HttpResponse(status=200)
-
-    if event['type'] == 'checkout.session.completed':
-
-        with transaction.atomic():
-            try:
-                session = event['data']['object']
-                customer_email = session["customer_details"]["email"]
-                product_id = session["metadata"]["product_id"]
-                sms_count_pack = session["metadata"]["sms_count"]
-                payment_intent = session['payment_intent']
-                ######
-                print('ID', product_id)
-                time.sleep(10)
-                ######
-                user_obj = CustomUser.objects.get(email=customer_email)
-               
-                user_obj.sms_count += int(sms_count_pack)
-                user_obj.save()
-                user_payment = UserPayment.objects.get(
-                    user_id=user_obj.id)
-                user_payment.purchase_id = payment_intent
-                user_payment.payment_bool = True
-
-                user_payment.save()
-                if (user_payment.payment_bool == True):
-                    user_payment.payment_bool = False
-                    print('HERE7')
-                    user_payment.stripe_checkout_id = session['id']
-                    user_payment.save()
-                    print('finally')
-                analytics = AnalyticsData.objects.get(custom_user=user_obj.id)
-                price = session.get('amount_total', 0) / 100  # Convert from cents to dollars
-                analytics.total_spend += price
-                analytics.save()
-                StripeEvent.objects.create(event_id=event_id)
-                send_mail(
-                        subject=f'Receipt for sendperplane product SMS Credits ({sms_count_pack})',
-                        message='Thank you for purchasing the package from us! We hope that you will enjoy our sending service.' +
-                        '\n\n\n'
-                        'Your purchase id is: ' +
-                        f'{payment_intent}'', use that code to make an inquire in case you got any questions or issues during the payment.' +
-                        '\n\n\n'
-                        'Please dont hesitate to contact us at: support@sendperplane.com'+'\n'
-                        'Once again, thank you for choosing Sendperplane. We look forward to serving you again in the future.' +
-                        '\n\n'
-                        'Best regards,'+'\n'
-                        'Sendperplane team',
-                        recipient_list=[customer_email],
-                        from_email='support@sendperplane.com'
-                    )
-            except IntegrityError:
-                pass
-    return HttpResponse(status=200)
-
-@require_http_methods(['POST'])
-@csrf_exempt
 def stripe_webhook(request):
-
     stripe.api_key = settings.STRIPE_SECRET_KEY
 
-    time.sleep(5)
     payload = request.body
-    signature_header = request.META['HTTP_STRIPE_SIGNATURE']
-    event = None
+    sig_header = request.META.get("HTTP_STRIPE_SIGNATURE")
+
     try:
         event = stripe.Webhook.construct_event(
-            payload, signature_header, settings.STRIPE_WEBHOOK_SECRET
+            payload,
+            sig_header,
+            settings.STRIPE_WEBHOOK_SECRET,  # ONE webhook secret
         )
-
-    except ValueError as e:
-        return HttpResponse(status=400)
-    except stripe.error.SignatureVerificationError as e:
+    except (ValueError, stripe.error.SignatureVerificationError):
         return HttpResponse(status=400)
 
-    event_id = event['id']
+    event_id = event["id"]
     if StripeEvent.objects.filter(event_id=event_id).exists():
         return HttpResponse(status=200)
 
-    if event['type'] == 'checkout.session.completed':
+    if event["type"] != "checkout.session.completed":
+        StripeEvent.objects.create(event_id=event_id)
+        return HttpResponse(status=200)
 
-        with transaction.atomic():
-            try:
-                session = event['data']['object']
-                customer_email = session["customer_details"]["email"]
-                product_id = session["metadata"]["product_id"]
-                payment_intent = session['subscription']
-                print('PRODUCTION', session)
-                ######
-                time.sleep(10)
-                ######
-                user_obj = CustomUser.objects.filter(email=customer_email)[0]
-                print('HERE')
-                package_obj = PackagePlan.objects.get(id=product_id)
-                user_obj.package_plan = package_obj
-                user_obj.sms_count += package_obj.sms_count_pack
-                user_obj.save()
-                print('HERE1')
-                user_payment = UserPayment.objects.get(
-                    user_id=user_obj.id)
-                print('HERE3')
+    session = event["data"]["object"]
+    customer_email = session["customer_details"]["email"]
+
+    with transaction.atomic():
+        try:
+            user = CustomUser.objects.get(email=customer_email)
+            user_payment = UserPayment.objects.get(user_id=user.id)
+            analytics = AnalyticsData.objects.get(custom_user=user.id)
+
+            # --------------------------------------------------
+            # ONE-TIME PURCHASE (SMS credits)
+            # --------------------------------------------------
+            if session["mode"] == "payment":
+                sms_count = int(session["metadata"]["sms_count"])
+                payment_intent = session["payment_intent"]
+                amount_paid = session.get("amount_total", 0) / 100
+
+                user.sms_count += sms_count
+                user.save()
+
                 user_payment.purchase_id = payment_intent
-                user_payment.payment_bool = True
-
+                user_payment.payment_bool = False
+                user_payment.stripe_checkout_id = session["id"]
                 user_payment.save()
-                print('HERE4')
-                analytics = AnalyticsData.objects.get(custom_user=user_obj.id)
-                analytics.total_spend += package_obj.price
+
+                analytics.total_spend += amount_paid
                 analytics.save()
-                print('HERE6')
-                if (user_payment.payment_bool == True):
-                    user_payment.payment_bool = False
-                    print('HERE7')
-                    user_payment.stripe_checkout_id = session['id']
-                    user_payment.save()
-                    purchase_object = stripe.Subscription.retrieve(
-                        id=user_payment.purchase_id
-                    )
-                    convert_epoch = datetime.fromtimestamp(
-                        purchase_object['current_period_end'])
 
-                    package_plan = PackagePlan.objects.get(
-                        custom_id=purchase_object['plan']['product'])
+                send_mail(
+                    subject=f"Receipt – SMS Credits ({sms_count})",
+                    message=(
+                        "Thank you for purchasing SMS credits.\n\n"
+                        f"Purchase ID: {payment_intent}\n\n"
+                        "Contact support@sendperplane.com if needed."
+                    ),
+                    recipient_list=[customer_email],
+                    from_email="support@sendperplane.com",
+                )
 
-                    user_obj.package_plan = package_plan
-                    user_obj.sms_count = package_plan.sms_count_pack
-                    user_obj.scheduled_subscription = convert_epoch
-                    user_obj.scheduled_package = package_plan.plan_type
+            # --------------------------------------------------
+            # SUBSCRIPTION PURCHASE (plans)
+            # --------------------------------------------------
+            elif session["mode"] == "subscription":
+                subscription_id = session["subscription"]
 
-                    recipients_qs = Contact.objects.filter(users=user_obj)
-                    flag_users = util.flag_recipients(
-                        user_obj, recipients_qs)
-                    user_obj.downgraded = not (
-                        flag_users.get('was_downgraded') is False)
+                subscription = stripe.Subscription.retrieve(subscription_id)
+                product_stripe_id = subscription["plan"]["product"]
 
-                    user_obj.save()
-                    Notification.objects.create(
-                        user=user_obj,
-                        notif_type='success',
-                        title="Purchase Successful",
-                        message=f"Your purchase of {package_obj.plan_type} was successful!"
-                    )
-                    print('HERE8')
-                    StripeEvent.objects.create(event_id=event_id)
-                    print('HERE9')
-                    send_mail(
-                        subject=f'Receipt for sendperplane product {package_obj.plan_type}',
-                        message='Thank you for purchasing the package from us! We hope that you will enjoy our sending service.' +
-                        '\n\n\n'
-                        'Your purchase id is: ' +
-                        f'{event["data"]["object"]["subscription"]}'', use that code to make an inquire in case you got any questions or issues during the payment.' +
-                        '\n\n\n'
-                        'Please dont hesitate to contact us at: support@sendperplane.com'+'\n'
-                        'Once again, thank you for choosing Sendperplane. We look forward to serving you again in the future.' +
-                        '\n\n'
-                        'Best regards,'+'\n'
-                        'Sendperplane team',
-                        recipient_list=[customer_email],
-                        from_email='support@sendperplane.com'
-                    )
-                    print('HERE10')
-                else:
-                    Notification.objects.create(
-                        user=user_obj,
-                        notif_type='error',
-                        title="Purchase Not completed",
-                        message=f"Your purchase of {package_obj.plan_type} was not completed, contact support!"
-                    )
-                    return Response('Payment not completed! Contact administrator for more info')
-            except IntegrityError:
-                pass
+                # IMPORTANT FIX: use custom_id, NOT id
+                package_plan = PackagePlan.objects.get(
+                    custom_id=product_stripe_id
+                )
+
+                user.package_plan = package_plan
+                user.sms_count = package_plan.sms_count_pack
+                user.scheduled_subscription = datetime.fromtimestamp(
+                    subscription["current_period_end"]
+                )
+                user.scheduled_package = package_plan.plan_type
+                user.save()
+
+                user_payment.purchase_id = subscription_id
+                user_payment.payment_bool = False
+                user_payment.stripe_checkout_id = session["id"]
+                user_payment.save()
+
+                analytics.total_spend += package_plan.price
+                analytics.save()
+
+                Notification.objects.create(
+                    user=user,
+                    notif_type="success",
+                    title="Purchase Successful",
+                    message=f"Your purchase of {package_plan.plan_type} was successful!",
+                )
+
+                send_mail(
+                    subject=f"Receipt – {package_plan.plan_type}",
+                    message=(
+                        "Thank you for subscribing.\n\n"
+                        f"Subscription ID: {subscription_id}\n\n"
+                        "Contact support@sendperplane.com if needed."
+                    ),
+                    recipient_list=[customer_email],
+                    from_email="support@sendperplane.com",
+                )
+
+            StripeEvent.objects.create(event_id=event_id)
+
+        except Exception as e:
+            # log this properly in prod
+            print("Stripe webhook error:", e)
+            raise
 
     return HttpResponse(status=200)
 
