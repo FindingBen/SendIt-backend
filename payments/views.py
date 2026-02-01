@@ -126,6 +126,7 @@ class StripeCheckoutPurchaseView(APIView):
                 ],
                 metadata={
                     'product_id': package[2],
+                    'sms_count': package[3],
                 },
                 payment_method_types=['card'],
                 mode='payment',

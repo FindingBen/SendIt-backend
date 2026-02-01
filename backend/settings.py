@@ -332,11 +332,11 @@ DOMAIN_STRIPE_NAME_CANCEL = os.environ.get('DOMAIN_STRIPE_NAME_CANCEL')
 TEST_PRODUCTS = (('Basic package', 'price_1RuFECAD7NIuijySOnprBvf3', 2), ('Silver package',
                                                                           'price_1NTJF1AD7NIuijySWfczHhRp', 3), ('Gold package', 'price_1NTKmiAD7NIuijySwioi2U02', 4))
 
-TEST_ONE_TIME_PRODUCTS = (('200 SMS', 'price_1SvxcoAD7NIuijySwyk9IkVB', 'prod_Ttl9MxlAsCFzyT'), ('1000 SMS',
-                                                                                     'price_1Svxd7AD7NIuijySqc6NUGHQ', 'prod_Ttl9yN18YIuDR1'), ('5000 SMS', 'price_1SvxdTAD7NIuijySk3I9yYmy', 'prod_Ttl9MM1aH2Cx7q'))
+TEST_ONE_TIME_PRODUCTS = (('200 SMS', 'price_1SvxcoAD7NIuijySwyk9IkVB', 'prod_Ttl9MxlAsCFzyT',200), ('1000 SMS',
+                                                                                     'price_1Svxd7AD7NIuijySqc6NUGHQ', 'prod_Ttl9yN18YIuDR1',1000), ('5000 SMS', 'price_1SvxdTAD7NIuijySk3I9yYmy', 'prod_Ttl9MM1aH2Cx7q',5000))
 
-ONE_TIME_PRODUCTS = (('200 SMS', 'price_1SvxZpAD7NIuijySReo8EPGf', 'prod_Ttl6vUpB18BYdQ'), ('1000 SMS',
-                                                                                     'price_1SvxbtAD7NIuijySaRpLIFZu', 'prod_Ttl8O6Vq5PXLPL'), ('5000 SMS', 'price_1SvxbTAD7NIuijyShdH1RMHC', 'prod_Ttl7W6okbdluJT'))
+ONE_TIME_PRODUCTS = (('200 SMS', 'price_1SvxZpAD7NIuijySReo8EPGf', 'prod_Ttl6vUpB18BYdQ',200), ('1000 SMS',
+                                                                                     'price_1SvxbtAD7NIuijySaRpLIFZu', 'prod_Ttl8O6Vq5PXLPL',1000), ('5000 SMS', 'price_1SvxbTAD7NIuijyShdH1RMHC', 'prod_Ttl7W6okbdluJT',5000))
 
 PROD_PRODUCTS = (('Basic package', 'price_1RuF9lAD7NIuijySkvmcXQCm', 2), ('Silver package',
                                                                           'price_1RuZM9AD7NIuijySsdUXBYMK', 3), ('Gold package', 'price_1RuZPMAD7NIuijySqCgJJ434', 4))
