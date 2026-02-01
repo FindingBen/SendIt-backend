@@ -54,15 +54,15 @@ class ShopifyAuthMixin:
         url = f"https://{shopify_domain}/admin/api/{settings.SHOPIFY_API_VERSION}/graphql.json"
         return shopify_store, shopify_token, url
 
-class StripeCheckoutView(APIView):
+class StripeCheckoutSubscriptionView(APIView):
     def post(self, request):
         data_package = [package for package in settings.ACTIVE_PRODUCTS]
-        print("DATA", request.data)
+
         try:
-            print('ALOL')
+
             customer = CustomUser.objects.get(
                 id=request.data['currentUser'])
-            print('LOL')
+
         except Exception as e:
             return Response({"error": e}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -98,6 +98,48 @@ class StripeCheckoutView(APIView):
             error_message = str(e)
             return Response({"error": error_message}, status=status.HTTP_400_BAD_REQUEST)
 
+
+class StripeCheckoutPurchaseView(APIView):
+    def post(self, request):
+        data_package = [package for package in settings.ACTIVE_PURCHASE_PRODUCTS]
+        print("DATA", request.data)
+        try:
+            customer = CustomUser.objects.get(
+                id=request.data['currentUser'])
+        except Exception as e:
+            return Response({"error": e}, status=status.HTTP_400_BAD_REQUEST)
+
+        package = next(
+            (pkg for pkg in data_package if pkg[0] == request.data['name_product']), None)
+        print('PACKAGE', package)
+        if package is None:
+            return Response({"error": "Invalid package name"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            checkout_session = stripe.checkout.Session.create(
+                line_items=[
+                    {
+                        # Provide the exact Price ID (for example, pr_1234) of the product you want to sell
+                        'price': package[1],
+                        'quantity': 1,
+                    },
+                ],
+                metadata={
+                    'product_id': package[2],
+                },
+                payment_method_types=['card'],
+                mode='payment',
+                customer=customer.stripe_custom_id,
+                success_url=settings.DOMAIN_STRIPE_PURCHASE_NAME +
+                '?success=true&session_id={CHECKOUT_SESSION_ID}',
+                cancel_url=settings.DOMAIN_STRIPE_NAME_CANCEL + '/?cancel=true',
+            )
+            url_str = str(checkout_session.url)
+            return Response({"url": url_str})
+
+        except Exception as e:
+            error_message = str(e)
+            return Response({"error": error_message}, status=status.HTTP_400_BAD_REQUEST)
 
 class StripeSubscriptionView(APIView):
     def post(self, request):
@@ -241,31 +283,33 @@ def cancel_shopify_subscription(request):
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def payment_successful(request, id):
+def payment_successful(request):
     try:
         user_id = request.user.id
+        session_id = request.data.get('session_id')
+        if not session_id:
+            return Response({'error': 'Session ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+
         user_object = CustomUser.objects.get(id=user_id)
         user_serializer = CustomUserSerializer(user_object)
         user_payment = UserPayment.objects.get(user=user_id)
 
-        purchase_object = stripe.Subscription.retrieve(
-            id=user_payment.purchase_id)
+        # Retrieve the Stripe checkout session with line items expanded
+        session = stripe.checkout.Session.retrieve(session_id, expand=['line_items'])
+        print(session)
+        if session.payment_status != 'paid':
+            return Response({'error': 'Payment not completed.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # purchase_obj = Purchase.objects.get(
-        #     payment_id=user_payment.purchase_id)
-        # print("PURCHASE")
-        # serializer_purchase = PurchaseSerializer(purchase_obj)
-        time.sleep(3)
-        if user_payment.payment_bool is True:
-            user_payment.stripe_checkout_id = id
-            user_payment.save()
-            print('FINAL STAGE')
+        # Update user payment with checkout session ID
+        user_payment.stripe_checkout_id = session_id
+        user_payment.save()
+
+        return Response({'purchase': session, 'user': user_serializer.data}, status=status.HTTP_200_OK)
+
     except Exception as e:
-        return Response(f'There has been an error: {e}')
-
-    return Response({'purchase': purchase_object, 'user': user_serializer.data}, status=status.HTTP_200_OK)
+        return Response(f'There has been an error: {e}', status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
@@ -326,6 +370,96 @@ def get_purchases(request, id):
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+
+SMS_PACKAGES = [
+    {"sms_count": 200,"product_id": "prod_Ttl9MxlAsCFzyT"},
+    {"sms_count": 1000,"product_id": "prod_Ttl9yN18YIuDR1"},
+    {"sms_count": 5000,"product_id": "prod_Ttl9MM1aH2Cx7q"},
+]
+
+@require_http_methods(['POST'])
+@csrf_exempt
+def stripe_one_time_purchase_webhook(request):
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    print('test')
+    time.sleep(5)
+    payload = request.body
+    signature_header = request.META['HTTP_STRIPE_SIGNATURE']
+    event = None
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, signature_header, settings.STRIPE_PURCHASE_WEBHOOK_SECRET
+        )
+
+    except ValueError as e:
+        print('ValueError:', e)
+        return HttpResponse(status=400)
+    except stripe.error.SignatureVerificationError as e:
+        print('SignatureVerificationError:', e)
+        return HttpResponse(status=400)
+    
+    event_id = event['id']
+    if StripeEvent.objects.filter(event_id=event_id).exists():
+        return HttpResponse(status=200)
+
+    if event['type'] == 'checkout.session.completed':
+
+        with transaction.atomic():
+            try:
+                session = event['data']['object']
+                customer_email = session["customer_details"]["email"]
+                product_id = session["metadata"]["product_id"]
+                payment_intent = session['payment_intent']
+                ######
+                print('ID', product_id)
+                time.sleep(10)
+                ######
+                user_obj = CustomUser.objects.get(email=customer_email)
+                print(user_obj)
+                sms_object_package = next(
+                    (pkg for pkg in SMS_PACKAGES if pkg["product_id"] == product_id), None)
+                print('PACKAGE',sms_object_package)
+                if sms_object_package is None:
+                    print(f"No matching package for product_id: {product_id}")
+                    return HttpResponse(status=400)
+                user_obj.sms_count += sms_object_package['sms_count']
+                user_obj.save()
+                user_payment = UserPayment.objects.get(
+                    user_id=user_obj.id)
+                user_payment.purchase_id = payment_intent
+                user_payment.payment_bool = True
+
+                user_payment.save()
+                if (user_payment.payment_bool == True):
+                    user_payment.payment_bool = False
+                    print('HERE7')
+                    user_payment.stripe_checkout_id = session['id']
+                    user_payment.save()
+                    print('finally')
+                analytics = AnalyticsData.objects.get(custom_user=user_obj.id)
+                price = session.get('amount_total', 0) / 100  # Convert from cents to dollars
+                analytics.total_spend += price
+                analytics.save()
+                StripeEvent.objects.create(event_id=event_id)
+                send_mail(
+                        subject=f'Receipt for sendperplane product SMS Credits ({sms_object_package["sms_count"]})',
+                        message='Thank you for purchasing the package from us! We hope that you will enjoy our sending service.' +
+                        '\n\n\n'
+                        'Your purchase id is: ' +
+                        f'{payment_intent}'', use that code to make an inquire in case you got any questions or issues during the payment.' +
+                        '\n\n\n'
+                        'Please dont hesitate to contact us at: support@sendperplane.com'+'\n'
+                        'Once again, thank you for choosing Sendperplane. We look forward to serving you again in the future.' +
+                        '\n\n'
+                        'Best regards,'+'\n'
+                        'Sendperplane team',
+                        recipient_list=[customer_email],
+                        from_email='support@sendperplane.com'
+                    )
+            except IntegrityError:
+                pass
+    return HttpResponse(status=200)
 
 @require_http_methods(['POST'])
 @csrf_exempt
@@ -602,7 +736,7 @@ def create_one_time_purchase_charge(request):
         'appPurchaseOneTimeCreate', {}).get('confirmationUrl')
     return Response({"url": confirmation_url})
 
-SMS_PACKAGES = {
+SMS_AMOUNTS = {
     "200 sms": 200,
     "1000 sms": 1000,
     "5000 sms": 5000,
@@ -640,7 +774,7 @@ def check_one_time_charge(request):
         return Response({"error": "Charge not active"}, status=400)
 
     package_name = node["name"]
-    sms_amount = SMS_PACKAGES.get(package_name)
+    sms_amount = SMS_AMOUNTS.get(package_name)
 
     if not sms_amount:
         return Response({"error": "Unknown SMS package"}, status=400)

@@ -1,11 +1,13 @@
 from django.urls import path
-from .views import StripeCheckoutView
+from .views import StripeCheckoutSubscriptionView, StripeCheckoutPurchaseView
 from . import views
 
 urlpatterns = [
     path('stripe_checkout_session',
-         StripeCheckoutView.as_view(), name='stripe-checkout'),
-    path('payment_successfull/<str:id>',
+         StripeCheckoutSubscriptionView.as_view(), name='stripe-checkout'),
+         path('stripe_checkout_purchase/',
+         StripeCheckoutPurchaseView.as_view(), name='stripe-purchase'),
+    path('payment_successfull',
          views.payment_successful, name='payment_successful'),
      path('shopify_one_time_charge/',
          views.create_one_time_purchase_charge),
@@ -19,6 +21,7 @@ urlpatterns = [
     path('calculate_plan/', views.calculate_plan_usage,
          name='calculate_package'),
     path('stripe_webhook', views.stripe_webhook, name='stripe_webhook'),
+    path('one_time_charge_webhook/',views.stripe_one_time_purchase_webhook),
     path('shopify_status/', views.get_shopify),
     path('shopify_charge/', views.create_shopify_charge),
     path('users_charge/', views.check_users_charge),

@@ -132,6 +132,7 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 STRIPE_SECRET_KEY = os.environ['STRIPE_SECRET_KEY']
 STRIPE_WEBHOOK_SECRET = os.environ['STRIPE_WEBHOOK_SECRET']
+STRIPE_PURCHASE_WEBHOOK_SECRET = os.environ['STRIPE_WEBHOOK_SECRET']
 
 
 REST_FRAMEWORK = {
@@ -323,11 +324,16 @@ DATE_INPUT_FORMATS = ('%d-%m-%Y', '%Y-%m-%d')
 
 DOMAIN_STRIPE_NAME = os.environ.get('DOMAIN_STRIPE_NAME')
 
+DOMAIN_STRIPE_PURCHASE_NAME = os.environ.get('DOMAIN_STRIPE_PURCHASE_NAME')
+
 DOMAIN_STRIPE_NAME_CANCEL = os.environ.get('DOMAIN_STRIPE_NAME_CANCEL')
 
 
 TEST_PRODUCTS = (('Basic package', 'price_1RuFECAD7NIuijySOnprBvf3', 2), ('Silver package',
                                                                           'price_1NTJF1AD7NIuijySWfczHhRp', 3), ('Gold package', 'price_1NTKmiAD7NIuijySwioi2U02', 4))
+
+TEST_ONE_TIME_PRODUCTS = (('200 SMS', 'price_1SvxcoAD7NIuijySwyk9IkVB', 'prod_Ttl9MxlAsCFzyT'), ('1000 SMS',
+                                                                                     'price_1Svxd7AD7NIuijySqc6NUGHQ', 'prod_Ttl9yN18YIuDR1'), ('5000 SMS', 'price_1SvxdTAD7NIuijySk3I9yYmy', 'prod_Ttl9MM1aH2Cx7q'))
 
 PROD_PRODUCTS = (('Basic package', 'price_1RuF9lAD7NIuijySkvmcXQCm', 2), ('Silver package',
                                                                           'price_1RuZM9AD7NIuijySsdUXBYMK', 3), ('Gold package', 'price_1RuZPMAD7NIuijySqCgJJ434', 4))
@@ -347,6 +353,7 @@ PROD_PRODUCTS_SHOPIFY = [
 # Set ACTIVE_PRODUCTS based on the environment
 if ENVIRONMENT == 'development':
     ACTIVE_PRODUCTS = TEST_PRODUCTS
+    ACTIVE_PURCHASE_PRODUCTS = TEST_ONE_TIME_PRODUCTS
     SHOPIFY_PRODUCTS = TEST_PRODUCTS_SHOPIFY
 elif ENVIRONMENT == 'production':
     ACTIVE_PRODUCTS = PROD_PRODUCTS
